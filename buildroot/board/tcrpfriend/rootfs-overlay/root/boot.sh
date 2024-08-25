@@ -1097,10 +1097,8 @@ function boot() {
 
     #Compare with the number of pre-counted disks in tcrp 0.1.1i
     if [ "${chkdisk}" = "true" ]; then
-
-    echo "usrdisks = ${usrdisks}"
         if [ "${usrdisks}" != "${DISKCNT}" ]; then
-            msgalert "It is different from the number of disks pre-counted in tcrp!!!\n"
+            msgalert "It is different from the number of disks pre-counted (${usrdisks}) in tcrp!!!\n"
             msgalert "To protect partitions within DSM,A shutdown is required. Press any key to shutdown..."
             read answer
             poweroff
@@ -1287,7 +1285,6 @@ function chk_diskcnt() {
         DISKCNT=$((DISKCNT+1))
     fi    
   done
-  echo "DISKCNT = ${DISKCNT}"
 }
 
 function initialize() {
