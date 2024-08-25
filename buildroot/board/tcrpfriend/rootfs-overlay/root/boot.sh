@@ -1101,10 +1101,10 @@ function chk_diskcnt() {
 }
 
 function boot() {
-
+    chk_diskcnt
     # Welcome message
     welcome
-    chk_diskcnt
+
     gethw
 
     #Compare with the number of pre-counted disks in tcrp 0.1.1i
