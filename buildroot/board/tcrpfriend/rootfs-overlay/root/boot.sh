@@ -1088,20 +1088,8 @@ function readconfig() {
 
 }
 
-function chk_diskcnt() {
-  DISKCNT=0
-  for edisk in $(fdisk -l | grep "Disk /dev/sd" | awk '{print $2}' | sed 's/://'); do
-    if [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l) -gt 0 ]; then
-        continue
-    else
-        DISKCNT=$((DISKCNT+1))
-    fi    
-  done
-  echo "DISKCNT = ${DISKCNT}"
-}
-
 function boot() {
-    chk_diskcnt
+    
     # Welcome message
     welcome
 
@@ -1290,10 +1278,25 @@ function welcome() {
     showlastupdate
 }
 
+function chk_diskcnt() {
+  DISKCNT=0
+  for edisk in $(fdisk -l | grep "Disk /dev/sd" | awk '{print $2}' | sed 's/://'); do
+    if [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l) -gt 0 ]; then
+        continue
+    else
+        DISKCNT=$((DISKCNT+1))
+    fi    
+  done
+  echo "DISKCNT = ${DISKCNT}"
+}
+
 function initialize() {
     # Checkif running in TC
     [ "$(hostname)" != "tcrpfriend" ] && echo "ERROR running on alien system" && exit 99
 
+    # check disk count
+    chk_diskcnt
+    
     # Mount loader disk
     [ -z "${LOADER_DISK}" ] && mountall
 
