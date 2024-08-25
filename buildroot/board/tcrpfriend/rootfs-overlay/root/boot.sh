@@ -661,8 +661,6 @@ function gethw() {
     echo -ne "DMI: $(msgwarning "$DMI")\n"
     HBACNT=$(lspci -nn | egrep -e "\[0104\]" -e "\[0107\]" | wc -l)
     NICCNT=$(lspci -nn | egrep -e "\[0200\]" | wc -l)
-    DISKCNT=$(fdisk -l | grep "Disk /dev/sd" | awk '{print $2}' | sed 's/://' | xargs -I {} bash -c 'if [ $(fdisk -l | grep "83 Linux" | grep {} | wc -l) -eq 0 ]; then echo 1; else echo 0; fi' | awk '{s+=$1} END {print s}')
-    echo "DISKCNT = ${DISKCNT}"
     echo -ne "SAS/RAID HBAs Count : $(msgalert "$HBACNT"), NICs Count : $(msgalert "$NICCNT"), SAS/SATA Disks Count : $(msgalert "${DISKCNT}")\n"
     [ -d /sys/firmware/efi ] && msgnormal "System is running in UEFI boot mode\n" && EFIMODE="yes" || msgblue "System is running in Legacy boot mode\n"    
 }
@@ -1094,12 +1092,14 @@ function boot() {
 
     # Welcome message
     welcome
-
+    
+    DISKCNT=$(fdisk -l | grep "Disk /dev/sd" | awk '{print $2}' | sed 's/://' | xargs -I {} bash -c 'if [ $(fdisk -l | grep "83 Linux" | grep {} | wc -l) -eq 0 ]; then echo 1; else echo 0; fi' | awk '{s+=$1} END {print s}')
+    echo "DISKCNT = ${DISKCNT}"
     gethw
 
     #Compare with the number of pre-counted disks in tcrp 0.1.1i
     if [ "${chkdisk}" = "true" ]; then
-    echo "DISKCNT = ${DISKCNT}"
+
     echo "usrdisks = ${usrdisks}"
         if [ "${usrdisks}" != "${DISKCNT}" ]; then
             msgalert "It is different from the number of disks pre-counted in tcrp!!!\n"
