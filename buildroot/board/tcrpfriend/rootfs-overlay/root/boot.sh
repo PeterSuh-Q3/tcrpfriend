@@ -648,17 +648,7 @@ function countdown() {
 }
 
 function chk_diskcnt() {
-
-  DISKCNT=0
-
-  for edisk in $(fdisk -l | grep "Disk /dev/sd" | awk '{print $2}' | sed 's/://'); do
-    if [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l) -gt 0 ]; then
-        continue
-    else
-        DISKCNT=$((DISKCNT+1))
-    fi    
-  done
-
+  DISKCNT=$(fdisk -l | grep "Disk /dev/sd" | awk '{print $2}' | sed 's/://' | xargs -I {} bash -c 'if [ $(fdisk -l | grep "83 Linux" | grep {} | wc -l) -eq 0 ]; then echo 1; else echo 0; fi' | awk '{s+=$1} END {print s}')
 }
 
 function gethw() {
