@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 240825
+# Date : 240908
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.1i"
+BOOTVER="0.1.1j"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 
@@ -100,6 +100,7 @@ function history() {
     0.1.1g Sort netif order by bus-id order (Synology netif sorting method)
     0.1.1h Fixed error displaying information for USB type NICs
     0.1.1i Added a feature to check whether the pre-counted number of disks matches (Optional)
+    0.1.1j SA6400(epyc7002) is integrated from lkm5 to lkm(lkm 24.9.8), affected by ramdisk patch.
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -115,6 +116,7 @@ function showlastupdate() {
 0.1.1g Sort netif order by bus-id order (Synology netif sorting method)
 0.1.1h Fixed error displaying information for USB type NICs
 0.1.1i Added a feature to check whether the pre-counted number of disks matches (Optional)
+0.1.1j SA6400(epyc7002) is integrated from lkm5 to lkm(lkm 24.9.8), affected by ramdisk patch.
 
 EOF
 }
@@ -237,7 +239,7 @@ function getredpillko() {
     echo "KERNEL VERSION of getredpillko() is ${KVER}"
     echo "Downloading ${ORIGIN_PLATFORM} ${KVER}+ redpill.ko ..."
     if [ "${ORIGIN_PLATFORM}" = "epyc7002" ]; then
-        v="5"
+        v=""
     else
         v=""
     fi
@@ -245,17 +247,13 @@ function getredpillko() {
     LATESTURL="`curl --connect-timeout 5 -skL -w %{url_effective} -o /dev/null "${PROXY}https://github.com/PeterSuh-Q3/redpill-lkm${v}/releases/latest"`"
 
     if [ $? -ne 0 ]; then
-        echo "Error downloading last version of ${ORIGIN_PLATFORM} ${KVER}+ rp-lkms.zip tring other path..."
-        curl --connect-timeout 5 -skL https://raw.githubusercontent.com/PeterSuh-Q3/redpill-lkm${v}/master/rp-lkms.zip -o /tmp/rp-lkms${v}.zip
-        if [ $? -ne 0 ]; then
-            echo "Error downloading https://raw.githubusercontent.com/PeterSuh-Q3/redpill-lkm${v}/master/rp-lkms${v}.zip"
-            cp -vf /mnt/tcrp/rp-lkms${v}.zip /tmp/rp-lkms${v}.zip
-        fi    
-    else
-        TAG="${LATESTURL##*/}"
-        echo "TAG is ${TAG}"        
-        STATUS=`curl --connect-timeout 5 -skL -w "%{http_code}" "${PROXY}https://github.com/PeterSuh-Q3/redpill-lkm${v}/releases/download/${TAG}/rp-lkms.zip" -o "/tmp/rp-lkms${v}.zip"`
+        msgalert "Error downloading last version of ${ORIGIN_PLATFORM} ${KVER}+ rp-lkms.zip, Stop Booting...\n"
+        exit 99
     fi
+
+    TAG="${LATESTURL##*/}"
+    echo "TAG is ${TAG}"        
+    STATUS=`curl --connect-timeout 5 -skL -w "%{http_code}" "${PROXY}https://github.com/PeterSuh-Q3/redpill-lkm${v}/releases/download/${TAG}/rp-lkms.zip" -o "/tmp/rp-lkms${v}.zip"`
 
     if [ "${ORIGIN_PLATFORM}" = "epyc7002" ]; then
         unzip /tmp/rp-lkms${v}.zip rp-${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}-prod.ko.gz -d /tmp >/dev/null 2>&1
@@ -647,6 +645,20 @@ function countdown() {
     done
 }
 
+function chk_diskcnt() {
+
+  DISKCNT=0
+
+  for edisk in $(fdisk -l | grep "Disk /dev/sd" | awk '{print $2}' | sed 's/://'); do
+    if [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l) -gt 0 ]; then
+        continue
+    else
+        DISKCNT=$((DISKCNT+1))
+    fi    
+  done
+
+}
+
 function gethw() {
 
     checkmachine
@@ -661,7 +673,8 @@ function gethw() {
     echo -ne "DMI: $(msgwarning "$DMI")\n"
     HBACNT=$(lspci -nn | egrep -e "\[0104\]" -e "\[0107\]" | wc -l)
     NICCNT=$(lspci -nn | egrep -e "\[0200\]" | wc -l)
-    echo -ne "SAS/RAID HBAs Count : $(msgalert "$HBACNT"), NICs Count : $(msgalert "$NICCNT"), SAS/SATA Disks Count : $(msgalert "${DISKCNT}")\n"
+    chk_diskcnt
+    echo -ne "SAS/RAID HBAs Count : $(msgalert "$HBACNT") , NICs Count : $(msgalert "$NICCNT"), SAS/SATA Disks Count : $(msgalert "$DISKCNT")\n"
     [ -d /sys/firmware/efi ] && msgnormal "System is running in UEFI boot mode\n" && EFIMODE="yes" || msgblue "System is running in Legacy boot mode\n"    
 }
 
@@ -1089,7 +1102,7 @@ function readconfig() {
 }
 
 function boot() {
-    
+
     # Welcome message
     welcome
 
@@ -1098,7 +1111,7 @@ function boot() {
     #Compare with the number of pre-counted disks in tcrp 0.1.1i
     if [ "${chkdisk}" = "true" ]; then
         if [ "${usrdisks}" != "${DISKCNT}" ]; then
-            msgalert "It is different from the number of disks pre-counted (${usrdisks}) in tcrp!!!\n"
+            msgalert "It is different from the number of disks pre-counted in tcrp!!!\n"
             msgalert "To protect partitions within DSM,A shutdown is required. Press any key to shutdown..."
             read answer
             poweroff
@@ -1276,24 +1289,10 @@ function welcome() {
     showlastupdate
 }
 
-function chk_diskcnt() {
-  DISKCNT=0
-  for edisk in $(fdisk -l | grep "Disk /dev/sd" | awk '{print $2}' | sed 's/://'); do
-    if [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l) -gt 0 ]; then
-        continue
-    else
-        DISKCNT=$((DISKCNT+1))
-    fi    
-  done
-}
-
 function initialize() {
     # Checkif running in TC
     [ "$(hostname)" != "tcrpfriend" ] && echo "ERROR running on alien system" && exit 99
 
-    # check disk count
-    chk_diskcnt
-    
     # Mount loader disk
     [ -z "${LOADER_DISK}" ] && mountall
 
