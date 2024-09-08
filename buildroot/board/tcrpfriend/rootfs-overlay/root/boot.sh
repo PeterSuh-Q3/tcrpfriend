@@ -673,8 +673,7 @@ function gethw() {
     echo -ne "DMI: $(msgwarning "$DMI")\n"
     HBACNT=$(lspci -nn | egrep -e "\[0104\]" -e "\[0107\]" | wc -l)
     NICCNT=$(lspci -nn | egrep -e "\[0200\]" | wc -l)
-    chk_diskcnt
-    echo -ne "SAS/RAID HBAs Count : $(msgalert "$HBACNT") , NICs Count : $(msgalert "$NICCNT"), SAS/SATA Disks Count : $(msgalert "$DISKCNT")\n"
+    echo -ne "SAS/RAID HBAs Count : $(msgalert "$HBACNT"), NICs Count : $(msgalert "$NICCNT"), SAS/SATA Disks Count : $(msgalert "${DISKCNT}")\n"
     [ -d /sys/firmware/efi ] && msgnormal "System is running in UEFI boot mode\n" && EFIMODE="yes" || msgblue "System is running in Legacy boot mode\n"    
 }
 
@@ -1111,7 +1110,7 @@ function boot() {
     #Compare with the number of pre-counted disks in tcrp 0.1.1i
     if [ "${chkdisk}" = "true" ]; then
         if [ "${usrdisks}" != "${DISKCNT}" ]; then
-            msgalert "It is different from the number of disks pre-counted in tcrp!!!\n"
+            msgalert "It is different from the number of disks pre-counted (${usrdisks}) in tcrp!!!\n"
             msgalert "To protect partitions within DSM,A shutdown is required. Press any key to shutdown..."
             read answer
             poweroff
@@ -1289,9 +1288,23 @@ function welcome() {
     showlastupdate
 }
 
+function chk_diskcnt() {
+  DISKCNT=0
+  for edisk in $(fdisk -l | grep "Disk /dev/sd" | awk '{print $2}' | sed 's/://'); do
+    if [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l) -gt 0 ]; then
+        continue
+    else
+        DISKCNT=$((DISKCNT+1))
+    fi    
+  done
+}
+
 function initialize() {
     # Checkif running in TC
     [ "$(hostname)" != "tcrpfriend" ] && echo "ERROR running on alien system" && exit 99
+
+    # check disk count
+    chk_diskcnt
 
     # Mount loader disk
     [ -z "${LOADER_DISK}" ] && mountall
