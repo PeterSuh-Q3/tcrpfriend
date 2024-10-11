@@ -9,7 +9,7 @@
 source menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.1j"
+BOOTVER="0.1.1k"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 
@@ -101,6 +101,7 @@ function history() {
     0.1.1h Fixed error displaying information for USB type NICs
     0.1.1i Added a feature to check whether the pre-counted number of disks matches (Optional)
     0.1.1j SA6400(epyc7002) is integrated from lkm5 to lkm(lkm 24.9.8), affected by ramdisk patch.
+    0.1.1k Enable mmc (SD Card) recognition
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -117,6 +118,7 @@ function showlastupdate() {
 0.1.1h Fixed error displaying information for USB type NICs
 0.1.1i Added a feature to check whether the pre-counted number of disks matches (Optional)
 0.1.1j SA6400(epyc7002) is integrated from lkm5 to lkm(lkm 24.9.8), affected by ramdisk patch.
+0.1.1k Enable mmc (SD Card) recognition
 
 EOF
 }
