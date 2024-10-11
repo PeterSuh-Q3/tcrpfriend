@@ -22,9 +22,7 @@ jobs:
         run: |
           mkdir /opt/updaterootfs
           cd /opt/updaterootfs
-          #URLS=`curl -s https://api.github.com/repos/PeterSuh-Q3/tcrpfriend/releases/tags/v0.0.0 | jq -r ".assets[] | select(.name | contains(\"${initrd-friend}\")) | .browser_download_url"`
-          #URLS="https://github.com/PeterSuh-Q3/tcrpfriend/releases/download/v0.0.0/initrd-friend https://github.com/pocopico/tcrpfriend/releases/download/v0.0.0/bzImage-friend"
-          URLS="`curl -s https://api.github.com/repos/PeterSuh-Q3/tcrpfriend/releases/tags/v0.0.0 | jq -r -e .assets[].browser_download_url`"
+          URLS="`curl -s https://api.github.com/repos/PeterSuh-Q3/tcrpfriend/releases/tags/v0.0.0a | jq -r -e .assets[].browser_download_url`"
           for file in $URLS; do curl --insecure --silent --location "$file" -O ; done
           ls -ltr 
           mkdir /opt/updaterootfs/temprd && cd /opt/updaterootfs/temprd
