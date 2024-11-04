@@ -175,17 +175,16 @@ function changeautoupdate {
 
     backupfile="$userconfigfile.$(date +%Y%b%d)"
     jsonfile=$(jq . $userconfigfile)
-
-    if [ "$(echo $jsonfile | jq '.general .usrcfgver')" = "null" ] || [ "$(echo $jsonfile | jq -r -e '.general .usrcfgver')" != "$BOOTVER" ]; then
-        echo -n "User config file needs update, updating -> "
-        if [ "$1" = "on" ]; then
-            jsonfile=$(echo $jsonfile | jq '.general |= . + { "friendautoupd":"true" }' || echo $jsonfile | jq .)
-        else
-            jsonfile=$(echo $jsonfile | jq '.general |= . + { "friendautoupd":"false" }' || echo $jsonfile | jq .)
-        fi
-        cp $userconfigfile $backupfile
-        echo $jsonfile | jq . >$userconfigfile && echo "Done" || echo "Failed"
+    
+    echo -n "friendautoupd on User config file needs update, updating !!!"
+    if [ "$1" = "on" ]; then
+        jsonfile=$(echo $jsonfile | jq '.general |= . + { "friendautoupd":"true" }' || echo $jsonfile | jq .)
+    else
+        jsonfile=$(echo $jsonfile | jq '.general |= . + { "friendautoupd":"false" }' || echo $jsonfile | jq .)
     fi
+    cp $userconfigfile $backupfile
+    echo $jsonfile | jq . >$userconfigfile && echo "Done" || echo "Failed"
+    
     cat $userconfigfile | grep friendautoupd
 
 }
