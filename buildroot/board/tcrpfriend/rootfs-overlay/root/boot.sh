@@ -177,7 +177,7 @@ function changeautoupdate {
     backupfile="$userconfigfile.$(date +%Y%b%d)"
     jsonfile=$(jq . $userconfigfile)
     
-    echo -n "friendautoupd on User config file needs update, updating !!!"
+    echo -n "friendautoupd on User config file needs update, updating -> "
     if [ "$1" = "on" ]; then
         jsonfile=$(echo $jsonfile | jq '.general |= . + { "friendautoupd":"true" }' || echo $jsonfile | jq .)
     else
