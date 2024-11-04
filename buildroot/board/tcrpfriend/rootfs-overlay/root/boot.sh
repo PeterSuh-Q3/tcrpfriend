@@ -178,10 +178,10 @@ function changeautoupdate {
 
     if [ "$(echo $jsonfile | jq '.general .usrcfgver')" = "null" ] || [ "$(echo $jsonfile | jq -r -e '.general .usrcfgver')" != "$BOOTVER" ]; then
         echo -n "User config file needs update, updating -> "
-	if [ "$1" = "on" ]; then
-            jsonfile=$([ "$(echo $jsonfile | jq '.general .friendautoupd')" = "false" ] && echo $jsonfile | jq '.general |= . + { "friendautoupd":"true" }' || echo $jsonfile | jq .) 
-	else
-            jsonfile=$([ "$(echo $jsonfile | jq '.general .friendautoupd')" = "true" ] && echo $jsonfile | jq '.general |= . + { "friendautoupd":"false" }' || echo $jsonfile | jq .) 
+        if [ "$1" = "on" ]; then
+            jsonfile=$(echo $jsonfile | jq '.general |= . + { "friendautoupd":"true" }' || echo $jsonfile | jq .)
+        else
+            jsonfile=$(echo $jsonfile | jq '.general |= . + { "friendautoupd":"false" }' || echo $jsonfile | jq .)
         fi
         cp $userconfigfile $backupfile
         echo $jsonfile | jq . >$userconfigfile && echo "Done" || echo "Failed"
