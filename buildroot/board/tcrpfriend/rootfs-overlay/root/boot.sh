@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 240908
+# Date : 241104
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.1k"
+BOOTVER="0.1.1l"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 
@@ -102,6 +102,7 @@ function history() {
     0.1.1i Added a feature to check whether the pre-counted number of disks matches (Optional)
     0.1.1j SA6400(epyc7002) is integrated from lkm5 to lkm(lkm 24.9.8), affected by ramdisk patch.
     0.1.1k Enable mmc (SD Card) recognition
+    0.1.1l Added manual update feature to specified version, added stop/enable automatic update feature
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -162,6 +163,32 @@ function checkinternet() {
 
 }
 
+function changeautoupdate {
+    if [ -z "$2" ]; then
+      echo -en "\r$(msgalert "$(TEXT "There is no on or off parameter.!!!")")\n"
+      exit 99
+    elif [ "$2" != "on" ] && [ "$2" != "off" ]; then
+      echo -en "\r$(msgalert "$(TEXT "There is no on or off parameter.!!!")")\n"
+      exit 99
+    fi
+
+    backupfile="$userconfigfile.$(date +%Y%b%d)"
+    jsonfile=$(jq . $userconfigfile)
+
+    if [ "$(echo $jsonfile | jq '.general .usrcfgver')" = "null" ] || [ "$(echo $jsonfile | jq -r -e '.general .usrcfgver')" != "$BOOTVER" ]; then
+        echo -n "User config file needs update, updating -> "
+	if [ "$2" = "on" ]; then
+            jsonfile=$([ "$(echo $jsonfile | jq '.general .friendautoupd')" = "false" ] && echo $jsonfile | jq '.general |= . + { "friendautoupd":"true" }' || echo $jsonfile | jq .) 
+	else
+            jsonfile=$([ "$(echo $jsonfile | jq '.general .friendautoupd')" = "true" ] && echo $jsonfile | jq '.general |= . + { "friendautoupd":"false" }' || echo $jsonfile | jq .) 
+        fi
+        cp $userconfigfile $backupfile
+        echo $jsonfile | jq . >$userconfigfile && echo "Done" || echo "Failed"
+    fi
+    cat jsonfile=$(jq . $userconfigfile) | grep friendautoupd
+
+}
+
 function upgradefriend() {
 
     if [ -d /sys/block/${LOADER_DISK}/${LOADER_DISK}4 ]; then
@@ -209,6 +236,59 @@ function upgradefriend() {
         else
             echo -e "$(msgalert "$(TEXT "No IP yet to check for latest friend")")"
         fi
+    fi
+}
+
+function upgrademan() {
+
+    if [ -z "$2" ]; then
+      echo -en "\r$(msgalert "$(TEXT "There is no TCRP Friend version.!!!")")\n"
+      exit 99
+    fi
+
+    if [ -d /sys/block/${LOADER_DISK}/${LOADER_DISK}4 ]; then
+      chgpart="-p1"
+    else
+      chgpart="" 
+    fi
+    
+    if [ ! -z "$IP" ]; then
+
+        if [ "${friendautoupd}" = "false" ]; then
+            echo -en "\r$(msgwarning "$(TEXT "TCRP Friend auto update disabled")")\n"
+        else
+            echo -en "\r$(msgwarning "$(TEXT "TCRP Friend auto update enabled")")\n"	
+        fi
+
+	FRIENDVERSION="$2"
+	msgwarning "Found target version, bringing over new friend version : $FRIENDVERSION \n"
+
+        echo -n $(TEXT "Checking for version $FRIENDVERSION friend -> ")
+        URL=$(curl --connect-timeout 15 -s --insecure -L https://api.github.com/repos/PeterSuh-Q3/tcrpfriend/releases/tags/"${FRIENDVERSION}" | jq -r -e .assets[].browser_download_url | grep chksum)
+	if [ $? -ne 0 ]; then
+	    msgalert "Error downloading version of $FRIENDVERSION friend...\n"
+	    exit 99
+	fi
+	
+        # download file chksum
+	[ -n "$URL" ] && curl -s --insecure -L $URL -O
+	if [ $? -ne 0 ]; then
+	    msgalert "Error downloading version of $FRIENDVERSION friend...\n"
+	    exit 99
+	fi
+
+	URLS=$(curl --insecure -s https://api.github.com/repos/PeterSuh-Q3/tcrpfriend/releases/tags/"${FRIENDVERSION}" | jq -r ".assets[].browser_download_url")
+	for file in $URLS; do curl --insecure --location --progress-bar "$file" -O; done
+	FRIENDVERSION="$(grep VERSION chksum | awk -F= '{print $2}')"
+	BZIMAGESHA256="$(grep bzImage-friend chksum | awk '{print $1}')"
+	INITRDSHA256="$(grep initrd-friend chksum | awk '{print $1}')"
+	[ "$(sha256sum bzImage-friend | awk '{print $1}')" = "$BZIMAGESHA256" ] && [ "$(sha256sum initrd-friend | awk '{print $1}')" = "$INITRDSHA256" ] && cp -f bzImage-friend /mnt/tcrp${chgpart}/ && msgnormal "bzImage OK! \n"
+	[ "$(sha256sum bzImage-friend | awk '{print $1}')" = "$BZIMAGESHA256" ] && [ "$(sha256sum initrd-friend | awk '{print $1}')" = "$INITRDSHA256" ] && cp -f initrd-friend /mnt/tcrp${chgpart}/ && msgnormal "initrd-friend OK! \n"
+	echo -e "$(msgnormal "$(TEXT "TCRP FRIEND HAS BEEN UPDATED, GOING FOR REBOOT")")"
+ 	changeautoupdate "off"
+	countdown "REBOOT"
+	reboot -f
+		
     fi
 }
 
@@ -1341,9 +1421,21 @@ function initialize() {
 
 case $1 in
 
-update)
+updateauto)
+    initialize
     getip
     upgradefriend
+    ;;
+
+update)
+    initialize
+    getip
+    upgrademan $2
+    ;;
+
+autoupdate)
+    initialize
+    changeautoupdate $2
     ;;
 
 checkupgrade)
