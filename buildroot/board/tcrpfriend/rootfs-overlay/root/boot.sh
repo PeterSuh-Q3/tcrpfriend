@@ -165,10 +165,10 @@ function checkinternet() {
 }
 
 function changeautoupdate {
-    if [ -z "$2" ]; then
+    if [ -z "$1" ]; then
       echo -en "\r$(msgalert "$(TEXT "There is no on or off parameter.!!!")")\n"
       exit 99
-    elif [ "$2" != "on" ] && [ "$2" != "off" ]; then
+    elif [ "$1" != "on" ] && [ "$1" != "off" ]; then
       echo -en "\r$(msgalert "$(TEXT "There is no on or off parameter.!!!")")\n"
       exit 99
     fi
@@ -178,7 +178,7 @@ function changeautoupdate {
 
     if [ "$(echo $jsonfile | jq '.general .usrcfgver')" = "null" ] || [ "$(echo $jsonfile | jq -r -e '.general .usrcfgver')" != "$BOOTVER" ]; then
         echo -n "User config file needs update, updating -> "
-	if [ "$2" = "on" ]; then
+	if [ "$1" = "on" ]; then
             jsonfile=$([ "$(echo $jsonfile | jq '.general .friendautoupd')" = "false" ] && echo $jsonfile | jq '.general |= . + { "friendautoupd":"true" }' || echo $jsonfile | jq .) 
 	else
             jsonfile=$([ "$(echo $jsonfile | jq '.general .friendautoupd')" = "true" ] && echo $jsonfile | jq '.general |= . + { "friendautoupd":"false" }' || echo $jsonfile | jq .) 
@@ -242,7 +242,7 @@ function upgradefriend() {
 
 function upgrademan() {
 
-    if [ -z "$2" ]; then
+    if [ -z "$1" ]; then
       echo -en "\r$(msgalert "$(TEXT "There is no TCRP Friend version.!!!")")\n"
       exit 99
     fi
@@ -261,7 +261,7 @@ function upgrademan() {
             echo -en "\r$(msgwarning "$(TEXT "TCRP Friend auto update enabled")")\n"	
         fi
 
-	FRIENDVERSION="$2"
+	FRIENDVERSION="$1"
 	msgwarning "Found target version, bringing over new friend version : $FRIENDVERSION \n"
 
         echo -n $(TEXT "Checking for version $FRIENDVERSION friend -> ")
