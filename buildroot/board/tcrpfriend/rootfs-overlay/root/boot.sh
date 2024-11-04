@@ -1431,12 +1431,12 @@ updateauto)
 update)
     initialize
     getip
-    upgrademan $2
+    upgrademan "$2"
     ;;
 
 autoupdate)
     initialize
-    changeautoupdate $2
+    changeautoupdate "$2"
     ;;
 
 checkupgrade)
