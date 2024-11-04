@@ -102,7 +102,7 @@ function history() {
     0.1.1i Added a feature to check whether the pre-counted number of disks matches (Optional)
     0.1.1j SA6400(epyc7002) is integrated from lkm5 to lkm(lkm 24.9.8), affected by ramdisk patch.
     0.1.1k Enable mmc (SD Card) recognition
-    0.1.1l Added manual update feature to specified version, added stop/enable automatic update feature
+    0.1.1l Added manual update feature to specified version, added disable/enable automatic update feature
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -120,7 +120,8 @@ function showlastupdate() {
 0.1.1i Added a feature to check whether the pre-counted number of disks matches (Optional)
 0.1.1j SA6400(epyc7002) is integrated from lkm5 to lkm(lkm 24.9.8), affected by ramdisk patch.
 0.1.1k Enable mmc (SD Card) recognition
-0.1.1l Added manual update feature to specified version, added stop/enable automatic update feature
+0.1.1l Added manual update feature to specified version, added disable/enable automatic update feature
+      ( usage : ./boot.sh update v0.1.1j | ./boot.sh autoupdate off | ./boot.sh autoupdate on )
 
 EOF
 }
