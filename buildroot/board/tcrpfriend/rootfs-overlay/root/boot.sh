@@ -186,7 +186,7 @@ function changeautoupdate {
         cp $userconfigfile $backupfile
         echo $jsonfile | jq . >$userconfigfile && echo "Done" || echo "Failed"
     fi
-    cat jsonfile=$(jq . $userconfigfile) | grep friendautoupd
+    cat $userconfigfile | grep friendautoupd
 
 }
 
