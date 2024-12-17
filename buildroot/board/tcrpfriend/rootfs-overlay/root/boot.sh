@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 241104
+# Date : 241217
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.1l"
+BOOTVER="0.1.1m"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 
@@ -103,6 +103,7 @@ function history() {
     0.1.1j SA6400(epyc7002) is integrated from lkm5 to lkm(lkm 24.9.8), affected by ramdisk patch.
     0.1.1k Enable mmc (SD Card) recognition
     0.1.1l Added manual update feature to specified version, added disable/enable automatic update feature
+    0.1.1m Expanded MAC address support from 4 to 8
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -112,16 +113,13 @@ EOF
 function showlastupdate() {
     cat <<EOF
 0.1.0  friend kernel version up from 5.15.26 to 6.4.16
-0.1.0q Added support for SHR type to HDD for bootloader injection. 
-0.1.0u Loader support bus type expansion (mmc, NVMe, etc.)
-0.1.1f Adjust Grub bootentry default after PostUpdate for jot mode
 0.1.1g Sort netif order by bus-id order (Synology netif sorting method)
-0.1.1h Fixed error displaying information for USB type NICs
 0.1.1i Added a feature to check whether the pre-counted number of disks matches (Optional)
 0.1.1j SA6400(epyc7002) is integrated from lkm5 to lkm(lkm 24.9.8), affected by ramdisk patch.
 0.1.1k Enable mmc (SD Card) recognition
 0.1.1l Added manual update feature to specified version, added disable/enable automatic update feature
       ( usage : ./boot.sh update v0.1.1j | ./boot.sh autoupdate off | ./boot.sh autoupdate on )
+0.1.1m Expanded MAC address support from 4 to 8
 
 EOF
 }
@@ -1003,7 +1001,7 @@ function setmac() {
             ip link set dev ${eth} address ${MAC} >/dev/null 2>&1 
         fi
         I=$((${I} + 1))
-        if [ "${eth}" = "eth4" ]; then
+        if [ "${eth}" = "eth8" ]; then
             break
         fi
     done
