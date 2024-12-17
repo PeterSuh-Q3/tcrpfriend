@@ -990,6 +990,8 @@ function setmac() {
 
     # Set custom MAC if defined
     ethdevs=$(ls /sys/class/net/ | grep -v lo || true)
+    /etc/init.d/S41dhcpcd stop >/dev/null 2>&1
+    /etc/init.d/S40network stop >/dev/null 2>&1    
     I=1
     for eth in $ethdevs; do 
         curmacmask=$(ip link | grep -A 1 ${eth} | tail -1 | awk '{print $2}' | tr '[:lower:]' '[:upper:]')
@@ -1005,7 +1007,9 @@ function setmac() {
             break
         fi
     done
-    /etc/init.d/S41dhcpcd restart >/dev/null 2>&1
+    /etc/init.d/S40network start >/dev/null 2>&1
+    /etc/init.d/S41dhcpcd start >/dev/null 2>&1    
+
 }
 
 function setnetwork() {
