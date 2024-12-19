@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 241217
+# Date : 241219
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.1m"
+BOOTVER="0.1.1n"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 
@@ -104,6 +104,7 @@ function history() {
     0.1.1k Enable mmc (SD Card) recognition
     0.1.1l Added manual update feature to specified version, added disable/enable automatic update feature
     0.1.1m Expanded MAC address support from 4 to 8, Add skip_vender_mac_interfaces cmdline again
+    0.1.1n Remove skip_vender_mac_interfaces cmdline ( Issue with not being able to use the changed mac address )
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -120,6 +121,7 @@ function showlastupdate() {
 0.1.1l Added manual update feature to specified version, added disable/enable automatic update feature
       ( usage : ./boot.sh update v0.1.1j | ./boot.sh autoupdate off | ./boot.sh autoupdate on )
 0.1.1m Expanded MAC address support from 4 to 8, Add skip_vender_mac_interfaces cmdline again
+0.1.1n Remove skip_vender_mac_interfaces cmdline ( Issue with not being able to use the changed mac address )
 
 EOF
 }
@@ -1274,7 +1276,7 @@ function boot() {
 
     [ "$1" = "forcejunior" ] && CMDLINE_LINE+="force_junior "
 
-    CMDLINE_LINE+="skip_vender_mac_interfaces=0,1,2,3,4,5,6,7 "
+    #CMDLINE_LINE+="skip_vender_mac_interfaces=0,1,2,3,4,5,6,7 "
 
     export MOD_ZIMAGE_FILE="/mnt/tcrp/zImage-dsm"
     export MOD_RDGZ_FILE="/mnt/tcrp/initrd-dsm"
