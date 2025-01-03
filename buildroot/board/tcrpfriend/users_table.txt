@@ -1,0 +1,1 @@
+tc -1 tc -1 = /home/tc /bin/sh - tc user
