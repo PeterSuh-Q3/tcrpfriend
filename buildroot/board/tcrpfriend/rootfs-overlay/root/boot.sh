@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 241219
+# Date : 250103
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.1n"
+BOOTVER="0.1.1o"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 
@@ -105,6 +105,7 @@ function history() {
     0.1.1l Added manual update feature to specified version, added disable/enable automatic update feature
     0.1.1m Expanded MAC address support from 4 to 8, Add skip_vender_mac_interfaces cmdline again
     0.1.1n Remove skip_vender_mac_interfaces cmdline ( Issue with not being able to use the changed mac address )
+    0.1.1o Add tc user and add apt/sudo packages to buildroot
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -120,8 +121,7 @@ function showlastupdate() {
 0.1.1k Enable mmc (SD Card) recognition
 0.1.1l Added manual update feature to specified version, added disable/enable automatic update feature
       ( usage : ./boot.sh update v0.1.1j | ./boot.sh autoupdate off | ./boot.sh autoupdate on )
-0.1.1m Expanded MAC address support from 4 to 8, Add skip_vender_mac_interfaces cmdline again
-0.1.1n Remove skip_vender_mac_interfaces cmdline ( Issue with not being able to use the changed mac address )
+0.1.1o Add tc user and add apt/sudo packages to buildroot
 
 EOF
 }
