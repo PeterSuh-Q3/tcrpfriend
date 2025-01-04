@@ -1226,6 +1226,11 @@ BR2_PACKAGE_NODEJS_ARCH_SUPPORTS=y
 # BR2_PACKAGE_NODEJS is not set
 
 #
+# locale 
+#
+BR2_PACKAGE_LOCALEDEF=y 
+
+#
 # octave needs a toolchain w/ C++ and fortran, gcc >= 4.8
 #
 BR2_PACKAGE_HOST_OPENJDK_BIN_ARCH_SUPPORTS=y
