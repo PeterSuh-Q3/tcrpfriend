@@ -49,8 +49,8 @@ jobs:
           VERSION=`grep "BOOTVER=" /home/runner/work/tcrpfriend/tcrpfriend/buildroot/board/tcrpfriend/rootfs-overlay/root/boot.sh | awk -F\" '{print $2}'`
           echo "Version: ${VERSION}"
           echo '---start make---'
-          make ${{github.event.inputs.board}}_defconfig
-          make
+          make -j$(nproc) ${{github.event.inputs.board}}_defconfig
+          make -j$(nproc)
           cp -vf /opt/buildroot/output/images/bzImage /opt/firmware/bzImage-friend || exit 1
           cp -vf /opt/buildroot/output/images/rootfs.cpio.xz /opt/firmware/initrd-friend || exit 1
       - name: Upload buildroot-${{github.event.inputs.branches-tags}}-${{github.event.inputs.board}}
