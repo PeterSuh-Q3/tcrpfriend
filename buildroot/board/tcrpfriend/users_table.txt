@@ -1,1 +1,1 @@
-tc -1 tc -1 = /home/tc /bin/sh - tc user
+tc -1 tc -1 *5$W42OkUiqJzaIfxsC$u/OoUJMmBsjeIqygpMwYLN4o.oKz1hGvG/VZJ3sVkQ.* = /home/tc /bin/sh - tc user
