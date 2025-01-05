@@ -6,6 +6,6 @@ tmpfs           /dev/shm        tmpfs   defaults,mode=1777        0       0
 #tmpfs          /tmp            tmpfs   defaults        0       0
 #tmpfs          /run            tmpfs   defaults        0       0
 sysfs           /sys            sysfs   defaults        0       0
-/dev/sda1       /mnt/sda1       vfat     noauto,users,exec,umask=000 0 0 # Added by TC
-/dev/sda2       /mnt/sda2       vfat     noauto,users,exec,umask=000 0 0 # Added by TC
-/dev/sda3       /mnt/sda3       vfat     noauto,users,exec,umask=000 0 0 # Added by TC
+#/dev/sda1       /mnt/sda1       vfat     noauto,users,exec,umask=000 0 0 # Added by TC
+#/dev/sda2       /mnt/sda2       vfat     noauto,users,exec,umask=000 0 0 # Added by TC
+#/dev/sda3       /mnt/sda3       vfat     noauto,users,exec,umask=000 0 0 # Added by TC
