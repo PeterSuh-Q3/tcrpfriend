@@ -1415,6 +1415,7 @@ function initialize() {
     if grep -q "IWANTTOCONFIGURE" /proc/cmdline; then
         echo "Proceed with configuring the selected loader..."
         tar -xzvf /mnt/tcrp/xtcrp.tgz -C /home/tc 2>&1 >/dev/null
+	echo "export PATH=$PATH:/sbin" >> /home/tc/.profile
 	mountxtcrp
         su - tc << EOF
         ./menu.sh
