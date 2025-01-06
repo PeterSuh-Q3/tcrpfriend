@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250103
+# Date : 250106
 # User Variables :
 ###############################################################################
 
@@ -105,7 +105,7 @@ function history() {
     0.1.1l Added manual update feature to specified version, added disable/enable automatic update feature
     0.1.1m Expanded MAC address support from 4 to 8, Add skip_vender_mac_interfaces cmdline again
     0.1.1n Remove skip_vender_mac_interfaces cmdline ( Issue with not being able to use the changed mac address )
-    0.1.1o Add tc user and add apt/sudo packages to buildroot
+    0.1.1o Add tc user, add apt/sudo packages to buildroot and add loader build menu to grub without tinycore linux (xtcrp release)
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -121,7 +121,7 @@ function showlastupdate() {
 0.1.1k Enable mmc (SD Card) recognition
 0.1.1l Added manual update feature to specified version, added disable/enable automatic update feature
       ( usage : ./boot.sh update v0.1.1j | ./boot.sh autoupdate off | ./boot.sh autoupdate on )
-0.1.1o Add tc user and add apt/sudo packages to buildroot
+0.1.1o Add tc user, add apt/sudo packages to buildroot and add loader build menu to grub without tinycore linux (xtcrp release)
 
 EOF
 }
@@ -1399,6 +1399,13 @@ function initialize() {
 
     # Mount loader disk
     [ -z "${LOADER_DISK}" ] && mountall
+
+    if grep -q "IWANTTOCHANGETHECONFIG" /proc/cmdline; then
+        echo "Configure loader selected"
+        tar -xzvf /mnt/tcrp/xtrcp.tgz -C /home/tc
+	cd /home/tc
+	./menu.sh
+    fi
 
     # Read Configuration variables
     readconfig
