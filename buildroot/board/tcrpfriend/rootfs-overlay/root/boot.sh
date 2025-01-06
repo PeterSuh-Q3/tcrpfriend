@@ -1417,9 +1417,9 @@ function initialize() {
         tar -xzvf /mnt/tcrp/xtcrp.tgz -C /home/tc 2>&1 >/dev/null
 	echo "export PATH=$PATH:/sbin" >> /home/tc/.profile
 	mountxtcrp
-        su - tc << EOF
-EOF
-        return
+        echo -e "Configure the loader using the \e[32m./menu.sh\e[0m command." 
+        su - tc
+        exit 0
     fi
 
     # Read Configuration variables
