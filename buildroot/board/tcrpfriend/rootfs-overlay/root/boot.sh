@@ -1402,9 +1402,8 @@ function initialize() {
 
     if grep -q "IWANTTOCONFIGURE" /proc/cmdline; then
         echo "Proceed with configuring the selected loader..."
-        tar -xzvf /mnt/tcrp/xtrcp.tgz -C /home/tc
+        tar -xzvf /mnt/tcrp/xtcrp.tgz -C /home/tc
         su - tc << EOF
-        cd /home/tc
         ./menu.sh
 EOF
     fi
