@@ -1128,6 +1128,18 @@ function mountall() {
 
 }
 
+function mountxtcrp() {
+
+    [ ! -d /mnt/${LOADER_DISK}${p1} ] && mkdir ${LOADER_DISK}${p1}
+    [ ! -d /mnt/${LOADER_DISK}${p2} ] && mkdir ${LOADER_DISK}${p2}
+    [ ! -d /mnt/${LOADER_DISK}${p3} ] && mkdir ${LOADER_DISK}${p3}
+
+    [ "$(mount | grep ${LOADER_DISK}${p1} | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p1} /mnt/${LOADER_DISK}${p1}
+    [ "$(mount | grep ${LOADER_DISK}${p2} | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p2} /mnt/${LOADER_DISK}${p2}
+    [ "$(mount | grep ${LOADER_DISK}${p3} | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p3} /mnt/${LOADER_DISK}${p3}
+
+}
+
 function readconfig() {
 
     userconfigfile=/mnt/tcrp/user_config.json
@@ -1402,7 +1414,8 @@ function initialize() {
 
     if grep -q "IWANTTOCONFIGURE" /proc/cmdline; then
         echo "Proceed with configuring the selected loader..."
-        tar -xzvf /mnt/tcrp/xtcrp.tgz -C /home/tc
+        tar -xzvf /mnt/tcrp/xtcrp.tgz -C /home/tc 2>&1 >/dev/null
+	mountxtcrp
         su - tc << EOF
         ./menu.sh
 EOF
