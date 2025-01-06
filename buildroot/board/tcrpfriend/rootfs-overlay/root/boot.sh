@@ -1400,13 +1400,13 @@ function initialize() {
     # Mount loader disk
     [ -z "${LOADER_DISK}" ] && mountall
 
-    if grep -q "IWANTTOCHANGETHECONFIG" /proc/cmdline; then
-        echo "Configure loader selected"
+    if grep -q "IWANTTOCONFIGURE" /proc/cmdline; then
+        echo "Proceed with configuring the selected loader..."
         tar -xzvf /mnt/tcrp/xtrcp.tgz -C /home/tc
         su - tc << EOF
         cd /home/tc
         ./menu.sh
-    EOF
+EOF
     fi
 
     # Read Configuration variables
