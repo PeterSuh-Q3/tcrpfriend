@@ -1403,8 +1403,10 @@ function initialize() {
     if grep -q "IWANTTOCHANGETHECONFIG" /proc/cmdline; then
         echo "Configure loader selected"
         tar -xzvf /mnt/tcrp/xtrcp.tgz -C /home/tc
-	cd /home/tc
-	./menu.sh
+        su - tc << EOF
+        cd /home/tc
+        ./menu.sh
+    EOF
     fi
 
     # Read Configuration variables
