@@ -1130,13 +1130,13 @@ function mountall() {
 
 function mountxtcrp() {
 
-    [ ! -d /mnt/${LOADER_DISK}${p1} ] && mkdir ${LOADER_DISK}${p1}
-    [ ! -d /mnt/${LOADER_DISK}${p2} ] && mkdir ${LOADER_DISK}${p2}
-    [ ! -d /mnt/${LOADER_DISK}${p3} ] && mkdir ${LOADER_DISK}${p3}
+    [ ! -d /mnt/${LOADER_DISK}${p1} ] && mkdir /mnt/${LOADER_DISK}${p1}
+    [ ! -d /mnt/${LOADER_DISK}${p2} ] && mkdir /mnt/${LOADER_DISK}${p2}
+    [ ! -d /mnt/${LOADER_DISK}${p3} ] && mkdir /mnt/${LOADER_DISK}${p3}
 
-    [ "$(mount | grep ${LOADER_DISK}${p1} | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p1} /mnt/${LOADER_DISK}${p1}
-    [ "$(mount | grep ${LOADER_DISK}${p2} | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p2} /mnt/${LOADER_DISK}${p2}
-    [ "$(mount | grep ${LOADER_DISK}${p3} | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p3} /mnt/${LOADER_DISK}${p3}
+    mount /dev/${LOADER_DISK}${p1} /mnt/${LOADER_DISK}${p1}
+    mount /dev/${LOADER_DISK}${p2} /mnt/${LOADER_DISK}${p2}
+    mount /dev/${LOADER_DISK}${p3} /mnt/${LOADER_DISK}${p3}
 
 }
 
