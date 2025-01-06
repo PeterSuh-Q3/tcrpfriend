@@ -1418,8 +1418,8 @@ function initialize() {
 	echo "export PATH=$PATH:/sbin" >> /home/tc/.profile
 	mountxtcrp
         su - tc << EOF
-        ./menu.sh
 EOF
+        return
     fi
 
     # Read Configuration variables
