@@ -1464,7 +1464,7 @@ updateauto)
     ;;
 
 update)
-    initialize
+    initialize normal
     getip
     upgrademan "$2"
     ;;
