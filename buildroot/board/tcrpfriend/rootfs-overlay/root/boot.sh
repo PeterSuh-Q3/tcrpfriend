@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250106
+# Date : 250107
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.1o"
+BOOTVER="0.1.1p"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 
@@ -106,6 +106,7 @@ function history() {
     0.1.1m Expanded MAC address support from 4 to 8, Add skip_vender_mac_interfaces cmdline again
     0.1.1n Remove skip_vender_mac_interfaces cmdline ( Issue with not being able to use the changed mac address )
     0.1.1o Added features for distribution of xTCRP (Tinycore Linux stripped down version)
+    0.1.1p Fix xTCRP user tc permissions issue
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -122,6 +123,7 @@ function showlastupdate() {
 0.1.1l Added manual update feature to specified version, added disable/enable automatic update feature
       ( usage : ./boot.sh update v0.1.1j | ./boot.sh autoupdate off | ./boot.sh autoupdate on )
 0.1.1o Added features for distribution of xTCRP (Tinycore Linux stripped down version)
+0.1.1p Fix xTCRP user tc permissions issue
 
 EOF
 }
@@ -1415,6 +1417,8 @@ function initialize() {
     if grep -q "IWANTTOCONFIGURE" /proc/cmdline; then
         echo "Proceed with configuring the selected loader..."
         tar -xzvf /mnt/tcrp/xtcrp.tgz -C /home/tc 2>&1 >/dev/null
+	chown -R tc:tc /home/tc
+        [ ! -d /mnt/tcrp/auxfiles ] && mkdir -p /mnt/tcrp/auxfiles
 	echo "export PATH=$PATH:/sbin" >> /home/tc/.profile
 	mountxtcrp
         echo -e "Configure the loader using the \e[32m./menu.sh\e[0m command." 
