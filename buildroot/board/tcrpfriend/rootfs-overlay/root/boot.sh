@@ -1419,6 +1419,9 @@ function initialize() {
             echo "Proceed with configuring the selected loader..."
             tar -xzvf /mnt/tcrp/xtcrp.tgz -C /home/tc 2>&1 >/dev/null
     	    chown -R tc:tc /home/tc
+	    touch /etc/init.d/tc-functions
+            mkdir -p /etc/sysconfig
+	    touch /etc/sysconfig/tcuser
             [ ! -d /mnt/tcrp/auxfiles ] && mkdir -p /mnt/tcrp/auxfiles
     	    echo "export PATH=$PATH:/sbin" >> /home/tc/.profile
     	    mountxtcrp
@@ -1464,7 +1467,7 @@ updateauto)
     ;;
 
 update)
-    initialize normal
+    initialize "normal"
     getip
     upgrademan "$2"
     ;;
@@ -1509,7 +1512,7 @@ extractramdisk)
 
 forcejunior)
     initialize
-    boot forcejunior
+    boot "forcejunior"
     ;;
 
 #gettycon)
@@ -1523,7 +1526,7 @@ menu)
     boot
     ;;
 normal)    
-    initialize normal
+    initialize "normal"
     boot
     ;;
 *)
