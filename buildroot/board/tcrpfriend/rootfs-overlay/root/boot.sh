@@ -1414,18 +1414,19 @@ function initialize() {
     # Mount loader disk
     [ -z "${LOADER_DISK}" ] && mountall
 
-    if grep -q "IWANTTOCONFIGURE" /proc/cmdline; then
-        echo "Proceed with configuring the selected loader..."
-        tar -xzvf /mnt/tcrp/xtcrp.tgz -C /home/tc 2>&1 >/dev/null
-	chown -R tc:tc /home/tc
-        [ ! -d /mnt/tcrp/auxfiles ] && mkdir -p /mnt/tcrp/auxfiles
-	echo "export PATH=$PATH:/sbin" >> /home/tc/.profile
-	mountxtcrp
-        echo -e "Configure the loader using the \e[32m./menu.sh\e[0m command." 
-        su - tc
-        exit 0
+    if [ -z "$1" ]; then 
+        if grep -q "IWANTTOCONFIGURE" /proc/cmdline; then
+            echo "Proceed with configuring the selected loader..."
+            tar -xzvf /mnt/tcrp/xtcrp.tgz -C /home/tc 2>&1 >/dev/null
+    	    chown -R tc:tc /home/tc
+            [ ! -d /mnt/tcrp/auxfiles ] && mkdir -p /mnt/tcrp/auxfiles
+    	    echo "export PATH=$PATH:/sbin" >> /home/tc/.profile
+    	    mountxtcrp
+            echo -e "Configure the loader using the \e[32m./menu.sh\e[0m command." 
+            su - tc
+            exit 0
+        fi
     fi
-
     # Read Configuration variables
     readconfig
 
@@ -1521,7 +1522,10 @@ menu)
     initialize
     boot
     ;;
-
+normal)    
+    initialize normal
+    boot
+    ;;
 *)
     initialize
     # All done, lets go for boot/
