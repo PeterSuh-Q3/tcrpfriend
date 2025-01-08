@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250107
+# Date : 250108
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.1p"
+BOOTVER="0.1.1q"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 
@@ -107,6 +107,7 @@ function history() {
     0.1.1n Remove skip_vender_mac_interfaces cmdline ( Issue with not being able to use the changed mac address )
     0.1.1o Added features for distribution of xTCRP (Tinycore Linux stripped down version)
     0.1.1p Fix xTCRP user tc permissions issue
+    0.1.1q Handling menu.sh and additional shell script aliases in xTCRP
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -124,6 +125,7 @@ function showlastupdate() {
       ( usage : ./boot.sh update v0.1.1j | ./boot.sh autoupdate off | ./boot.sh autoupdate on )
 0.1.1o Added features for distribution of xTCRP (Tinycore Linux stripped down version)
 0.1.1p Fix xTCRP user tc permissions issue
+0.1.1q Handling menu.sh and additional shell script aliases in xTCRP
 
 EOF
 }
@@ -1419,13 +1421,20 @@ function initialize() {
             echo "Proceed with configuring the selected loader..."
             tar -xzvf /mnt/tcrp/xtcrp.tgz -C /home/tc 2>&1 >/dev/null
     	    chown -R tc:tc /home/tc
+	 
 	    touch /etc/init.d/tc-functions
             mkdir -p /etc/sysconfig
 	    touch /etc/sysconfig/tcuser
+	    ln -s /home/tc/menu.sh /usr/bin/menu.sh
+            ln -s /home/tc/monitor.sh /usr/bin/monitor.sh
+            ln -s /home/tc/ntp.sh /usr/bin/ntp.sh
+
             [ ! -d /mnt/tcrp/auxfiles ] && mkdir -p /mnt/tcrp/auxfiles
     	    echo "export PATH=$PATH:/sbin" >> /home/tc/.profile
     	    mountxtcrp
-            echo -e "Configure the loader using the \e[32m./menu.sh\e[0m command." 
+            echo -e "Configure the loader using the \e[32mmenu.sh\e[0m command." 
+	    echo -e "To check system information and boot entries using the \e[33mmonitor.sh\e[0m command." 
+            echo -e "To check the settings and installed addons using the \e[35mntp.sh\e[0m command." 
             su - tc
             exit 0
         fi
