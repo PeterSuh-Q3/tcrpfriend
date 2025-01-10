@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250108
+# Date : 250111
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.1q"
+BOOTVER="0.1.1r"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 
@@ -108,6 +108,7 @@ function history() {
     0.1.1o Added features for distribution of xTCRP (Tinycore Linux stripped down version)
     0.1.1p Fix xTCRP user tc permissions issue
     0.1.1q Handling menu.sh and additional shell script aliases in xTCRP
+    0.1.1r Improved getloaderdisk() processing, displayed the number of NVMe disks
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -126,6 +127,7 @@ function showlastupdate() {
 0.1.1o Added features for distribution of xTCRP (Tinycore Linux stripped down version)
 0.1.1p Fix xTCRP user tc permissions issue
 0.1.1q Handling menu.sh and additional shell script aliases in xTCRP
+0.1.1r Improved getloaderdisk() processing, displayed the number of NVMe disks
 
 EOF
 }
@@ -760,7 +762,8 @@ function gethw() {
     echo -ne "DMI: $(msgwarning "$DMI")\n"
     HBACNT=$(lspci -nn | egrep -e "\[0104\]" -e "\[0107\]" | wc -l)
     NICCNT=$(lspci -nn | egrep -e "\[0200\]" | wc -l)
-    echo -ne "SAS/RAID HBAs Count : $(msgalert "$HBACNT"), NICs Count : $(msgalert "$NICCNT"), SAS/SATA Disks Count : $(msgalert "${DISKCNT}")\n"
+    NVMECNT=$(lspci -nn | egrep -e "\[0108\]" | wc -l)
+    echo -ne "SAS/RAID HBAs Count : $(msgalert "$HBACNT"), NICs Count : $(msgalert "$NICCNT"), SAS/SATA Disks Count : $(msgalert "${DISKCNT}"), NVMe Disks Count : $(msgalert "${NVMECNT}")\n"
     [ -d /sys/firmware/efi ] && msgnormal "System is running in UEFI boot mode\n" && EFIMODE="yes" || msgblue "System is running in Legacy boot mode\n"    
 }
 
@@ -1055,22 +1058,18 @@ function setnetwork() {
 function mountall() {
 
     LOADER_DISK=""
-    for edisk in $(fdisk -l | grep "Disk /dev/sd" | awk '{print $2}' | sed 's/://' ); do
-        if [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l ) -eq 3 ]; then
-            LOADER_DISK="$(blkid | grep ${edisk} | grep "6234-C863" | cut -c 1-8 | awk -F\/ '{print $3}')"
-            [ -z "${LOADER_DISK}" ] && continue || break
-        elif [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l ) -eq 1 ]; then
-            LOADER_DISK="$(blkid | grep ${edisk} | grep "6234-C863" | cut -c 1-8 | awk -F\/ '{print $3}')"
-            [ -z "${LOADER_DISK}" ] && continue || break
-        fi    
-    done
-    if [ -z "${LOADER_DISK}" ]; then
-        for edisk in $(fdisk -l | grep -e "Disk /dev/nvme" -e "Disk /dev/mmc" | awk '{print $2}' | sed 's/://' ); do
-            if [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l ) -eq 3 ]; then
-                LOADER_DISK="$(blkid | grep ${edisk} | grep "6234-C863" | cut -c 1-12 | awk -F\/ '{print $3}')"    
-            fi    
-        done
-    fi    
+    while read -r edisk; do
+        if [ $(sudo /sbin/fdisk -l "$edisk" | grep -c "83 Linux") -eq 3 ]; then
+            LOADER_DISK=$(/sbin/blkid | grep "6234-C863" | cut -d ':' -f1 | sed 's/p\?3//g' | awk -F/ '{print $NF}' | head -n 1)
+            if [ -n "$LOADER_DISK" ]; then
+                break
+            else
+                # check for the other type
+                LOADER_DISK="$(echo ${edisk} | cut -c 1-12 | awk -F\/ '{print $3}')"
+                [ -n "$LOADER_DISK" ] && break
+            fi
+        fi
+    done < <(lsblk -ndo NAME | grep -v '^loop' | grep -v '^zram' | sed 's/^/\/dev\//')
 
     if [ -z "${LOADER_DISK}" ]; then
         TEXT "Not Supported Loader BUS Type, program Exit!!!"
