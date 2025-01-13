@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250111
+# Date : 250113
 # User Variables :
 ###############################################################################
 
@@ -762,7 +762,6 @@ function gethw() {
     echo -ne "DMI: $(msgwarning "$DMI")\n"
     HBACNT=$(lspci -nn | egrep -e "\[0104\]" -e "\[0107\]" | wc -l)
     NICCNT=$(lspci -nn | egrep -e "\[0200\]" | wc -l)
-    NVMECNT=$(lspci -nn | egrep -e "\[0108\]" | wc -l)
     echo -ne "SAS/RAID HBAs Count : $(msgalert "$HBACNT"), NICs Count : $(msgalert "$NICCNT"), SAS/SATA Disks Count : $(msgalert "${DISKCNT}"), NVMe Disks Count : $(msgalert "${NVMECNT}")\n"
     [ -d /sys/firmware/efi ] && msgnormal "System is running in UEFI boot mode\n" && EFIMODE="yes" || msgblue "System is running in Legacy boot mode\n"    
 }
@@ -1396,13 +1395,24 @@ function welcome() {
 
 function chk_diskcnt() {
   DISKCNT=0
-  for edisk in $(fdisk -l | grep "Disk /dev/sd" | awk '{print $2}' | sed 's/://'); do
-    if [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l) -gt 0 ]; then
+  while read -r edisk; do
+    if [ $(/sbin/fdisk -l "$edisk" | grep -c "83 Linux") -eq 3 ]; then
         continue
     else
         DISKCNT=$((DISKCNT+1))
     fi    
-  done
+  done < <(lsblk -ndo NAME | grep '^sd' | sed 's/^/\/dev\//')
+}
+
+function chk_nvmecnt() {
+  NVMECNT=0
+  while read -r edisk; do
+    if [ $(/sbin/fdisk -l "$edisk" | grep -c "83 Linux") -eq 3 ]; then
+        continue
+    else
+        NVMECNT=$((NVMECNT+1))
+    fi    
+  done < <(lsblk -ndo NAME | grep '^nvme' | sed 's/^/\/dev\//')
 }
 
 function initialize() {
@@ -1411,7 +1421,8 @@ function initialize() {
 
     # check disk count
     chk_diskcnt
-
+    # check nvme count
+    chk_nvmecnt
     # Mount loader disk
     [ -z "${LOADER_DISK}" ] && mountall
 
