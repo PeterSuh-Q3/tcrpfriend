@@ -445,7 +445,7 @@ function extractramdisk() {
         echo "Ramdisk is compressed"
         xz -dc /mnt/tcrp-p2/rd.gz 2>/dev/null | cpio -idm >/dev/null 2>&1
     else
-        sudo cat /mnt/tcrp-p2/rd.gz | cpio -idm 2>&1 >/dev/null
+        cat /mnt/tcrp-p2/rd.gz | cpio -idm 2>&1 >/dev/null
     fi
 
     if [ -f $temprd/etc/VERSION ]; then
@@ -1059,7 +1059,7 @@ function mountall() {
 
     LOADER_DISK=""
     while read -r edisk; do
-        if [ $(sudo /sbin/fdisk -l "$edisk" | grep -c "83 Linux") -eq 3 ]; then
+        if [ $(/sbin/fdisk -l "$edisk" | grep -c "83 Linux") -eq 3 ]; then
             LOADER_DISK=$(/sbin/blkid | grep "6234-C863" | cut -d ':' -f1 | sed 's/p\?3//g' | awk -F/ '{print $NF}' | head -n 1)
             if [ -n "$LOADER_DISK" ]; then
                 break
