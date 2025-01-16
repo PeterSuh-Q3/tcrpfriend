@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250113
+# Date : 250116
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.1r"
+BOOTVER="0.1.1s"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 
@@ -109,6 +109,7 @@ function history() {
     0.1.1p Fix xTCRP user tc permissions issue
     0.1.1q Handling menu.sh and additional shell script aliases in xTCRP
     0.1.1r Improved getloaderdisk() processing, displayed the number of NVMe disks
+    0.1.1s Add Mellanox MLX4(InfiniBand added), MLX5 modules
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -128,6 +129,7 @@ function showlastupdate() {
 0.1.1p Fix xTCRP user tc permissions issue
 0.1.1q Handling menu.sh and additional shell script aliases in xTCRP
 0.1.1r Improved getloaderdisk() processing, displayed the number of NVMe disks
+0.1.1s Add Mellanox MLX4(InfiniBand added), MLX5 modules
 
 EOF
 }
