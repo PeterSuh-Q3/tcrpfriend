@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250116
+# Date : 250129
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.1s"
+BOOTVER="0.1.1t"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 
@@ -110,6 +110,7 @@ function history() {
     0.1.1q Handling menu.sh and additional shell script aliases in xTCRP
     0.1.1r Improved getloaderdisk() processing, displayed the number of NVMe disks
     0.1.1s Add Mellanox MLX4(InfiniBand added), MLX5 modules
+    0.1.1t Added platform-specific integrated config.json when patching ramdisk Added reference function 
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -120,16 +121,13 @@ function showlastupdate() {
     cat <<EOF
 0.1.0  friend kernel version up from 5.15.26 to 6.4.16
 0.1.1g Sort netif order by bus-id order (Synology netif sorting method)
-0.1.1i Added a feature to check whether the pre-counted number of disks matches (Optional)
-0.1.1j SA6400(epyc7002) is integrated from lkm5 to lkm(lkm 24.9.8), affected by ramdisk patch.
 0.1.1k Enable mmc (SD Card) recognition
 0.1.1l Added manual update feature to specified version, added disable/enable automatic update feature
       ( usage : ./boot.sh update v0.1.1j | ./boot.sh autoupdate off | ./boot.sh autoupdate on )
 0.1.1o Added features for distribution of xTCRP (Tinycore Linux stripped down version)
-0.1.1p Fix xTCRP user tc permissions issue
-0.1.1q Handling menu.sh and additional shell script aliases in xTCRP
 0.1.1r Improved getloaderdisk() processing, displayed the number of NVMe disks
 0.1.1s Add Mellanox MLX4(InfiniBand added), MLX5 modules
+0.1.1t Added platform-specific integrated config.json when patching ramdisk Added reference function
 
 EOF
 }
@@ -473,11 +471,13 @@ function patchramdisk() {
     extractramdisk
 
     temprd="/root/rd.temp"
-    RAMDISK_PATCH=$(cat /root/config/$model/$version/config.json | jq -r -e ' .patches .ramdisk')
-    SYNOINFO_PATCH=$(cat /root/config/$model/$version/config.json | jq -r -e ' .synoinfo')
+    CONFIG_PATH="/root/config/$ORIGIN_PLATFORM/$version/config.json"
+    
+    RAMDISK_PATCH=$(cat ${CONFIG_PATH} | jq -r -e ' .patches .ramdisk')
+    SYNOINFO_PATCH=$(cat ${CONFIG_PATH} | jq -r -e ' .synoinfo')
     SYNOINFO_USER=$(cat /mnt/tcrp/user_config.json | jq -r -e ' .synoinfo')
-    RAMDISK_COPY=$(cat /root/config/$model/$version/config.json | jq -r -e ' .extra .ramdisk_copy')
-    RD_COMPRESSED=$(cat /root/config/$model/$version/config.json | jq -r -e ' .extra .compress_rd')
+    RAMDISK_COPY=$(cat ${CONFIG_PATH} | jq -r -e ' .extra .ramdisk_copy')
+    RD_COMPRESSED=$(cat ${CONFIG_PATH} | jq -r -e ' .extra .compress_rd')
     echo "Patching RamDisk"
 
     PATCHES="$(echo $RAMDISK_PATCH | jq . | sed -e 's/@@@COMMON@@@/\/root\/config\/_common/' | grep config | sed -e 's/"//g' | sed -e 's/,//g')"
