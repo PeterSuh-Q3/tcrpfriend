@@ -1078,7 +1078,7 @@ function mountall() {
     fi
     
     getBus "${LOADER_DISK}"
-
+    echo "LOADER_DISK = ${LOADER_DISK}"
     [ "${BUS}" = "nvme" ] && LOADER_DISK="${LOADER_DISK}p"
     [ "${BUS}" = "mmc"  ] && LOADER_DISK="${LOADER_DISK}p"    
 
@@ -1095,6 +1095,7 @@ function mountall() {
 	    break
         fi
       done
+      echo "BOOT_DISK = ${BOOT_DISK}"
       #if [ "${BOOT_DISK}" = "${LOADER_DISK}" ]; then
       #  TEXT "Failed to find boot Partition on !!!"
       #  exit 99
