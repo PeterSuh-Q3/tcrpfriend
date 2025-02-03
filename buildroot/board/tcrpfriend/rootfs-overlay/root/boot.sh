@@ -1060,7 +1060,7 @@ function mountall() {
 
     LOADER_DISK=""
     while read -r edisk; do
-        if [ $(/sbin/fdisk -l "$edisk" | grep -c "83 Linux") -eq 3 ]; then
+        if [ $(/sbin/fdisk -l "$edisk" | grep -c "83 Linux") -eq 3 ] || [ $(/sbin/fdisk -l "$edisk" | grep -c "83 Linux") -eq 1 ]; then
             LOADER_DISK=$(/sbin/blkid | grep "6234-C863" | cut -d ':' -f1 | sed 's/p\?3//g' | awk -F/ '{print $NF}' | head -n 1)
             if [ -n "$LOADER_DISK" ]; then
                 break
@@ -1098,7 +1098,7 @@ function mountall() {
         TEXT "Failed to find boot Partition on !!!"
         exit 99
       fi
-      if [ $(fdisk -l | grep "W95 Ext" | grep ${edisk} | wc -l ) -eq 1 ]; then
+      if [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l ) -eq 1 ]; then
         p1="4"
       else  
         p1="5"
