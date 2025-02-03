@@ -1089,15 +1089,16 @@ function mountall() {
     BOOT_DISK="${LOADER_DISK}"
     if [ -d /sys/block/${LOADER_DISK}/${LOADER_DISK}4 ]; then
       for edisk in $(fdisk -l | grep "Disk /dev/sd" | awk '{print $2}' | sed 's/://' ); do
-        if [ $(fdisk -l | grep "fd Linux raid autodetect" | grep ${edisk} | wc -l ) -eq 3 ] && [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l ) -eq 2 ]; then
+        if [ $(fdisk -l | grep "fd Linux raid autodetect" | grep ${edisk} | wc -l ) -eq 3 ] && [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l ) -eq 1 ]; then
             echo "This is BASIC or RAID Type Disk & Has Syno Boot Partition. $edisk"
-            BOOT_DISK=$(echo "$edisk" | cut -c 6-8)
+            BOOT_DISK=$(echo "$edisk" | cut -c 1-12 | awk -F\/ '{print $3}')
+	    break
         fi
       done
-      if [ "${BOOT_DISK}" = "${LOADER_DISK}" ]; then
-        TEXT "Failed to find boot Partition on !!!"
-        exit 99
-      fi
+      #if [ "${BOOT_DISK}" = "${LOADER_DISK}" ]; then
+      #  TEXT "Failed to find boot Partition on !!!"
+      #  exit 99
+      #fi
       if [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l ) -eq 1 ]; then
         p1="4"
       else  
