@@ -1059,9 +1059,9 @@ function setnetwork() {
 function mountall() {
 
     LOADER_DISK=""
-    while read -r edisk; do
-        if [ $(/sbin/fdisk -l "$edisk" | grep -c "83 Linux") -eq 3 ]; then
-            LOADER_DISK=$(/sbin/blkid | grep "6234-C863" | cut -d ':' -f1 | sed 's/p\?3//g' | awk -F/ '{print $NF}' | head -n 1)
+    for edisk in $(fdisk -l | grep "Disk /dev/sd" | awk '{print $2}' | sed 's/://' ); do
+	if [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l) -eq 1 ] || [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l) -eq 3 ]; then
+	    LOADER_DISK="$(/sbin/blkid | grep ${edisk} | grep "6234-C863" | cut -c 1-8 | awk -F\/ '{print $3}')"
             if [ -n "$LOADER_DISK" ]; then
                 break
             else
@@ -1069,8 +1069,8 @@ function mountall() {
                 LOADER_DISK="$(echo ${edisk} | cut -c 1-12 | awk -F\/ '{print $3}')"
                 [ -n "$LOADER_DISK" ] && break
             fi
-        fi
-    done < <(lsblk -ndo NAME | grep -v '^loop' | grep -v '^zram' | sed 's/^/\/dev\//')
+	fi
+    done
 
     if [ -z "${LOADER_DISK}" ]; then
         TEXT "Not Supported Loader BUS Type, program Exit!!!"
