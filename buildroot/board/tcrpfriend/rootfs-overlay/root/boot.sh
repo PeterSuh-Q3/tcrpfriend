@@ -1060,7 +1060,7 @@ function mountall() {
 
     LOADER_DISK=""
     while read -r edisk; do
-        if [ $(/sbin/fdisk -l "$edisk" | grep -c "83 Linux") -eq 3 ] || [ $(/sbin/fdisk -l "$edisk" | grep -c "83 Linux") -eq 1 ]; then
+        if [ $(/sbin/fdisk -l "$edisk" | grep -c "83 Linux") -eq 3 ]; then
             LOADER_DISK=$(/sbin/blkid | grep "6234-C863" | cut -d ':' -f1 | sed 's/p\?3//g' | awk -F/ '{print $NF}' | head -n 1)
             if [ -n "$LOADER_DISK" ]; then
                 break
@@ -1077,8 +1077,10 @@ function mountall() {
         exit 99
     fi
     
+    echo "LOADER_DISK = ${LOADER_DISK}"    
+    
     getBus "${LOADER_DISK}"
-    echo "LOADER_DISK = ${LOADER_DISK}"
+    
     [ "${BUS}" = "nvme" ] && LOADER_DISK="${LOADER_DISK}p"
     [ "${BUS}" = "mmc"  ] && LOADER_DISK="${LOADER_DISK}p"    
 
@@ -1089,18 +1091,16 @@ function mountall() {
     BOOT_DISK="${LOADER_DISK}"
     if [ -d /sys/block/${LOADER_DISK}/${LOADER_DISK}4 ]; then
       for edisk in $(fdisk -l | grep "Disk /dev/sd" | awk '{print $2}' | sed 's/://' ); do
-        if [ $(fdisk -l | grep "fd Linux raid autodetect" | grep ${edisk} | wc -l ) -eq 3 ] && [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l ) -eq 1 ]; then
+        if [ $(fdisk -l | grep "fd Linux raid autodetect" | grep ${edisk} | wc -l ) -eq 3 ] && [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l ) -eq 2 ]; then
             echo "This is BASIC or RAID Type Disk & Has Syno Boot Partition. $edisk"
-            BOOT_DISK=$(echo "$edisk" | cut -c 1-12 | awk -F\/ '{print $3}')
-	    break
+            BOOT_DISK=$(echo "$edisk" | cut -c 6-8)
         fi
       done
-      echo "BOOT_DISK = ${BOOT_DISK}"
-      #if [ "${BOOT_DISK}" = "${LOADER_DISK}" ]; then
-      #  TEXT "Failed to find boot Partition on !!!"
-      #  exit 99
-      #fi
-      if [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l ) -eq 1 ]; then
+      if [ "${BOOT_DISK}" = "${LOADER_DISK}" ]; then
+        TEXT "Failed to find boot Partition on !!!"
+        exit 99
+      fi
+      if [ $(fdisk -l | grep "W95 Ext" | grep ${edisk} | wc -l ) -eq 1 ]; then
         p1="4"
       else  
         p1="5"
