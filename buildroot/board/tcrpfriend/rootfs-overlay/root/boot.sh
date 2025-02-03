@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250129
+# Date : 250203
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.1t"
+BOOTVER="0.1.1u"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 
@@ -111,6 +111,7 @@ function history() {
     0.1.1r Improved getloaderdisk() processing, displayed the number of NVMe disks
     0.1.1s Add Mellanox MLX4(InfiniBand added), MLX5 modules
     0.1.1t Added platform-specific integrated config.json when patching ramdisk Added reference function 
+    0.1.1u Renewal of SinoDisk bootloader injection function
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -128,6 +129,7 @@ function showlastupdate() {
 0.1.1r Improved getloaderdisk() processing, displayed the number of NVMe disks
 0.1.1s Add Mellanox MLX4(InfiniBand added), MLX5 modules
 0.1.1t Added platform-specific integrated config.json when patching ramdisk Added reference function
+0.1.1u Renewal of SinoDisk bootloader injection function
 
 EOF
 }
