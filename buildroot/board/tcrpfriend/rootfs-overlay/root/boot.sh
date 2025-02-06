@@ -111,7 +111,7 @@ function history() {
     0.1.1r Improved getloaderdisk() processing, displayed the number of NVMe disks
     0.1.1s Add Mellanox MLX4(InfiniBand added), MLX5 modules
     0.1.1t Added platform-specific integrated config.json when patching ramdisk Added reference function 
-    0.1.1u Renewal of SinoDisk bootloader injection function
+    0.1.1u Renewal of SynoDisk bootloader injection function
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -129,7 +129,7 @@ function showlastupdate() {
 0.1.1r Improved getloaderdisk() processing, displayed the number of NVMe disks
 0.1.1s Add Mellanox MLX4(InfiniBand added), MLX5 modules
 0.1.1t Added platform-specific integrated config.json when patching ramdisk Added reference function
-0.1.1u Renewal of SinoDisk bootloader injection function
+0.1.1u Renewal of SynoDisk bootloader injection function
 
 EOF
 }
@@ -1060,6 +1060,7 @@ function setnetwork() {
 
 function mountall() {
 
+    SYNOBOOT_INJECT="NO"
     LOADER_DISK=""
     for edisk in $(fdisk -l | grep "Disk /dev/sd" | awk '{print $2}' | sed 's/://' ); do
 	if [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l) -eq 1 ] || [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l) -eq 3 ]; then
@@ -1096,6 +1097,7 @@ function mountall() {
         if [ $(fdisk -l | grep "fd Linux raid autodetect" | grep ${edisk} | wc -l ) -eq 3 ] && [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l ) -eq 2 ]; then
             echo "This is BASIC or RAID Type Disk & Has Syno Boot Partition. $edisk"
             BOOT_DISK=$(echo "$edisk" | cut -c 6-8)
+	    SYNOBOOT_INJECT="YES"
         fi
       done
       if [ "${BOOT_DISK}" = "${LOADER_DISK}" ]; then
@@ -1288,6 +1290,9 @@ function boot() {
             CMDLINE_LINE+="dom_szmax=32768 "
         fi
 
+ 	if [ "${SYNOBOOT_INJECT}" = "YES" ]; then
+            CMDLINE_LINE=$(echo "$CMDLINE_LINE" | sed -E 's/synoboot_satadom=[12]\s*//g')
+  	fi
     else
         CMDLINE_LINE=$(jq -r -e '.general .usb_line' /mnt/tcrp/user_config.json)
     fi
