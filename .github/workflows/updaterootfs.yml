@@ -10,7 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Bring over config files from redpill-load
         run: |
           mkdir /opt/config-files
@@ -63,7 +63,7 @@ jobs:
           sha256sum /opt/output/initrd-friend >> /opt/output/chksum
       - name: Upload FriendFiles-${{ steps.updaterootfs.outputs.VERSION }}
         if: success()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: FriendFiles-${{ steps.updaterootfs.outputs.VERSION }}
           path: /opt/output
