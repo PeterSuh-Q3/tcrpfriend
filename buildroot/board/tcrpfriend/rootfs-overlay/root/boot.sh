@@ -1062,28 +1062,30 @@ function setnetwork() {
 function mountall() {
 
     SYNOBOOT_INJECT="NO"
+    LOADER_BASE=""
     LOADER_DISK=""
     for edisk in $(fdisk -l | grep -e "Disk /dev/sd" -e "Disk /dev/nv" | awk '{print $2}' | sed 's/://' ); do
 	    linux_partitions=$(fdisk -l | grep "83 Linux" | grep "${edisk}" | wc -l)
 	    partition_number=$([ "$linux_partitions" -eq 1 ] && echo 4 || echo 3)
-	    LOADER_DISK=$(/sbin/blkid | grep "6234-C863" | cut -d ':' -f1 | sed "s/p\?${partition_number}//g" | awk -F/ '{print $NF}' | head -n 1)
-	    if [ -n "$LOADER_DISK" ]; then
+	    LOADER_BASE=$(/sbin/blkid | grep "6234-C863" | cut -d ':' -f1 | sed "s/p\?${partition_number}//g" | awk -F/ '{print $NF}' | head -n 1)
+	    if [ -n "$LOADER_BASE" ]; then
 	        break
 	    else
 	    # check for the other type
-	        LOADER_DISK="$(echo ${edisk} | cut -c 1-12 | awk -F\/ '{print $3}')"
-	        [ -n "$LOADER_DISK" ] && break
+	        LOADER_BASE="$(echo ${edisk} | cut -c 1-12 | awk -F\/ '{print $3}')"
+	        [ -n "$LOADER_BASE" ] && break
 	    fi
     done
 
-    if [ -z "${LOADER_DISK}" ]; then
+    if [ -z "${LOADER_BASE}" ]; then
         TEXT "Not Supported Loader BUS Type, program Exit!!!"
         exit 99
     fi
     
-    echo "LOADER_DISK = ${LOADER_DISK}"    
+    echo "LOADER_BASE = ${LOADER_BASE}"    
     
-    getBus "${LOADER_DISK}"
+    getBus "${LOADER_BASE}"
+    LOADER_DISK="${LOADER_BASE}"
     
     [ "${BUS}" = "nvme" ] && LOADER_DISK="${LOADER_DISK}p"
     [ "${BUS}" = "mmc"  ] && LOADER_DISK="${LOADER_DISK}p"    
@@ -1092,8 +1094,10 @@ function mountall() {
     [ ! -d /mnt/tcrp-p1 ] && mkdir /mnt/tcrp-p1
     [ ! -d /mnt/tcrp-p2 ] && mkdir /mnt/tcrp-p2
 
+    echo "LOADER_DISK = ${LOADER_DISK}" 
+
     BOOT_DISK="${LOADER_DISK}"
-    if [ -d "/sys/block/${LOADER_DISK}/${LOADER_DISK}*4" ]; then
+    if [ -d "/sys/block/${LOADER_BASE}/${LOADER_DISK}4" ]; then
       echo "Found Syno Boot Injected Partition !!!"
       for edisk in $(fdisk -l | grep -e "Disk /dev/sd" -e "Disk /dev/nv" | awk '{print $2}' | sed 's/://' ); do
         if [ $(/sbin/blkid | grep "1234-5678" | wc -l) -gt 0 ]; then 
