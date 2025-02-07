@@ -1063,16 +1063,16 @@ function mountall() {
     SYNOBOOT_INJECT="NO"
     LOADER_DISK=""
     for edisk in $(fdisk -l | grep -e "Disk /dev/sd" -e "Disk /dev/nv" | awk '{print $2}' | sed 's/://' ); do
-	if [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l) -eq 1 ] || [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l) -eq 3 ]; then
-	    LOADER_DISK="$(/sbin/blkid | grep ${edisk} | grep "6234-C863" | cut -c 1-8 | awk -F\/ '{print $3}')"
-            if [ -n "$LOADER_DISK" ]; then
-                break
-            else
-                # check for the other type
-                LOADER_DISK="$(echo ${edisk} | cut -c 1-12 | awk -F\/ '{print $3}')"
-                [ -n "$LOADER_DISK" ] && break
-            fi
-	fi
+	    linux_partitions=$(fdisk -l | grep "83 Linux" | grep "${edisk}" | wc -l)
+	    partition_number=$([ "$linux_partitions" -eq 1 ] && echo 4 || echo 3)
+	    LOADER_DISK=$(/sbin/blkid | grep "6234-C863" | cut -d ':' -f1 | sed "s/p\?${partition_number}//g" | awk -F/ '{print $NF}' | head -n 1)
+	    if [ -n "$LOADER_DISK" ]; then
+	        break
+	    else
+	    # check for the other type
+	        LOADER_DISK="$(echo ${edisk} | cut -c 1-12 | awk -F\/ '{print $3}')"
+	        [ -n "$LOADER_DISK" ] && break
+	    fi
     done
 
     if [ -z "${LOADER_DISK}" ]; then
@@ -1097,7 +1097,7 @@ function mountall() {
         if [ $(fdisk -l | grep "fd Linux raid autodetect" | grep ${edisk} | wc -l ) -eq 3 ] && [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l ) -eq 2 ]; then
             echo "This is BASIC or RAID Type Disk & Has Syno Boot Partition. $edisk"
             BOOT_DISK=$(echo "$edisk" | cut -c 6-8)
-	    SYNOBOOT_INJECT="YES"
+	        SYNOBOOT_INJECT="YES"
         fi
       done
       if [ "${BOOT_DISK}" = "${LOADER_DISK}" ]; then
