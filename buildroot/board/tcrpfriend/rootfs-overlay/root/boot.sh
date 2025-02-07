@@ -1093,7 +1093,7 @@ function mountall() {
     [ ! -d /mnt/tcrp-p2 ] && mkdir /mnt/tcrp-p2
 
     BOOT_DISK="${LOADER_DISK}"
-    if compgen -G "/sys/block/${LOADER_DISK}/${LOADER_DISK}*4" > /dev/null; then
+    if [ -d "/sys/block/${LOADER_DISK}/${LOADER_DISK}*4" ]; then
       echo "Found Syno Boot Injected Partition !!!"
       for edisk in $(fdisk -l | grep -e "Disk /dev/sd" -e "Disk /dev/nv" | awk '{print $2}' | sed 's/://' ); do
         if [ $(/sbin/blkid | grep "1234-5678" | wc -l) -gt 0 ]; then 
