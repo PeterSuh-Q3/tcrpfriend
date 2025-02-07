@@ -1097,7 +1097,7 @@ function mountall() {
     echo "LOADER_DISK = ${LOADER_DISK}" 
 
     BOOT_DISK="${LOADER_DISK}"
-    if [ -d "/sys/block/${LOADER_BASE}/${LOADER_DISK}4" ]; then
+    if [ -d "/sys/block/${LOADER_BASE}/${LOADER_DISK}4" ]; then
       echo "Found Syno Boot Injected Partition !!!"
       for edisk in $(fdisk -l | grep -e "Disk /dev/sd" -e "Disk /dev/nv" | awk '{print $2}' | sed 's/://' ); do
         if [ $(/sbin/blkid | grep "1234-5678" | wc -l) -gt 0 ]; then 
