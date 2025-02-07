@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250207
+# Date : 250208
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.1v"
+BOOTVER="0.1.1w"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 
@@ -113,6 +113,7 @@ function history() {
     0.1.1t Added platform-specific integrated config.json when patching ramdisk Added reference function 
     0.1.1u Renewal of SynoDisk bootloader injection function
     0.1.1v SynoDisk with Bootloader Injection Supports NVMe DISK
+    0.1.1w Adjust xTCRP mount function
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -131,6 +132,7 @@ function showlastupdate() {
 0.1.1t Added platform-specific integrated config.json when patching ramdisk Added reference function
 0.1.1u Renewal of SynoDisk bootloader injection function
 0.1.1v SynoDisk with Bootloader Injection Supports NVMe DISK
+0.1.1w Adjust xTCRP mount function
 
 EOF
 }
@@ -1153,13 +1155,13 @@ function mountall() {
 
 function mountxtcrp() {
 
-    [ ! -d /mnt/${LOADER_DISK}${p1} ] && mkdir /mnt/${LOADER_DISK}${p1}
-    [ ! -d /mnt/${LOADER_DISK}${p2} ] && mkdir /mnt/${LOADER_DISK}${p2}
-    [ ! -d /mnt/${LOADER_DISK}${p3} ] && mkdir /mnt/${LOADER_DISK}${p3}
+    [ ! -d /mnt/${LOADER_DISK}1 ] && mkdir /mnt/${LOADER_DISK}1
+    [ ! -d /mnt/${LOADER_DISK}2 ] && mkdir /mnt/${LOADER_DISK}2
+    [ ! -d /mnt/${LOADER_DISK}3 ] && mkdir /mnt/${LOADER_DISK}3
 
-    mount /dev/${LOADER_DISK}${p1} /mnt/${LOADER_DISK}${p1}
-    mount /dev/${LOADER_DISK}${p2} /mnt/${LOADER_DISK}${p2}
-    mount /dev/${LOADER_DISK}${p3} /mnt/${LOADER_DISK}${p3}
+    mount /dev/${BOOT_DISK}${p1} /mnt/${LOADER_DISK}1
+    mount /dev/${BOOT_DISK}${p2} /mnt/${LOADER_DISK}2
+    mount /dev/${LOADER_DISK}${p3} /mnt/${LOADER_DISK}3
 
 }
 
