@@ -787,14 +787,15 @@ function checkmachine() {
 # get bus of disk
 # 1 - device path
 function getBus() {
-  BUS=""
+  local bus=""
+  local device_path="$1"
   # usb/ata(sata/ide)/scsi
-  [ -z "${BUS}" ] && BUS=$(udevadm info --query property --name "${1}" 2>/dev/null | grep ID_BUS | cut -d= -f2 | sed 's/ata/sata/')
+  [ -z "${bus}" ] && bus=$(udevadm info --query property --name "${device_path}" 2>/dev/null | grep ID_BUS | cut -d= -f2 | sed 's/ata/sata/')
   # usb/sata(sata/ide)/nvme
-  [ -z "${BUS}" ] && BUS=$(lsblk -dpno KNAME,TRAN 2>/dev/null | grep "${1} " | awk '{print $2}') #Spaces are intentional
+  [ -z "${bus}" ] && bus=$(lsblk -dpno KNAME,TRAN 2>/dev/null | grep "${device_path} " | awk '{print $2}') #Spaces are intentional
   # usb/scsi(sata/ide)/virtio(scsi/virtio)/mmc/nvme
-  [ -z "${BUS}" ] && BUS=$(lsblk -dpno KNAME,SUBSYSTEMS 2>/dev/null | grep "${1} " | awk -F':' '{print $(NF-1)}' | sed 's/_host//') #Spaces are intentional
-  echo "${BUS}"
+  [ -z "${bus}" ] && bus=$(lsblk -dpno KNAME,SUBSYSTEMS 2>/dev/null | grep "${device_path} " | awk -F':' '{print $(NF-1)}' | sed 's/_host//') #Spaces are intentional
+  echo "${bus}"
 }
 
 function getusb() {
@@ -1084,8 +1085,8 @@ function mountall() {
     fi
     
     echo "LOADER_BASE = ${LOADER_BASE}"    
-    
-    getBus "${LOADER_BASE}"
+
+    BUS=$(getBus "${LOADER_BASE}")
     LOADER_DISK="${LOADER_BASE}"
     
     [ "${BUS}" = "nvme" ] && LOADER_DISK="${LOADER_DISK}p"
@@ -1111,6 +1112,10 @@ function mountall() {
       if [ "${BOOT_DISK}" = "${LOADER_DISK}" ]; then
         TEXT "Failed to find boot Partition on !!!"
         exit 99
+      else
+        BOOTBUS=$(getBus "${BOOT_DISK}")
+        [ "${BOOTBUS}" = "nvme" ] && BOOT_DISK="${BOOT_DISK}p"
+        [ "${BOOTBUS}" = "mmc"  ] && BOOT_DISK="${BOOT_DISK}p"    
       fi
       if [ $(fdisk -l | grep "W95 Ext" | grep ${edisk} | wc -l ) -eq 1 ]; then
         p1="4"
