@@ -1092,7 +1092,7 @@ function mountall() {
     [ ! -d /mnt/tcrp-p2 ] && mkdir /mnt/tcrp-p2
 
     BOOT_DISK="${LOADER_DISK}"
-    if [ -d /sys/block/${LOADER_DISK}/${LOADER_DISK}4 ]; then
+    if compgen -G "/sys/block/${LOADER_DISK}/${LOADER_DISK}*4" > /dev/null; then
       for edisk in $(fdisk -l | grep -e "Disk /dev/sd" -e "Disk /dev/nv" | awk '{print $2}' | sed 's/://' ); do
         if [ $(fdisk -l | grep "fd Linux raid autodetect" | grep ${edisk} | wc -l ) -eq 3 ] && [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l ) -eq 2 ]; then
             echo "This is BASIC or RAID Type Disk & Has Syno Boot Partition. $edisk"
