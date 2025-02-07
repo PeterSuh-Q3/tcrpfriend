@@ -1093,11 +1093,13 @@ function mountall() {
 
     BOOT_DISK="${LOADER_DISK}"
     if compgen -G "/sys/block/${LOADER_DISK}/${LOADER_DISK}*4" > /dev/null; then
+      echo "Found Syno Boot Injected Partition !!!"
       for edisk in $(fdisk -l | grep -e "Disk /dev/sd" -e "Disk /dev/nv" | awk '{print $2}' | sed 's/://' ); do
         if [ $(/sbin/blkid | grep "1234-5678" | wc -l) -gt 0 ]; then 
             echo "This is BASIC or RAID Type Disk & Has Syno Boot Partition. $edisk"
             BOOT_DISK=$(/sbin/blkid | grep "6234-C863" | cut -d ':' -f1 | sed "s/p\?5//g" | awk -F/ '{print $NF}' | head -n 1)
-	          SYNOBOOT_INJECT="YES"
+	    SYNOBOOT_INJECT="YES"
+            break
         fi
       done
       if [ "${BOOT_DISK}" = "${LOADER_DISK}" ]; then
