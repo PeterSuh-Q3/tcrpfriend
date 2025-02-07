@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250207
+# Date : 250203
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.1v"
+BOOTVER="0.1.1u"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 
@@ -112,7 +112,6 @@ function history() {
     0.1.1s Add Mellanox MLX4(InfiniBand added), MLX5 modules
     0.1.1t Added platform-specific integrated config.json when patching ramdisk Added reference function 
     0.1.1u Renewal of SynoDisk bootloader injection function
-    0.1.1v SynoDisk with Bootloader Injection Supports NVMe DISK
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -128,9 +127,9 @@ function showlastupdate() {
       ( usage : ./boot.sh update v0.1.1j | ./boot.sh autoupdate off | ./boot.sh autoupdate on )
 0.1.1o Added features for distribution of xTCRP (Tinycore Linux stripped down version)
 0.1.1r Improved getloaderdisk() processing, displayed the number of NVMe disks
+0.1.1s Add Mellanox MLX4(InfiniBand added), MLX5 modules
 0.1.1t Added platform-specific integrated config.json when patching ramdisk Added reference function
 0.1.1u Renewal of SynoDisk bootloader injection function
-0.1.1v SynoDisk with Bootloader Injection Supports NVMe DISK
 
 EOF
 }
@@ -787,15 +786,14 @@ function checkmachine() {
 # get bus of disk
 # 1 - device path
 function getBus() {
-  local bus=""
-  local device_path="$1"
+  BUS=""
   # usb/ata(sata/ide)/scsi
-  [ -z "${bus}" ] && bus=$(udevadm info --query property --name "${device_path}" 2>/dev/null | grep ID_BUS | cut -d= -f2 | sed 's/ata/sata/')
+  [ -z "${BUS}" ] && BUS=$(udevadm info --query property --name "${1}" 2>/dev/null | grep ID_BUS | cut -d= -f2 | sed 's/ata/sata/')
   # usb/sata(sata/ide)/nvme
-  [ -z "${bus}" ] && bus=$(lsblk -dpno KNAME,TRAN 2>/dev/null | grep "${device_path} " | awk '{print $2}') #Spaces are intentional
+  [ -z "${BUS}" ] && BUS=$(lsblk -dpno KNAME,TRAN 2>/dev/null | grep "${1} " | awk '{print $2}') #Spaces are intentional
   # usb/scsi(sata/ide)/virtio(scsi/virtio)/mmc/nvme
-  [ -z "${bus}" ] && bus=$(lsblk -dpno KNAME,SUBSYSTEMS 2>/dev/null | grep "${device_path} " | awk -F':' '{print $(NF-1)}' | sed 's/_host//') #Spaces are intentional
-  echo "${bus}"
+  [ -z "${BUS}" ] && BUS=$(lsblk -dpno KNAME,SUBSYSTEMS 2>/dev/null | grep "${1} " | awk -F':' '{print $(NF-1)}' | sed 's/_host//') #Spaces are intentional
+  echo "${BUS}"
 }
 
 function getusb() {
@@ -1063,31 +1061,28 @@ function setnetwork() {
 function mountall() {
 
     SYNOBOOT_INJECT="NO"
-    LOADER_BASE=""
     LOADER_DISK=""
-    for edisk in $(fdisk -l | grep -e "Disk /dev/sd" -e "Disk /dev/nv" | awk '{print $2}' | sed 's/://' ); do
-	    linux_partitions=$(fdisk -l | grep "83 Linux" | grep "${edisk}" | wc -l)
-        [ $linux_partitions -eq 2 ] && continue
-        partition_number=$((linux_partitions == 1 ? 4 : 3))
-	    LOADER_BASE=$(/sbin/blkid | grep "6234-C863" | cut -d ':' -f1 | sed "s/p\?${partition_number}//g" | awk -F/ '{print $NF}' | head -n 1)
-	    if [ -n "$LOADER_BASE" ]; then
-	        break
-	    else
-	    # check for the other type
-	        LOADER_BASE="$(echo ${edisk} | cut -c 1-12 | awk -F\/ '{print $3}')"
-	        [ -n "$LOADER_BASE" ] && break
-	    fi
+    for edisk in $(fdisk -l | grep "Disk /dev/sd" | awk '{print $2}' | sed 's/://' ); do
+	if [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l) -eq 1 ] || [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l) -eq 3 ]; then
+	    LOADER_DISK="$(/sbin/blkid | grep ${edisk} | grep "6234-C863" | cut -c 1-8 | awk -F\/ '{print $3}')"
+            if [ -n "$LOADER_DISK" ]; then
+                break
+            else
+                # check for the other type
+                LOADER_DISK="$(echo ${edisk} | cut -c 1-12 | awk -F\/ '{print $3}')"
+                [ -n "$LOADER_DISK" ] && break
+            fi
+	fi
     done
 
-    if [ -z "${LOADER_BASE}" ]; then
+    if [ -z "${LOADER_DISK}" ]; then
         TEXT "Not Supported Loader BUS Type, program Exit!!!"
         exit 99
     fi
     
-    echo "LOADER_BASE = ${LOADER_BASE}"    
-
-    BUS=$(getBus "${LOADER_BASE}")
-    LOADER_DISK="${LOADER_BASE}"
+    echo "LOADER_DISK = ${LOADER_DISK}"    
+    
+    getBus "${LOADER_DISK}"
     
     [ "${BUS}" = "nvme" ] && LOADER_DISK="${LOADER_DISK}p"
     [ "${BUS}" = "mmc"  ] && LOADER_DISK="${LOADER_DISK}p"    
@@ -1096,26 +1091,18 @@ function mountall() {
     [ ! -d /mnt/tcrp-p1 ] && mkdir /mnt/tcrp-p1
     [ ! -d /mnt/tcrp-p2 ] && mkdir /mnt/tcrp-p2
 
-    echo "LOADER_DISK = ${LOADER_DISK}" 
-
     BOOT_DISK="${LOADER_DISK}"
-    if [ -d "/sys/block/${LOADER_BASE}/${LOADER_DISK}4" ]; then
-      echo "Found Syno Boot Injected Partition !!!"
-      for edisk in $(fdisk -l | grep -e "Disk /dev/sd" -e "Disk /dev/nv" | awk '{print $2}' | sed 's/://' ); do
-        if [ $(/sbin/blkid | grep "1234-5678" | wc -l) -gt 0 ]; then 
+    if [ -d /sys/block/${LOADER_DISK}/${LOADER_DISK}4 ]; then
+      for edisk in $(fdisk -l | grep "Disk /dev/sd" | awk '{print $2}' | sed 's/://' ); do
+        if [ $(fdisk -l | grep "fd Linux raid autodetect" | grep ${edisk} | wc -l ) -eq 3 ] && [ $(fdisk -l | grep "83 Linux" | grep ${edisk} | wc -l ) -eq 2 ]; then
             echo "This is BASIC or RAID Type Disk & Has Syno Boot Partition. $edisk"
-            BOOT_DISK=$(/sbin/blkid | grep "1234-5678" | cut -d ':' -f1 | sed "s/p\?5//g" | awk -F/ '{print $NF}' | head -n 1)
-	        SYNOBOOT_INJECT="YES"
-            break
+            BOOT_DISK=$(echo "$edisk" | cut -c 6-8)
+	    SYNOBOOT_INJECT="YES"
         fi
       done
       if [ "${BOOT_DISK}" = "${LOADER_DISK}" ]; then
         TEXT "Failed to find boot Partition on !!!"
         exit 99
-      else
-        BOOTBUS=$(getBus "${BOOT_DISK}")
-        [ "${BOOTBUS}" = "nvme" ] && BOOT_DISK="${BOOT_DISK}p"
-        [ "${BOOTBUS}" = "mmc"  ] && BOOT_DISK="${BOOT_DISK}p"    
       fi
       if [ $(fdisk -l | grep "W95 Ext" | grep ${edisk} | wc -l ) -eq 1 ]; then
         p1="4"
