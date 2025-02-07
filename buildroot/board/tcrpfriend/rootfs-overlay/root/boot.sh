@@ -1102,8 +1102,8 @@ function mountall() {
       for edisk in $(fdisk -l | grep -e "Disk /dev/sd" -e "Disk /dev/nv" | awk '{print $2}' | sed 's/://' ); do
         if [ $(/sbin/blkid | grep "1234-5678" | wc -l) -gt 0 ]; then 
             echo "This is BASIC or RAID Type Disk & Has Syno Boot Partition. $edisk"
-            BOOT_DISK=$(/sbin/blkid | grep "6234-C863" | cut -d ':' -f1 | sed "s/p\?5//g" | awk -F/ '{print $NF}' | head -n 1)
-	    SYNOBOOT_INJECT="YES"
+            BOOT_DISK=$(/sbin/blkid | grep "1234-5678" | cut -d ':' -f1 | sed "s/p\?5//g" | awk -F/ '{print $NF}' | head -n 1)
+	        SYNOBOOT_INJECT="YES"
             break
         fi
       done
