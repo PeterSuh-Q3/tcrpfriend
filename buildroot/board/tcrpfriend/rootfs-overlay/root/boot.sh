@@ -1066,7 +1066,8 @@ function mountall() {
     LOADER_DISK=""
     for edisk in $(fdisk -l | grep -e "Disk /dev/sd" -e "Disk /dev/nv" | awk '{print $2}' | sed 's/://' ); do
 	    linux_partitions=$(fdisk -l | grep "83 Linux" | grep "${edisk}" | wc -l)
-	    partition_number=$([ "$linux_partitions" -eq 1 ] && echo 4 || echo 3)
+        [ $linux_partitions -eq 2 ] && continue
+        partition_number=$((linux_partitions == 1 ? 4 : 3))
 	    LOADER_BASE=$(/sbin/blkid | grep "6234-C863" | cut -d ':' -f1 | sed "s/p\?${partition_number}//g" | awk -F/ '{print $NF}' | head -n 1)
 	    if [ -n "$LOADER_BASE" ]; then
 	        break
