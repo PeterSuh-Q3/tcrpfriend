@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250203
+# Date : 250207
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.1u"
+BOOTVER="0.1.1v"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 
@@ -112,6 +112,7 @@ function history() {
     0.1.1s Add Mellanox MLX4(InfiniBand added), MLX5 modules
     0.1.1t Added platform-specific integrated config.json when patching ramdisk Added reference function 
     0.1.1u Renewal of SynoDisk bootloader injection function
+    0.1.1v SynoDisk with Bootloader Injection Supports NVMe DISK
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -127,9 +128,9 @@ function showlastupdate() {
       ( usage : ./boot.sh update v0.1.1j | ./boot.sh autoupdate off | ./boot.sh autoupdate on )
 0.1.1o Added features for distribution of xTCRP (Tinycore Linux stripped down version)
 0.1.1r Improved getloaderdisk() processing, displayed the number of NVMe disks
-0.1.1s Add Mellanox MLX4(InfiniBand added), MLX5 modules
 0.1.1t Added platform-specific integrated config.json when patching ramdisk Added reference function
 0.1.1u Renewal of SynoDisk bootloader injection function
+0.1.1v SynoDisk with Bootloader Injection Supports NVMe DISK
 
 EOF
 }
