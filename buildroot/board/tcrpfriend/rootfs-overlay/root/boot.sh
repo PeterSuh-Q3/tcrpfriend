@@ -1066,7 +1066,7 @@ function getloadertype() {
 
     # Get list of UUIDs
     uuids=$(lsblk -nro UUID)
-
+    
     # Group UUIDs by disk
     declare -A disk_uuids
     while read -r uuid; do
@@ -1080,6 +1080,7 @@ function getloadertype() {
     uuid1="1234-5678"
     uuid2="6234-C863"
     LDTYPE=""
+    BOOT_DISK=""
     
     found_uuid1=false
     found_uuid2=false
@@ -1088,11 +1089,16 @@ function getloadertype() {
     for disk in "${!disk_uuids[@]}"; do
         if [[ "${disk_uuids[$disk]}" == *"$uuid1"* && "${disk_uuids[$disk]}" == *"$uuid2"* ]]; then
             same_disk=true
+            BOOT_DISK=${disk#/dev/}
             break
         elif [[ "${disk_uuids[$disk]}" == *"$uuid1"* ]]; then
             found_uuid1=true
+            BOOT_DISK=${disk#/dev/}
         elif [[ "${disk_uuids[$disk]}" == *"$uuid2"* ]]; then
             found_uuid2=true
+            if [ -z "$BOOT_DISK" ]; then
+                BOOT_DISK=${disk#/dev/}
+            fi
         fi
     done
     
@@ -1104,14 +1110,14 @@ function getloadertype() {
         LDTYPE="NORMAL"
     fi
     
-    # Print result
+    # Print results
     echo "LDTYPE=$LDTYPE"
+    echo "BOOT_DISK=$BOOT_DISK"
 
 }
 
 function mountall() {
 
-    SYNOBOOT_INJECT="NO"
     LOADER_BASE=""
     LOADER_DISK=""
 
@@ -1154,22 +1160,13 @@ function mountall() {
 
     echo "LOADER_DISK = ${LOADER_DISK}" 
 
-    BOOT_DISK="${LOADER_DISK}"
     if [ "${LDTYPE}" = "SHR" ] || [ "${LDTYPE}" = "BASIC" ]; then
       echo "Found Syno Boot Injected Partition !!!"
-      for edisk in $(fdisk -l | grep -e "Disk /dev/sd" -e "Disk /dev/nv" | awk '{print $2}' | sed 's/://' ); do
-        echo "This is BASIC or RAID Type Disk & Has Syno Boot Partition. $edisk"
-        case "${LDTYPE}" in
-          BASIC)  BOOT_DISK=$(/sbin/blkid | grep "1234-5678" | cut -d ':' -f1 | sed "s/p\?5//g" | awk -F/ '{print $NF}' | head -n 1) ;;
-          SHR)    BOOT_DISK=$(/sbin/blkid | grep "1234-5678" | cut -d ':' -f1 | sed "s/p\?4//g" | awk -F/ '{print $NF}' | head -n 1) ;;
-        esac
-        SYNOBOOT_INJECT="YES"
-        break
-      done
+      W95BOOT_DISK="${BOOT_DISK}"
       BOOTBUS=$(getBus "${BOOT_DISK}")
       [ "${BOOTBUS}" = "nvme" ] && BOOT_DISK="${BOOT_DISK}p"
       [ "${BOOTBUS}" = "mmc"  ] && BOOT_DISK="${BOOT_DISK}p"    
-      if [ $(fdisk -l | grep "W95 Ext" | grep ${edisk} | wc -l ) -eq 1 ]; then
+      if [ $(fdisk -l | grep "W95 Ext" | grep "/dev/${W95BOOT_DISK}" | wc -l ) -eq 1 ]; then
         p1="4"
         p2="6"
         p3="7"
@@ -1347,7 +1344,6 @@ function boot() {
     fi
 
     if [ "${BUS}" = "sata" ]; then
-
         CMDLINE_LINE=$(jq -r -e '.general .sata_line' /mnt/tcrp/user_config.json)
         # Check dom size and set max size accordingly
         # 2024.03.17 Force the dom_szmax limit of the injected bootloader to be 16GB
@@ -1357,9 +1353,9 @@ function boot() {
             CMDLINE_LINE+="dom_szmax=32768 "
         fi
 
- 	if [ "${SYNOBOOT_INJECT}" = "YES" ]; then
+ 	    if [ "${LDTYPE}" = "SHR" ] || [ "${LDTYPE}" = "BASIC" ]; then
             CMDLINE_LINE=$(echo "$CMDLINE_LINE" | sed -E 's/synoboot_satadom=[12]\s*//g')
-  	fi
+  	    fi
     else
         CMDLINE_LINE=$(jq -r -e '.general .usb_line' /mnt/tcrp/user_config.json)
     fi
