@@ -1155,7 +1155,7 @@ function mountall() {
     echo "LOADER_DISK = ${LOADER_DISK}" 
 
     BOOT_DISK="${LOADER_DISK}"
-    if $found_uuid1; then
+    if [ "${LDTYPE}" = "SHR" ] || [ "${LDTYPE}" = "BASIC" ]; then
       echo "Found Syno Boot Injected Partition !!!"
       for edisk in $(fdisk -l | grep -e "Disk /dev/sd" -e "Disk /dev/nv" | awk '{print $2}' | sed 's/://' ); do
         echo "This is BASIC or RAID Type Disk & Has Syno Boot Partition. $edisk"
