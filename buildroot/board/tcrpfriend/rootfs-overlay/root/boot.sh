@@ -1113,7 +1113,7 @@ function mountall() {
               1) BOOT_DISK=$(/sbin/blkid | grep "1234-5678" | cut -d ':' -f1 | sed "s/p\?5//g" | awk -F/ '{print $NF}' | head -n 1) ;;
               2) BOOT_DISK=$(/sbin/blkid | grep "1234-5678" | cut -d ':' -f1 | sed "s/p\?4//g" | awk -F/ '{print $NF}' | head -n 1) ;;
             esac
-	          SYNOBOOT_INJECT="YES"
+	        SYNOBOOT_INJECT="YES"
             break
         fi
       done
@@ -1138,7 +1138,7 @@ function mountall() {
     [ "$(mount | grep ${BOOT_DISK}${p1} | wc -l)" = "0" ] && mount /dev/${BOOT_DISK}${p1} /mnt/tcrp-p1
     case $linux_partitions in
       1) [ "$(mount | grep ${BOOT_DISK}${p2} | wc -l)" = "0" ] && mount /dev/${BOOT_DISK}${p2} /mnt/tcrp-p2 ;;
-      2) mount --bind /mnt/tcrp-p1/2nd /mnt/tcrp-p2 ;;
+      2) mount --bind /mnt/tcrp/2nd /mnt/tcrp-p2 ;;
     esac
     [ "$(mount | grep ${LOADER_DISK}${p3} | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p3} /mnt/tcrp
 
@@ -1209,9 +1209,9 @@ function readconfig() {
         mac2="$(jq -r -e '.extra_cmdline .mac2' $userconfigfile)"
         mac3="$(jq -r -e '.extra_cmdline .mac3' $userconfigfile)"
         mac4="$(jq -r -e '.extra_cmdline .mac4' $userconfigfile)"
-	mac5="$(jq -r -e '.extra_cmdline .mac5' $userconfigfile)"
- 	mac6="$(jq -r -e '.extra_cmdline .mac6' $userconfigfile)"
-  	mac7="$(jq -r -e '.extra_cmdline .mac7' $userconfigfile)"
+    	mac5="$(jq -r -e '.extra_cmdline .mac5' $userconfigfile)"
+     	mac6="$(jq -r -e '.extra_cmdline .mac6' $userconfigfile)"
+      	mac7="$(jq -r -e '.extra_cmdline .mac7' $userconfigfile)"
         mac8="$(jq -r -e '.extra_cmdline .mac8' $userconfigfile)"
         staticboot="$(jq -r -e '.general .staticboot' $userconfigfile)"
         dmpm="$(jq -r -e '.general.devmod' $userconfigfile)"
@@ -1220,8 +1220,8 @@ function readconfig() {
         tz=$(echo $ucode | cut -c 4-)
 
         usrdisks=$(jq -r -e '.general.diskcount' "$userconfigfile")
-	chkdisk="false"
-	chkdisk=$(jq -r -e '.general.check_diskcnt' "$userconfigfile")
+    	chkdisk="false"
+    	chkdisk=$(jq -r -e '.general.check_diskcnt' "$userconfigfile")
 
         export LANG=${ucode}.UTF-8
         export LC_ALL=${ucode}.UTF-8
