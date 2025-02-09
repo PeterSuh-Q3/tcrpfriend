@@ -1062,18 +1062,69 @@ function setnetwork() {
     fi
 }
 
+function getloadertype() {
+
+    # Get list of UUIDs
+    uuids=$(lsblk -nro UUID)
+
+    # Group UUIDs by disk
+    declare -A disk_uuids
+    while read -r uuid; do
+        if [ -n "$uuid" ]; then
+            disk=$(lsblk -nro PKNAME,UUID | grep "$uuid" | awk '{print $1}')
+            disk_uuids[$disk]+="$uuid "
+        fi
+    done <<< "$uuids"
+    
+    # Search for UUIDs and set LDTYPE
+    uuid1="1234-5678"
+    uuid2="6234-C863"
+    LDTYPE=""
+    
+    found_uuid1=false
+    found_uuid2=false
+    same_disk=false
+    
+    for disk in "${!disk_uuids[@]}"; do
+        if [[ "${disk_uuids[$disk]}" == *"$uuid1"* && "${disk_uuids[$disk]}" == *"$uuid2"* ]]; then
+            same_disk=true
+            break
+        elif [[ "${disk_uuids[$disk]}" == *"$uuid1"* ]]; then
+            found_uuid1=true
+        elif [[ "${disk_uuids[$disk]}" == *"$uuid2"* ]]; then
+            found_uuid2=true
+        fi
+    done
+    
+    if $same_disk; then
+        LDTYPE="SHR"
+    elif $found_uuid1 && $found_uuid2; then
+        LDTYPE="BASIC"
+    elif ! $found_uuid1 && $found_uuid2; then
+        LDTYPE="NORMAL"
+    fi
+    
+    # Print result
+    echo "LDTYPE=$LDTYPE"
+
+}
+
 function mountall() {
 
     SYNOBOOT_INJECT="NO"
     LOADER_BASE=""
     LOADER_DISK=""
+
+    getloadertype
+    
     for edisk in $(fdisk -l | grep -e "Disk /dev/sd" -e "Disk /dev/nv" | awk '{print $2}' | sed 's/://' ); do
-	      linux_partitions=$(fdisk -l | grep "83 Linux" | grep "${edisk}" | wc -l)
-        case $linux_partitions in
-          1) partition_number=4 ;;
-          2) partition_number=7 ;;
-          *) partition_number=3 ;;
+	      
+        case "${LDTYPE}" in
+          BASIC)  partition_number=4 ;;
+          SHR)    partition_number=7 ;;
+          NORMAL) partition_number=3 ;;
         esac
+        
         LOADER_BASE=$(/sbin/blkid | grep "6234-C863" | cut -d ':' -f1 | sed "s/p\?${partition_number}//g" | awk -F/ '{print $NF}' | head -n 1)
         if [ -n "$LOADER_BASE" ]; then
             break
@@ -1104,13 +1155,13 @@ function mountall() {
     echo "LOADER_DISK = ${LOADER_DISK}" 
 
     BOOT_DISK="${LOADER_DISK}"
-    if [ $(/sbin/blkid | grep "1234-5678" | wc -l) -gt 0 ]; then 
+    if $found_uuid1; then
       echo "Found Syno Boot Injected Partition !!!"
       for edisk in $(fdisk -l | grep -e "Disk /dev/sd" -e "Disk /dev/nv" | awk '{print $2}' | sed 's/://' ); do
         echo "This is BASIC or RAID Type Disk & Has Syno Boot Partition. $edisk"
-        case $linux_partitions in
-        1) BOOT_DISK=$(/sbin/blkid | grep "1234-5678" | cut -d ':' -f1 | sed "s/p\?5//g" | awk -F/ '{print $NF}' | head -n 1) ;;
-        2) BOOT_DISK=$(/sbin/blkid | grep "1234-5678" | cut -d ':' -f1 | sed "s/p\?4//g" | awk -F/ '{print $NF}' | head -n 1) ;;
+        case "${LDTYPE}" in
+          BASIC)  BOOT_DISK=$(/sbin/blkid | grep "1234-5678" | cut -d ':' -f1 | sed "s/p\?5//g" | awk -F/ '{print $NF}' | head -n 1) ;;
+          SHR)    BOOT_DISK=$(/sbin/blkid | grep "1234-5678" | cut -d ':' -f1 | sed "s/p\?4//g" | awk -F/ '{print $NF}' | head -n 1) ;;
         esac
         SYNOBOOT_INJECT="YES"
         break
