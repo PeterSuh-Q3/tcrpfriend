@@ -1135,12 +1135,12 @@ function mountall() {
       p3="3"
     fi
 
+    [ "$(mount | grep ${LOADER_DISK}${p3} | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p3} /mnt/tcrp
     [ "$(mount | grep ${BOOT_DISK}${p1} | wc -l)" = "0" ] && mount /dev/${BOOT_DISK}${p1} /mnt/tcrp-p1
     case $linux_partitions in
       1) [ "$(mount | grep ${BOOT_DISK}${p2} | wc -l)" = "0" ] && mount /dev/${BOOT_DISK}${p2} /mnt/tcrp-p2 ;;
       2) mount --bind /mnt/tcrp/2nd /mnt/tcrp-p2 ;;
     esac
-    [ "$(mount | grep ${LOADER_DISK}${p3} | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p3} /mnt/tcrp
 
     if [ "$(mount | grep /mnt/tcrp-p1 | wc -l)" = "0" ]; then
         echo "Failed mount /dev/${BOOT_DISK}${p1} to /mnt/tcrp-p1, stopping boot process"
