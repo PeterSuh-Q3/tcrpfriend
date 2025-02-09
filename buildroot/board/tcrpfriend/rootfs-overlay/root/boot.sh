@@ -1071,7 +1071,7 @@ function mountall() {
 	      linux_partitions=$(fdisk -l | grep "83 Linux" | grep "${edisk}" | wc -l)
         case $linux_partitions in
           1) partition_number=4 ;;
-          2) partition_number=6 ;;
+          2) partition_number=7 ;;
           *) partition_number=3 ;;
         esac
         LOADER_BASE=$(/sbin/blkid | grep "6234-C863" | cut -d ':' -f1 | sed "s/p\?${partition_number}//g" | awk -F/ '{print $NF}' | head -n 1)
@@ -1104,26 +1104,24 @@ function mountall() {
     echo "LOADER_DISK = ${LOADER_DISK}" 
 
     BOOT_DISK="${LOADER_DISK}"
-    if [ -d "/sys/block/${LOADER_BASE}/${LOADER_DISK}4" ]; then
+    if [ $(/sbin/blkid | grep "1234-5678" | wc -l) -gt 0 ]; then 
       echo "Found Syno Boot Injected Partition !!!"
       for edisk in $(fdisk -l | grep -e "Disk /dev/sd" -e "Disk /dev/nv" | awk '{print $2}' | sed 's/://' ); do
-        if [ $(/sbin/blkid | grep "1234-5678" | wc -l) -gt 0 ]; then 
-            echo "This is BASIC or RAID Type Disk & Has Syno Boot Partition. $edisk"
-            case $linux_partitions in
-              1) BOOT_DISK=$(/sbin/blkid | grep "1234-5678" | cut -d ':' -f1 | sed "s/p\?5//g" | awk -F/ '{print $NF}' | head -n 1) ;;
-              2) BOOT_DISK=$(/sbin/blkid | grep "1234-5678" | cut -d ':' -f1 | sed "s/p\?4//g" | awk -F/ '{print $NF}' | head -n 1) ;;
-            esac
-	        SYNOBOOT_INJECT="YES"
-            break
-        fi
+        echo "This is BASIC or RAID Type Disk & Has Syno Boot Partition. $edisk"
+        case $linux_partitions in
+        1) BOOT_DISK=$(/sbin/blkid | grep "1234-5678" | cut -d ':' -f1 | sed "s/p\?5//g" | awk -F/ '{print $NF}' | head -n 1) ;;
+        2) BOOT_DISK=$(/sbin/blkid | grep "1234-5678" | cut -d ':' -f1 | sed "s/p\?4//g" | awk -F/ '{print $NF}' | head -n 1) ;;
+        esac
+        SYNOBOOT_INJECT="YES"
+        break
       done
       BOOTBUS=$(getBus "${BOOT_DISK}")
       [ "${BOOTBUS}" = "nvme" ] && BOOT_DISK="${BOOT_DISK}p"
       [ "${BOOTBUS}" = "mmc"  ] && BOOT_DISK="${BOOT_DISK}p"    
       if [ $(fdisk -l | grep "W95 Ext" | grep ${edisk} | wc -l ) -eq 1 ]; then
         p1="4"
-        p2="5"
-        p3="6"
+        p2="6"
+        p3="7"
       else  
         p1="5"
         p2="6"
@@ -1137,10 +1135,12 @@ function mountall() {
 
     [ "$(mount | grep ${LOADER_DISK}${p3} | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p3} /mnt/tcrp
     [ "$(mount | grep ${BOOT_DISK}${p1} | wc -l)" = "0" ] && mount /dev/${BOOT_DISK}${p1} /mnt/tcrp-p1
-    case $linux_partitions in
-      1) [ "$(mount | grep ${BOOT_DISK}${p2} | wc -l)" = "0" ] && mount /dev/${BOOT_DISK}${p2} /mnt/tcrp-p2 ;;
-      2) mount --bind /mnt/tcrp/2nd /mnt/tcrp-p2 ;;
-    esac
+    [ "$(mount | grep ${BOOT_DISK}${p2} | wc -l)" = "0" ] && mount /dev/${BOOT_DISK}${p2} /mnt/tcrp-p2 
+
+    if [ "$(mount | grep /mnt/tcrp | wc -l)" = "0" ]; then
+        echo "Failed mount /dev/${LOADER_DISK}${p3} to /mnt/tcrp, stopping boot process"
+        exit 99
+    fi
 
     if [ "$(mount | grep /mnt/tcrp-p1 | wc -l)" = "0" ]; then
         echo "Failed mount /dev/${BOOT_DISK}${p1} to /mnt/tcrp-p1, stopping boot process"
@@ -1149,11 +1149,6 @@ function mountall() {
 
     if [ "$(mount | grep /mnt/tcrp-p2 | wc -l)" = "0" ]; then
         echo "Failed mount /dev/${BOOT_DISK}${p2} to /mnt/tcrp-p2, stopping boot process"
-        exit 99
-    fi
-
-    if [ "$(mount | grep /mnt/tcrp | wc -l)" = "0" ]; then
-        echo "Failed mount /dev/${LOADER_DISK}${p3} to /mnt/tcrp, stopping boot process"
         exit 99
     fi
 
