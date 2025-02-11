@@ -1082,80 +1082,46 @@ function getloadertype() {
     uuid1="1234-5678"
     uuid2="6234-C863"
     LDTYPE=""
-    BOOT_DISK=""
+    LOADER_DISK=""
     
     found_uuid1=false
     found_uuid2=false
-    same_disk=false
     
     for disk in "${!disk_uuids[@]}"; do
-        if [[ "${disk_uuids[$disk]}" == *"$uuid1"* && "${disk_uuids[$disk]}" == *"$uuid2"* ]]; then
-            same_disk=true
-            BOOT_DISK=${disk#/dev/}
-            break
-        elif [[ "${disk_uuids[$disk]}" == *"$uuid1"* ]]; then
+        if [[ "${disk_uuids[$disk]}" == *"$uuid1"* ]]; then
             found_uuid1=true
-            BOOT_DISK=${disk#/dev/}
         elif [[ "${disk_uuids[$disk]}" == *"$uuid2"* ]]; then
             found_uuid2=true
-            if [ -z "$BOOT_DISK" ]; then
-                BOOT_DISK=${disk#/dev/}
-            fi
+            LOADER_DISK=${disk#/dev/}
         fi
     done
     
-    if $same_disk; then
+    if $found_uuid1 && $found_uuid2; then
         LDTYPE="SHR"
-    elif $found_uuid1 && $found_uuid2; then
-        LDTYPE="BASIC"
     elif ! $found_uuid1 && $found_uuid2; then
         LDTYPE="NORMAL"
     fi
     
     # Print results
     echo "LDTYPE=$LDTYPE"
-    echo "BOOT_DISK=$BOOT_DISK"
+    echo "LOADER_DISK=$LOADER_DISK"
 
 }
 
 function mountall() {
 
-    LOADER_BASE=""
-    LOADER_DISK=""
-
+    # get SHR or NORMAL
     getloadertype
-    
-    for edisk in $(fdisk -l | grep -e "Disk /dev/sd" -e "Disk /dev/nv" | awk '{print $2}' | sed 's/://' ); do
-	      
-        case "${LDTYPE}" in
-          BASIC)  partition_number=4 ;;
-          SHR)    partition_number=7 ;;
-          NORMAL) partition_number=3 ;;
-        esac
-        
-        LOADER_BASE=$(/sbin/blkid | grep "6234-C863" | cut -d ':' -f1 | sed "s/p\?${partition_number}//g" | awk -F/ '{print $NF}' | head -n 1)
-        if [ -n "$LOADER_BASE" ]; then
-            break
-        else
-            # check for the other type
-            LOADER_BASE="$(echo ${edisk} | cut -c 1-12 | awk -F\/ '{print $3}')"
-            [ -n "$LOADER_BASE" ] && break
-        fi
-    done
+    echo "LOADER_DISK = ${LOADER_DISK}"    
 
-    if [ -z "${LOADER_BASE}" ]; then
+    BUS=$(getBus "${LOADER_DISK}")
+    if [ -z "${LOADER_DISK}" ]; then
         TEXT "Not Supported Loader BUS Type, program Exit!!!"
         exit 99
     fi
     
-    echo "LOADER_BASE = ${LOADER_BASE}"    
-
-    BUS=$(getBus "${LOADER_BASE}")
-    
-    [ "${BUS}" = "nvme" ] && LOADER_BASE="${LOADER_BASE}p"
-    [ "${BUS}" = "mmc"  ] && LOADER_BASE="${LOADER_BASE}p"    
-    
-    LOADER_DISK="${LOADER_BASE}"
+    [ "${BUS}" = "nvme" ] && LOADER_DISK="${LOADER_DISK}p"
+    [ "${BUS}" = "mmc"  ] && LOADER_DISK="${LOADER_DISK}p"    
 
     [ ! -d /mnt/tcrp ] && mkdir /mnt/tcrp
     [ ! -d /mnt/tcrp-p1 ] && mkdir /mnt/tcrp-p1
@@ -1163,43 +1129,33 @@ function mountall() {
 
     echo "LOADER_DISK = ${LOADER_DISK}" 
 
-    if [ "${LDTYPE}" = "SHR" ] || [ "${LDTYPE}" = "BASIC" ]; then
+    if [ "${LDTYPE}" = "SHR" ]; then
       echo "Found Syno Boot Injected Partition !!!"
-      W95BOOT_DISK="${BOOT_DISK}"
-      BOOTBUS=$(getBus "${BOOT_DISK}")
-      [ "${BOOTBUS}" = "nvme" ] && BOOT_DISK="${BOOT_DISK}p"
-      [ "${BOOTBUS}" = "mmc"  ] && BOOT_DISK="${BOOT_DISK}p"    
-      if [ $(fdisk -l | grep "W95 Ext" | grep "/dev/${W95BOOT_DISK}" | wc -l ) -eq 1 ]; then
-        p1="4"
-        p2="6"
-        p3="7"
-      else  
-        p1="5"
-        p2="6"
-        p3="4"
-      fi  
+      p1="4"
+      p2="6"
+      p3="7"
     else
       p1="1"
       p2="2"
       p3="3"
     fi
 
+    [ "$(mount | grep ${LOADER_DISK}${p1} | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p1} /mnt/tcrp-p1
+    [ "$(mount | grep ${LOADER_DISK}${p2} | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p2} /mnt/tcrp-p2 
     [ "$(mount | grep ${LOADER_DISK}${p3} | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p3} /mnt/tcrp
-    [ "$(mount | grep ${BOOT_DISK}${p1} | wc -l)" = "0" ] && mount /dev/${BOOT_DISK}${p1} /mnt/tcrp-p1
-    [ "$(mount | grep ${BOOT_DISK}${p2} | wc -l)" = "0" ] && mount /dev/${BOOT_DISK}${p2} /mnt/tcrp-p2 
-
-    if [ "$(mount | grep /mnt/tcrp | wc -l)" = "0" ]; then
-        echo "Failed mount /dev/${LOADER_DISK}${p3} to /mnt/tcrp, stopping boot process"
-        exit 99
-    fi
 
     if [ "$(mount | grep /mnt/tcrp-p1 | wc -l)" = "0" ]; then
-        echo "Failed mount /dev/${BOOT_DISK}${p1} to /mnt/tcrp-p1, stopping boot process"
+        echo "Failed mount /dev/${LOADER_DISK}${p1} to /mnt/tcrp-p1, stopping boot process"
         exit 99
     fi
 
     if [ "$(mount | grep /mnt/tcrp-p2 | wc -l)" = "0" ]; then
-        echo "Failed mount /dev/${BOOT_DISK}${p2} to /mnt/tcrp-p2, stopping boot process"
+        echo "Failed mount /dev/${LOADER_DISK}${p2} to /mnt/tcrp-p2, stopping boot process"
+        exit 99
+    fi
+
+    if [ "$(mount | grep /mnt/tcrp | wc -l)" = "0" ]; then
+        echo "Failed mount /dev/${LOADER_DISK}${p3} to /mnt/tcrp, stopping boot process"
         exit 99
     fi
 
@@ -1211,8 +1167,8 @@ function mountxtcrp() {
     [ ! -d /mnt/${LOADER_DISK}2 ] && mkdir /mnt/${LOADER_DISK}2
     [ ! -d /mnt/${LOADER_DISK}3 ] && mkdir /mnt/${LOADER_DISK}3
 
-    mount /dev/${BOOT_DISK}${p1} /mnt/${LOADER_DISK}1
-    mount /dev/${BOOT_DISK}${p2} /mnt/${LOADER_DISK}2
+    mount /dev/${LOADER_DISK}${p1} /mnt/${LOADER_DISK}1
+    mount /dev/${LOADER_DISK}${p2} /mnt/${LOADER_DISK}2
     mount /dev/${LOADER_DISK}${p3} /mnt/${LOADER_DISK}3
 
 }
@@ -1350,15 +1306,10 @@ function boot() {
         CMDLINE_LINE=$(jq -r -e '.general .sata_line' /mnt/tcrp/user_config.json)
         # Check dom size and set max size accordingly
         # 2024.03.17 Force the dom_szmax limit of the injected bootloader to be 16GB
-        if [ "${BOOT_DISK}" = "${LOADER_DISK}" ]; then
-            CMDLINE_LINE+="dom_szmax=$(fdisk -l /dev/${LOADER_DISK} | head -1 | awk -F: '{print $2}' | awk '{ print $1*1024}') "
-        else
-            CMDLINE_LINE+="dom_szmax=32768 "
-        fi
-
- 	    if [ "${LDTYPE}" = "SHR" ] || [ "${LDTYPE}" = "BASIC" ]; then
+        CMDLINE_LINE+="dom_szmax=$(fdisk -l /dev/${LOADER_DISK} | head -1 | awk -F: '{print $2}' | awk '{ print $1*1024}') "
+    	if [ "${LDTYPE}" = "SHR" ]; then
             CMDLINE_LINE=$(echo "$CMDLINE_LINE" | sed -E 's/synoboot_satadom=[12]\s*//g')
-  	    fi
+  	fi
     else
         CMDLINE_LINE=$(jq -r -e '.general .usb_line' /mnt/tcrp/user_config.json)
     fi
