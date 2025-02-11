@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250209
+# Date : 250211
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.1w"
+BOOTVER="0.1.1x"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 
@@ -114,6 +114,7 @@ function history() {
     0.1.1u Renewal of SynoDisk bootloader injection function
     0.1.1v SynoDisk with Bootloader Injection Supports NVMe DISK
     0.1.1w SynoDisk with Bootloader Injection Supports Single SHR DISK
+    0.1.1x NVMe/MMC type bootloader bug fix of mountall()
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -133,6 +134,7 @@ function showlastupdate() {
 0.1.1u Renewal of SynoDisk bootloader injection function
 0.1.1v SynoDisk with Bootloader Injection Supports NVMe DISK
 0.1.1w SynoDisk with Bootloader Injection Supports Single SHR DISK
+0.1.1x NVMe/MMC type bootloader bug fix of mountall()
 
 EOF
 }
@@ -1149,10 +1151,11 @@ function mountall() {
     echo "LOADER_BASE = ${LOADER_BASE}"    
 
     BUS=$(getBus "${LOADER_BASE}")
-    LOADER_DISK="${LOADER_BASE}"
     
-    [ "${BUS}" = "nvme" ] && LOADER_DISK="${LOADER_DISK}p"
-    [ "${BUS}" = "mmc"  ] && LOADER_DISK="${LOADER_DISK}p"    
+    [ "${BUS}" = "nvme" ] && LOADER_BASE="${LOADER_BASE}p"
+    [ "${BUS}" = "mmc"  ] && LOADER_BASE="${LOADER_BASE}p"    
+    
+    LOADER_DISK="${LOADER_BASE}"
 
     [ ! -d /mnt/tcrp ] && mkdir /mnt/tcrp
     [ ! -d /mnt/tcrp-p1 ] && mkdir /mnt/tcrp-p1
