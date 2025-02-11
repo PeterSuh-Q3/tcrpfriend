@@ -9,7 +9,7 @@
 source menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.1x"
+BOOTVER="0.1.1y"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 
@@ -115,6 +115,7 @@ function history() {
     0.1.1v SynoDisk with Bootloader Injection Supports NVMe DISK
     0.1.1w SynoDisk with Bootloader Injection Supports Single SHR DISK
     0.1.1x NVMe/MMC type bootloader bug fix of mountall()
+    0.1.1y SynoDisk with bootloader injection uses UUID 8765-4321 instead of 6234-C863
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -131,10 +132,9 @@ function showlastupdate() {
 0.1.1o Added features for distribution of xTCRP (Tinycore Linux stripped down version)
 0.1.1r Improved getloaderdisk() processing, displayed the number of NVMe disks
 0.1.1t Added platform-specific integrated config.json when patching ramdisk Added reference function
-0.1.1u Renewal of SynoDisk bootloader injection function
-0.1.1v SynoDisk with Bootloader Injection Supports NVMe DISK
 0.1.1w SynoDisk with Bootloader Injection Supports Single SHR DISK
 0.1.1x NVMe/MMC type bootloader bug fix of mountall()
+0.1.1y SynoDisk with bootloader injection uses UUID 8765-4321 instead of 6234-C863
 
 EOF
 }
@@ -799,7 +799,7 @@ function getBus() {
   [ -z "${bus}" ] && bus=$(lsblk -dpno KNAME,TRAN 2>/dev/null | grep "${device_path} " | awk '{print $2}') #Spaces are intentional
   # usb/scsi(sata/ide)/virtio(scsi/virtio)/mmc/nvme
   [ -z "${bus}" ] && bus=$(lsblk -dpno KNAME,SUBSYSTEMS 2>/dev/null | grep "${device_path} " | awk -F':' '{print $(NF-1)}' | sed 's/_host//') #Spaces are intentional
-  echo "${bus}"
+  echo -e "${bus}"
 }
 
 function getusb() {
@@ -1080,12 +1080,14 @@ function getloadertype() {
     
     # Search for UUIDs and set LDTYPE
     uuid1="1234-5678"
-    uuid2="6234-C863"
+    uuid2="8765-4321"
+    uuid3="6234-C863"
     LDTYPE=""
     LOADER_DISK=""
     
     found_uuid1=false
     found_uuid2=false
+    found_uuid3=false
     
     for disk in "${!disk_uuids[@]}"; do
         if [[ "${disk_uuids[$disk]}" == *"$uuid1"* ]]; then
@@ -1094,14 +1096,22 @@ function getloadertype() {
  
         if [[ "${disk_uuids[$disk]}" == *"$uuid2"* ]]; then
             found_uuid2=true
-            LOADER_DISK=${disk#/dev/}
+            LOADER_DISK=${disk#/dev/}	    
+        fi
+
+        if [[ "${disk_uuids[$disk]}" == *"$uuid3"* ]]; then
+            found_uuid3=true
+            LOADER_DISK=${disk#/dev/}	    
         fi
     done
     
-    if $found_uuid1 && $found_uuid2; then
+    if $found_uuid1 && $found_uuid2 && ! $found_uuid3; then
         LDTYPE="SHR"
-    elif ! $found_uuid1 && $found_uuid2; then
+    elif ! $found_uuid1 && ! $found_uuid2 && $found_uuid3; then
         LDTYPE="NORMAL"
+    else 
+        echo "There is two more Bootloader or Invalid Loader Type, Exit !!!"
+	exit 99
     fi
     
     # Print results
@@ -1117,6 +1127,7 @@ function mountall() {
     echo "LOADER_DISK = ${LOADER_DISK}"    
 
     BUS=$(getBus "${LOADER_DISK}")
+    echo $SHR_EX_TEXT
     if [ -z "${LOADER_DISK}" ]; then
         TEXT "Not Supported Loader BUS Type, program Exit!!!"
         exit 99
@@ -1133,10 +1144,12 @@ function mountall() {
 
     if [ "${LDTYPE}" = "SHR" ]; then
       echo "Found Syno Boot Injected Partition !!!"
+      SHR_EX_TEXT=" (SynoBoot Injected to Synodisk)"
       p1="4"
       p2="6"
       p3="7"
     else
+      SHR_EX_TEXT=""
       p1="1"
       p2="2"
       p3="3"
