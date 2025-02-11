@@ -1090,7 +1090,9 @@ function getloadertype() {
     for disk in "${!disk_uuids[@]}"; do
         if [[ "${disk_uuids[$disk]}" == *"$uuid1"* ]]; then
             found_uuid1=true
-        elif [[ "${disk_uuids[$disk]}" == *"$uuid2"* ]]; then
+	fi
+ 
+        if [[ "${disk_uuids[$disk]}" == *"$uuid2"* ]]; then
             found_uuid2=true
             LOADER_DISK=${disk#/dev/}
         fi
