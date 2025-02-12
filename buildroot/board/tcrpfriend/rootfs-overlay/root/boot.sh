@@ -1067,7 +1067,6 @@ function setnetwork() {
 }
 
 function getloadertype() {
-
     # Get list of UUIDs
     uuids=$(lsblk -nro UUID)
     
@@ -1087,39 +1086,39 @@ function getloadertype() {
     LDTYPE=""
     LOADER_DISK=""
     
+    # Search for uuid3 first
+    for disk in "${!disk_uuids[@]}"; do
+        if [[ "${disk_uuids[$disk]}" == *"$uuid3"* ]]; then
+            LDTYPE="NORMAL"
+            LOADER_DISK=${disk#/dev/}
+            echo "LDTYPE=$LDTYPE"
+            echo "LOADER_DISK=$LOADER_DISK"
+            return
+        fi
+    done
+    
+    # If uuid3 is not found, search for uuid1 and uuid2
     found_uuid1=false
     found_uuid2=false
-    found_uuid3=false
     
     for disk in "${!disk_uuids[@]}"; do
         if [[ "${disk_uuids[$disk]}" == *"$uuid1"* ]]; then
             found_uuid1=true
-	fi
- 
+        fi
         if [[ "${disk_uuids[$disk]}" == *"$uuid2"* ]]; then
             found_uuid2=true
-            LOADER_DISK=${disk#/dev/}	    
-        fi
-
-        if [[ "${disk_uuids[$disk]}" == *"$uuid3"* ]]; then
-            found_uuid3=true
-            LOADER_DISK=${disk#/dev/}	    
+            LOADER_DISK=${disk#/dev/}
         fi
     done
     
-    if $found_uuid1 && $found_uuid2 && ! $found_uuid3; then
+    if $found_uuid1 && $found_uuid2; then
         LDTYPE="SHR"
-    elif ! $found_uuid1 && ! $found_uuid2 && $found_uuid3; then
-        LDTYPE="NORMAL"
+        echo "LDTYPE=$LDTYPE"
+        echo "LOADER_DISK=$LOADER_DISK"
     else 
-        echo "There is two more Bootloader or Invalid Loader Type, Exit !!!"
-	exit 99
+        echo "Invalid Loader Type. Exiting!"
+        exit 99
     fi
-    
-    # Print results
-    echo "LDTYPE=$LDTYPE"
-    echo "LOADER_DISK=$LOADER_DISK"
-
 }
 
 function mountall() {
