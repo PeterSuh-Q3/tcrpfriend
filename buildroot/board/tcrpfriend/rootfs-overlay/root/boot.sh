@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250211
+# Date : 250212
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.1y"
+BOOTVER="0.1.1z"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 
@@ -116,6 +116,7 @@ function history() {
     0.1.1w SynoDisk with Bootloader Injection Supports Single SHR DISK
     0.1.1x NVMe/MMC type bootloader bug fix of mountall()
     0.1.1y SynoDisk with bootloader injection uses UUID 8765-4321 instead of 6234-C863
+    0.1.1z Bugfix bad array subscript of getloadertype()
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -135,6 +136,7 @@ function showlastupdate() {
 0.1.1w SynoDisk with Bootloader Injection Supports Single SHR DISK
 0.1.1x NVMe/MMC type bootloader bug fix of mountall()
 0.1.1y SynoDisk with bootloader injection uses UUID 8765-4321 instead of 6234-C863
+0.1.1z Bugfix bad array subscript of getloadertype()
 
 EOF
 }
@@ -1074,7 +1076,7 @@ function getloadertype() {
     while read -r uuid; do
         if [ -n "$uuid" ]; then
             disk=$(lsblk -nro PKNAME,UUID | grep "$uuid" | awk '{print $1}')
-            disk_uuids[$disk]+="$uuid "
+            disk_uuids["$disk"]+="$uuid "
         fi
     done <<< "$uuids"
     
@@ -1144,7 +1146,7 @@ function mountall() {
 
     if [ "${LDTYPE}" = "SHR" ]; then
       echo "Found Syno Boot Injected Partition !!!"
-      SHR_EX_TEXT=" (SynoBoot Injected to Synodisk)"
+      SHR_EX_TEXT=" (SynoBoot Injected into Synodisk)"
       p1="4"
       p2="6"
       p3="7"
