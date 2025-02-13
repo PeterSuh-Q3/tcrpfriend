@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250212
+# Date : 250213
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.1z"
+BOOTVER="0.1.2a"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 
@@ -116,7 +116,8 @@ function history() {
     0.1.1w SynoDisk with Bootloader Injection Supports Single SHR DISK
     0.1.1x NVMe/MMC type bootloader bug fix of mountall()
     0.1.1y SynoDisk with bootloader injection uses UUID 8765-4321 instead of 6234-C863
-    0.1.1z Bugfix bad array subscript of getloadertype()
+    0.1.1z Changed to load the default loader first rather than the one injected into Synodisk
+    0.1.2a Bugfix bad array subscript of getloadertype()
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -133,10 +134,9 @@ function showlastupdate() {
 0.1.1o Added features for distribution of xTCRP (Tinycore Linux stripped down version)
 0.1.1r Improved getloaderdisk() processing, displayed the number of NVMe disks
 0.1.1t Added platform-specific integrated config.json when patching ramdisk Added reference function
-0.1.1w SynoDisk with Bootloader Injection Supports Single SHR DISK
-0.1.1x NVMe/MMC type bootloader bug fix of mountall()
 0.1.1y SynoDisk with bootloader injection uses UUID 8765-4321 instead of 6234-C863
-0.1.1z Bugfix bad array subscript of getloadertype()
+0.1.1z Changed to load the default loader first rather than the one injected into Synodisk
+0.1.2a Bugfix bad array subscript of getloadertype()
 
 EOF
 }
@@ -1072,10 +1072,12 @@ function getloadertype() {
     
     # Group UUIDs by disk
     declare -A disk_uuids
-    while read -r uuid; do
+    while IFS= read -r uuid; do
         if [ -n "$uuid" ]; then
             disk=$(lsblk -nro PKNAME,UUID | grep "$uuid" | awk '{print $1}')
-            disk_uuids["$disk"]+="$uuid "
+            if [ -n "$disk" ]; then
+                disk_uuids["$disk"]+="$uuid "
+            fi
         fi
     done <<< "$uuids"
     
