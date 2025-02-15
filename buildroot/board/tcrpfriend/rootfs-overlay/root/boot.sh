@@ -1068,7 +1068,7 @@ function setnetwork() {
 
 function getloadertype() {
     # Define the UUID pattern
-    uuid_pattern='^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+    uuid_pattern='^[0-9a-fA-F]{4,8}(-[0-9a-fA-F]{4}){0,4}$'
     
     # Get the list of UUIDs
     uuids=$(lsblk -nro UUID)
