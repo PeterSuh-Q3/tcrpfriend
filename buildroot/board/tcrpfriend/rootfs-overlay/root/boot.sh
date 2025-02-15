@@ -1067,19 +1067,28 @@ function setnetwork() {
 }
 
 function getloadertype() {
-    # Get list of UUIDs
+    # Define the UUID pattern
+    uuid_pattern='^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+    
+    # Get the list of UUIDs
     uuids=$(lsblk -nro UUID)
     
     # Group UUIDs by disk
     declare -A disk_uuids
     while IFS= read -r uuid; do
-        if [ -n "$uuid" ]; then
+        # Process only if UUID is not empty and matches the valid format
+        if [[ -n "$uuid" && "$uuid" =~ $uuid_pattern ]]; then
             disk=$(lsblk -nro PKNAME,UUID | grep "$uuid" | awk '{print $1}')
-            if [ -n "$disk" ]; then
+            if [[ -n "$disk" ]]; then
                 disk_uuids["$disk"]+="$uuid "
             fi
         fi
     done <<< "$uuids"
+    
+    # Print the results
+    for disk in "${!disk_uuids[@]}"; do
+        echo "Disk: $disk, UUIDs: ${disk_uuids[$disk]}"
+    done
     
     # Search for UUIDs and set LDTYPE
     uuid1="1234-5678"
