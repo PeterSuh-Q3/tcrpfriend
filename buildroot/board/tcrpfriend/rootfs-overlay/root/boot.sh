@@ -714,12 +714,10 @@ function countdown() {
         printf '\e[35m%s\e[0m\r' "Press <ctrl-c> to stop boot $1 in : $timeout"
         read -t 1 -n 1 key
         case $key in
-            #'g') # j key
-            #    echo "g key pressed! Prepare Entering Getty Console!"
-            #    sleep 3
-            #    initialize
-            #    boot gettycon
-            #    ;;
+            'c') # j key
+                echo "c key pressed! End script now!"
+                exit 99 
+                ;;
             'r') # r key
                 TEXT "r key pressed! Entering Menu for Reset DSM Password!"
                 pip install passlib >/dev/null 2>/dev/null
