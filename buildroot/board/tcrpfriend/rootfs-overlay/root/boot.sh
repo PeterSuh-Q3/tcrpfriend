@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250213
+# Date : 250218
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.2a"
+BOOTVER="0.1.2b"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 
@@ -118,6 +118,7 @@ function history() {
     0.1.1y SynoDisk with bootloader injection uses UUID 8765-4321 instead of 6234-C863
     0.1.1z Changed to load the default loader first rather than the one injected into Synodisk
     0.1.2a Bugfix bad array subscript of getloadertype()
+    0.1.2b Update config for DS3615xs (bromolow)
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -137,6 +138,7 @@ function showlastupdate() {
 0.1.1y SynoDisk with bootloader injection uses UUID 8765-4321 instead of 6234-C863
 0.1.1z Changed to load the default loader first rather than the one injected into Synodisk
 0.1.2a Bugfix bad array subscript of getloadertype()
+0.1.2b Update config for DS3615xs (bromolow)
 
 EOF
 }
