@@ -1193,7 +1193,7 @@ function mountxtcrp() {
 
     [ "$(mount | grep /mnt/${LOADER_DISK}1 | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p1} /mnt/${LOADER_DISK}1
     [ "$(mount | grep /mnt/${LOADER_DISK}2 | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p2} /mnt/${LOADER_DISK}2
-    [ "$(mount | grep /mnt/${LOADER_DISK}2 | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p3} /mnt/${LOADER_DISK}3
+    [ "$(mount | grep /mnt/${LOADER_DISK}3 | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p3} /mnt/${LOADER_DISK}3
 
 }
 
@@ -1501,7 +1501,7 @@ function initialize() {
 	    sleep 3
             IP="$(ip route show dev eth0 2>/dev/null | grep default | grep metric | awk '{print $7}')"
             IP=$(echo -n "${IP}" | tr '\n' '\b')
-            echo -e "To use the xTCRP web console, access \e[33${IP}:7681\e[0m with a web browser."
+            echo -e "To use the xTCRP web console, access \e[33m${IP}:7681\e[0m with a web browser."
             su - tc
             exit 0
         fi
