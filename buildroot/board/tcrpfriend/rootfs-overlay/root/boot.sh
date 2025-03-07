@@ -1481,7 +1481,6 @@ function initialize() {
     if [ -z "$1" ]; then 
         if grep -q "IWANTTOCONFIGURE" /proc/cmdline; then
             echo "Proceed with configuring the selected loader..."
-	    getip
             tar -xzvf /mnt/tcrp/xtcrp.tgz -C /home/tc 2>&1 >/dev/null
     	    chown -R tc:tc /home/tc
 	 
@@ -1499,6 +1498,9 @@ function initialize() {
 	    echo -e "To check system information and boot entries using the \e[33mmonitor.sh\e[0m command." 
             echo -e "To check the settings and installed addons using the \e[35mntp.sh\e[0m command." 
             echo ""
+	    sleep 3
+            IP="$(ip route show dev eth0 2>/dev/null | grep default | grep metric | awk '{print $7}')"
+            IP=$(echo -n "${IP}" | tr '\n' '\b')
             echo -e "To use the xTCRP web console, access \e[33${IP}:7681\e[0m with a web browser."
             su - tc
             exit 0
