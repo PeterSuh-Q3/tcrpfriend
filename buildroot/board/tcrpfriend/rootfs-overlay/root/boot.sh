@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250218
+# Date : 250307
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.2b"
+BOOTVER="0.1.2c"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 
@@ -119,6 +119,7 @@ function history() {
     0.1.1z Changed to load the default loader first rather than the one injected into Synodisk
     0.1.2a Bugfix bad array subscript of getloadertype()
     0.1.2b Update config for DS3615xs (bromolow)
+    0.1.2c Fix xTCRP web console URL guidance and error message output issues
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -128,17 +129,13 @@ EOF
 function showlastupdate() {
     cat <<EOF
 0.1.0  friend kernel version up from 5.15.26 to 6.4.16
-0.1.1g Sort netif order by bus-id order (Synology netif sorting method)
-0.1.1k Enable mmc (SD Card) recognition
 0.1.1l Added manual update feature to specified version, added disable/enable automatic update feature
       ( usage : ./boot.sh update v0.1.1j | ./boot.sh autoupdate off | ./boot.sh autoupdate on )
 0.1.1o Added features for distribution of xTCRP (Tinycore Linux stripped down version)
 0.1.1r Improved getloaderdisk() processing, displayed the number of NVMe disks
-0.1.1t Added platform-specific integrated config.json when patching ramdisk Added reference function
 0.1.1y SynoDisk with bootloader injection uses UUID 8765-4321 instead of 6234-C863
 0.1.1z Changed to load the default loader first rather than the one injected into Synodisk
-0.1.2a Bugfix bad array subscript of getloadertype()
-0.1.2b Update config for DS3615xs (bromolow)
+0.1.2c Fix xTCRP web console URL guidance and error message output issues
 
 EOF
 }
@@ -1102,8 +1099,8 @@ function getloadertype() {
         if [[ "${disk_uuids[$disk]}" == *"$uuid3"* ]]; then
             LDTYPE="NORMAL"
             LOADER_DISK=${disk#/dev/}
-            echo "LDTYPE=$LDTYPE"
-            echo "LOADER_DISK=$LOADER_DISK"
+            #echo "LDTYPE=$LDTYPE"
+            #echo "LOADER_DISK=$LOADER_DISK"
             return
         fi
     done
@@ -1124,8 +1121,8 @@ function getloadertype() {
     
     if $found_uuid1 && $found_uuid2; then
         LDTYPE="SHR"
-        echo "LDTYPE=$LDTYPE"
-        echo "LOADER_DISK=$LOADER_DISK"
+        #echo "LDTYPE=$LDTYPE"
+        #echo "LOADER_DISK=$LOADER_DISK"
     else 
         echo "Invalid Loader Type. Exiting!"
         exit 99
@@ -1136,7 +1133,7 @@ function mountall() {
 
     # get SHR or NORMAL
     getloadertype
-    echo "LOADER_DISK = ${LOADER_DISK}"    
+    #echo "LOADER_DISK = ${LOADER_DISK}"
 
     BUS=$(getBus "${LOADER_DISK}")
 
@@ -1152,7 +1149,7 @@ function mountall() {
     [ ! -d /mnt/tcrp-p1 ] && mkdir /mnt/tcrp-p1
     [ ! -d /mnt/tcrp-p2 ] && mkdir /mnt/tcrp-p2
 
-    echo "LOADER_DISK = ${LOADER_DISK}" 
+    echo "LOADER_DISK = ${LOADER_DISK}"
 
     if [ "${LDTYPE}" = "SHR" ]; then
       echo "Found Syno Boot Injected Partition !!!"
@@ -1194,9 +1191,9 @@ function mountxtcrp() {
     [ ! -d /mnt/${LOADER_DISK}2 ] && mkdir /mnt/${LOADER_DISK}2
     [ ! -d /mnt/${LOADER_DISK}3 ] && mkdir /mnt/${LOADER_DISK}3
 
-    mount /dev/${LOADER_DISK}${p1} /mnt/${LOADER_DISK}1
-    mount /dev/${LOADER_DISK}${p2} /mnt/${LOADER_DISK}2
-    mount /dev/${LOADER_DISK}${p3} /mnt/${LOADER_DISK}3
+    [ "$(mount | grep /mnt/${LOADER_DISK}1 | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p1} /mnt/${LOADER_DISK}1
+    [ "$(mount | grep /mnt/${LOADER_DISK}2 | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p2} /mnt/${LOADER_DISK}2
+    [ "$(mount | grep /mnt/${LOADER_DISK}2 | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p3} /mnt/${LOADER_DISK}3
 
 }
 
@@ -1484,15 +1481,16 @@ function initialize() {
     if [ -z "$1" ]; then 
         if grep -q "IWANTTOCONFIGURE" /proc/cmdline; then
             echo "Proceed with configuring the selected loader..."
+	    getip
             tar -xzvf /mnt/tcrp/xtcrp.tgz -C /home/tc 2>&1 >/dev/null
     	    chown -R tc:tc /home/tc
 	 
 	    touch /etc/init.d/tc-functions
             mkdir -p /etc/sysconfig
 	    touch /etc/sysconfig/tcuser
-	    ln -s /home/tc/menu.sh /usr/bin/menu.sh
-            ln -s /home/tc/monitor.sh /usr/bin/monitor.sh
-            ln -s /home/tc/ntp.sh /usr/bin/ntp.sh
+	    [ ! -f /usr/bin/menu.sh ] && ln -s /home/tc/menu.sh /usr/bin/menu.sh
+            [ ! -f /usr/bin/monitor.sh ] && ln -s /home/tc/monitor.sh /usr/bin/monitor.sh
+            [ ! -f /usr/bin/ntp.sh ] && ln -s /home/tc/ntp.sh /usr/bin/ntp.sh
 
             [ ! -d /mnt/tcrp/auxfiles ] && mkdir -p /mnt/tcrp/auxfiles
     	    echo "export PATH=$PATH:/sbin" >> /home/tc/.profile
@@ -1500,6 +1498,8 @@ function initialize() {
             echo -e "Configure the loader using the \e[32mmenu.sh\e[0m command." 
 	    echo -e "To check system information and boot entries using the \e[33mmonitor.sh\e[0m command." 
             echo -e "To check the settings and installed addons using the \e[35mntp.sh\e[0m command." 
+            echo ""
+            echo -e "To use the xTCRP web console, access \e[33${IP}:7681\e[0m with a web browser."
             su - tc
             exit 0
         fi
