@@ -1,15 +1,15 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250307
+# Date : 250308
 # User Variables :
 ###############################################################################
 
 ##### INCLUDES #####################################################################################################
-source menufunc.h
+source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.2c"
+BOOTVER="0.1.2d"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 
@@ -120,6 +120,7 @@ function history() {
     0.1.2a Bugfix bad array subscript of getloadertype()
     0.1.2b Update config for DS3615xs (bromolow)
     0.1.2c Fix xTCRP web console URL guidance and error message output issues
+    0.1.2d Change the path referenced by source to /root/menufunc.h
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -136,6 +137,7 @@ function showlastupdate() {
 0.1.1y SynoDisk with bootloader injection uses UUID 8765-4321 instead of 6234-C863
 0.1.1z Changed to load the default loader first rather than the one injected into Synodisk
 0.1.2c Fix xTCRP web console URL guidance and error message output issues
+0.1.2d Change the path referenced by source to /root/menufunc.h
 
 EOF
 }
