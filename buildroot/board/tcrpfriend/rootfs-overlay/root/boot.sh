@@ -12,6 +12,7 @@ source /root/menufunc.h
 BOOTVER="0.1.2d"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
+userconfigfile=/mnt/tcrp/user_config.json
 
 # Apply i18n
 export TEXTDOMAINDIR="/root/lang"
@@ -1201,8 +1202,6 @@ function mountxtcrp() {
 
 function readconfig() {
 
-    userconfigfile=/mnt/tcrp/user_config.json
-
     if [ -f $userconfigfile ]; then
         model="$(jq -r -e '.general .model' $userconfigfile)"
         if [ -z "$model" ]; then
@@ -1419,7 +1418,7 @@ function boot() {
 
         if [ "${INTERNET}" = "ON" ]; then
             [ -n "${IP}" ] && URL="http://${IP}:5000" || URL="http://find.synology.com/"
-            python functions.py makeqr -d "${URL}" -l "br" -o "/tmp/qrcode.png"
+            python /root/functions.py makeqr -d "${URL}" -l "br" -o "/tmp/qrcode.png"
             #curl -skL https://quickchart.io/qr?text="${URL}" -o /tmp/qrcode.png
             [ -f "/tmp/qrcode.png" ] && echo | fbv -acufi "/tmp/qrcode.png" >/dev/null 2>/dev/null || true
         fi    
