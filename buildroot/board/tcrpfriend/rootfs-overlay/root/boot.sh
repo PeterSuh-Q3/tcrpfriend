@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250308
+# Date : 250313
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.2d"
+BOOTVER="0.1.2e"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -122,6 +122,7 @@ function history() {
     0.1.2b Update config for DS3615xs (bromolow)
     0.1.2c Fix xTCRP web console URL guidance and error message output issues
     0.1.2d Change the path referenced by source to /root/menufunc.h
+	0.1.2e Fix boot failure error when bootloader has more than 4 partitions
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -139,6 +140,7 @@ function showlastupdate() {
 0.1.1z Changed to load the default loader first rather than the one injected into Synodisk
 0.1.2c Fix xTCRP web console URL guidance and error message output issues
 0.1.2d Change the path referenced by source to /root/menufunc.h
+0.1.2e Fix boot failure error when bootloader has more than 4 partitions
 
 EOF
 }
@@ -209,7 +211,7 @@ function changeautoupdate {
 
 function upgradefriend() {
 
-    if [ -d /sys/block/${LOADER_DISK}/${LOADER_DISK}4 ]; then
+    if [ "${LDTYPE}" = "SHR" ]; then
       chgpart="-p1"
     else
       chgpart="" 
@@ -264,7 +266,7 @@ function upgrademan() {
       exit 99
     fi
 
-    if [ -d /sys/block/${LOADER_DISK}/${LOADER_DISK}4 ]; then
+    if [ "${LDTYPE}" = "SHR" ]; then
       chgpart="-p1"
     else
       chgpart="" 
@@ -278,8 +280,8 @@ function upgrademan() {
             echo -en "\r$(msgwarning "$(TEXT "TCRP Friend auto update enabled")")\n"	
         fi
 
-	FRIENDVERSION="$1"
-	msgwarning "Found target version, bringing over new friend version : $FRIENDVERSION \n"
+		FRIENDVERSION="$1"
+		msgwarning "Found target version, bringing over new friend version : $FRIENDVERSION \n"
 
         echo -n $(TEXT "Checking for version $FRIENDVERSION friend -> ")
         URL=$(curl --connect-timeout 15 -s --insecure -L https://api.github.com/repos/PeterSuh-Q3/tcrpfriend/releases/tags/"${FRIENDVERSION}" | jq -r -e .assets[].browser_download_url | grep chksum)
