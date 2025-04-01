@@ -15,6 +15,7 @@ on:
         description: 'board'
         required: true
         default: 'tcrpfriend'
+
 jobs:
   build:
     runs-on: ubuntu-latest
