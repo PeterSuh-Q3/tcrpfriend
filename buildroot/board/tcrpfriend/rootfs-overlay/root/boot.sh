@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250313
+# Date : 250401
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.2e"
+BOOTVER="0.1.3a"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -122,7 +122,8 @@ function history() {
     0.1.2b Update config for DS3615xs (bromolow)
     0.1.2c Fix xTCRP web console URL guidance and error message output issues
     0.1.2d Change the path referenced by source to /root/menufunc.h
-	0.1.2e Fix boot failure error when bootloader has more than 4 partitions
+    0.1.2e Fix boot failure error when bootloader has more than 4 partitions
+    0.1.3a friend kernel version up from 6.4.16 to 6.6.x (expecting mmc module improvements)
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -141,6 +142,7 @@ function showlastupdate() {
 0.1.2c Fix xTCRP web console URL guidance and error message output issues
 0.1.2d Change the path referenced by source to /root/menufunc.h
 0.1.2e Fix boot failure error when bootloader has more than 4 partitions
+0.1.3a friend kernel version up from 6.4.16 to 6.6.x (expecting mmc module improvements)
 
 EOF
 }
