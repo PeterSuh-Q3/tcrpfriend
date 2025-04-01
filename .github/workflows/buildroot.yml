@@ -35,8 +35,8 @@ jobs:
           sudo apt-get install -y libelf-dev locales busybox dialog curl xz-utils cpio sed cmake
           sudo apt-get install -y libnsl || sudo apt-get install -y libnsl-dev
           sudo apt install libcrypt1 libcrypt-dev
-          sudo dpkg --add-architecture i386
-          sudo apt install libcrypt1:i386 libcrypt-dev:i386
+          #sudo dpkg --add-architecture i386
+          #sudo apt install libcrypt1:i386 libcrypt-dev:i386
           sudo apt install build-essential libtool libltdl-dev
           cmake --version
       - name: Bring over config files from redpill-load
