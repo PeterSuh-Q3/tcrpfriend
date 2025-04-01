@@ -15,7 +15,6 @@ on:
         description: 'board'
         required: true
         default: 'tcrpfriend'
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -25,11 +24,15 @@ jobs:
         run: |
           git clone ${{github.event.inputs.git-address}} /opt/buildroot
           cd /opt/buildroot
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.11
       - name: Install packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y libelf-dev locales busybox dialog curl xz-utils cpio sed
-          
+          sudo apt-get install -y libelf-dev locales busybox dialog curl xz-utils cpio sed cmake
+          cmake --version
       - name: Bring over config files from redpill-load
         run: |
           mkdir /opt/config-files
