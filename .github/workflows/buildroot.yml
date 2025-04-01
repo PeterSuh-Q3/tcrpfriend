@@ -10,7 +10,7 @@ on:
       branches-tags:
         description: 'branches-tags'
         required: true
-        default: '2024.02.x'
+        default: '2023.11.x'
       board:
         description: 'board'
         required: true
@@ -25,20 +25,11 @@ jobs:
         run: |
           git clone ${{github.event.inputs.git-address}} /opt/buildroot
           cd /opt/buildroot
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.11
       - name: Install packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y libelf-dev locales busybox dialog curl xz-utils cpio sed cmake glibc
-          sudo apt-get install -y libnsl || sudo apt-get install -y libnsl-dev
-          sudo apt install libcrypt1 libcrypt-dev
-          #sudo dpkg --add-architecture i386
-          #sudo apt install libcrypt1:i386 libcrypt-dev:i386
-          sudo apt install build-essential libtool libltdl-dev
-          cmake --version
+          sudo apt-get install -y libelf-dev locales busybox dialog curl xz-utils cpio sed
+          
       - name: Bring over config files from redpill-load
         run: |
           mkdir /opt/config-files
