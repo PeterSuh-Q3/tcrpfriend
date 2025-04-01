@@ -22,7 +22,7 @@ jobs:
         run: |
           mkdir /opt/updaterootfs
           cd /opt/updaterootfs
-          URLS="`curl -s https://api.github.com/repos/PeterSuh-Q3/tcrpfriend/releases/tags/v0.0.0c | jq -r -e .assets[].browser_download_url`"
+          URLS="`curl -s https://api.github.com/repos/PeterSuh-Q3/tcrpfriend/releases/tags/v0.0.0d | jq -r -e .assets[].browser_download_url`"
           for file in $URLS; do curl --insecure --silent --location "$file" -O ; done
           ls -ltr 
           mkdir /opt/updaterootfs/temprd && cd /opt/updaterootfs/temprd
