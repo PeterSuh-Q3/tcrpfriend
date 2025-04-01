@@ -32,7 +32,9 @@ jobs:
       - name: Install packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y libelf-dev locales busybox dialog curl xz-utils cpio sed cmake libnsl libxcrypt-compat
+          sudo apt-get install -y libelf-dev locales busybox dialog curl xz-utils cpio sed cmake
+          sudo apt-get install -y libnsl || sudo apt-get install -y libnsl-dev
+          sudo apt-get install -y libxcrypt-compat || sudo apt-get install -y libxcrypt-dev
           cmake --version
       - name: Bring over config files from redpill-load
         run: |
