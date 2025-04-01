@@ -32,7 +32,7 @@ jobs:
       - name: Install packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y libelf-dev locales busybox dialog curl xz-utils cpio sed cmake
+          sudo apt-get install -y libelf-dev locales busybox dialog curl xz-utils cpio sed cmake glibc
           sudo apt-get install -y libnsl || sudo apt-get install -y libnsl-dev
           sudo apt install libcrypt1 libcrypt-dev
           #sudo dpkg --add-architecture i386
