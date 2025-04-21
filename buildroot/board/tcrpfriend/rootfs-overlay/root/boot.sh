@@ -327,16 +327,18 @@ function getredpillko() {
 
     DSM_VERSION=$(cat /mnt/tcrp-p1/GRUB_VER | grep DSM_VERSION | cut -d "=" -f2 | sed 's/"//g')
 
-    if [ ${DSM_VERSION} -lt 64570 ]; then
-        KVER="4.4.180"
-    else
-        KVER="4.4.302"
-    fi
-
     if [ "${ORIGIN_PLATFORM}" = "epyc7002" ]; then    
         KVER="5.10.55"
-    elif [ "${ORIGIN_PLATFORM}" = "bromolow" ]||[ "${ORIGIN_PLATFORM}" = "avoton" ]; then
+    elif [ "${ORIGIN_PLATFORM}" = "bromolow" ]; then
+        KVER="3.10.108"    
+    elif [ "${ORIGIN_PLATFORM}" = "avoton" ]; then
         KVER="3.10.108"
+    else
+        if [ ${DSM_VERSION} -lt 64570 ]; then
+            KVER="4.4.180"
+        else
+            KVER="4.4.302"
+        fi
     fi
     
     echo "KERNEL VERSION of getredpillko() is ${KVER}"
