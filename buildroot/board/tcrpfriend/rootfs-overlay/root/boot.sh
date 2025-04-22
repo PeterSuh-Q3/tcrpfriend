@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.3b"
+BOOTVER="0.1.3c"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -125,6 +125,7 @@ function history() {
     0.1.2e Fix boot failure error when bootloader has more than 4 partitions
     0.1.3a friend kernel version up from 6.4.16 to 6.6.x (expecting mmc module improvements)
     0.1.3b avoton (DS1515+ kernel 3) support started
+    0.1.3c cedarview (DS713+ kernel 3) support started
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -142,6 +143,7 @@ function showlastupdate() {
 0.1.1z Changed to load the default loader first rather than the one injected into Synodisk
 0.1.3a friend kernel version up from 6.4.16 to 6.6.x (expecting mmc module improvements)
 0.1.3b avoton (DS1515+ kernel 3) support started
+0.1.3c cedarview (DS713+ kernel 3) support started
 
 EOF
 }
@@ -332,6 +334,10 @@ function getredpillko() {
     elif [ "${ORIGIN_PLATFORM}" = "bromolow" ]; then
         KVER="3.10.108"    
     elif [ "${ORIGIN_PLATFORM}" = "avoton" ]; then
+        KVER="3.10.108"
+    elif [ "${ORIGIN_PLATFORM}" = "braswell" ]; then
+        KVER="3.10.108"
+    elif [ "${ORIGIN_PLATFORM}" = "cedarview" ]; then
         KVER="3.10.108"
     else
         if [ ${DSM_VERSION} -lt 64570 ]; then
@@ -1531,7 +1537,7 @@ function initialize() {
     ORIGIN_PLATFORM=$(cat /mnt/tcrp-p1/GRUB_VER | grep PLATFORM | cut -d "=" -f2 | tr '[:upper:]' '[:lower:]' | sed 's/"//g')
 
     case $ORIGIN_PLATFORM in
-    avoton | bromolow | braswell)
+    avoton | bromolow | braswell | cedarview)
         MODULE_ALIAS_FILE="modules.alias.3.json"
         ;;
     apollolake | broadwell | broadwellnk | v1000 | denverton | geminilake | broadwellnkv2 | broadwellntbap | purley | *)
