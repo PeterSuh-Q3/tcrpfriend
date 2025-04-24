@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250421
+# Date : 250424
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.3c"
+BOOTVER="0.1.3d"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -126,6 +126,7 @@ function history() {
     0.1.3a friend kernel version up from 6.4.16 to 6.6.x (expecting mmc module improvements)
     0.1.3b avoton (DS1515+ kernel 3) support started
     0.1.3c cedarview (DS713+ kernel 3) support started
+    0.1.3d v1000nk (DS925+ kernel 5) support started
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -144,6 +145,7 @@ function showlastupdate() {
 0.1.3a friend kernel version up from 6.4.16 to 6.6.x (expecting mmc module improvements)
 0.1.3b avoton (DS1515+ kernel 3) support started
 0.1.3c cedarview (DS713+ kernel 3) support started
+0.1.3d v1000nk (DS925+ kernel 5) support started
 
 EOF
 }
@@ -331,6 +333,8 @@ function getredpillko() {
 
     if [ "${ORIGIN_PLATFORM}" = "epyc7002" ]; then    
         KVER="5.10.55"
+    elif [ "${ORIGIN_PLATFORM}" = "v1000nk" ]; then
+        KVER="5.10.55"
     elif [ "${ORIGIN_PLATFORM}" = "bromolow" ]; then
         KVER="3.10.108"    
     elif [ "${ORIGIN_PLATFORM}" = "avoton" ]; then
@@ -349,11 +353,6 @@ function getredpillko() {
     
     echo "KERNEL VERSION of getredpillko() is ${KVER}"
     echo "Downloading ${ORIGIN_PLATFORM} ${KVER}+ redpill.ko ..."
-    if [ "${ORIGIN_PLATFORM}" = "epyc7002" ]; then
-        v=""
-    else
-        v=""
-    fi
 
     LATESTURL="`curl --connect-timeout 5 -skL -w %{url_effective} -o /dev/null "${PROXY}https://github.com/PeterSuh-Q3/redpill-lkm${v}/releases/latest"`"
 
@@ -366,7 +365,7 @@ function getredpillko() {
     echo "TAG is ${TAG}"        
     STATUS=`curl --connect-timeout 5 -skL -w "%{http_code}" "${PROXY}https://github.com/PeterSuh-Q3/redpill-lkm${v}/releases/download/${TAG}/rp-lkms.zip" -o "/tmp/rp-lkms${v}.zip"`
 
-    if [ "${ORIGIN_PLATFORM}" = "epyc7002" ]; then
+    if [ "${ORIGIN_PLATFORM}" = "epyc7002" ]||[ "${ORIGIN_PLATFORM}" = "v1000nk" ]; then
         unzip /tmp/rp-lkms${v}.zip rp-${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}-prod.ko.gz -d /tmp >/dev/null 2>&1
         gunzip -f /tmp/rp-${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}-prod.ko.gz >/dev/null 2>&1
         cp -vf /tmp/rp-${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}-prod.ko /root/redpill.ko
@@ -1537,7 +1536,7 @@ function initialize() {
     ORIGIN_PLATFORM=$(cat /mnt/tcrp-p1/GRUB_VER | grep PLATFORM | cut -d "=" -f2 | tr '[:upper:]' '[:lower:]' | sed 's/"//g')
 
     case $ORIGIN_PLATFORM in
-    avoton | bromolow | braswell | cedarview)
+    avoton | bromolow | braswell | cedarview | grantley)
         MODULE_ALIAS_FILE="modules.alias.3.json"
         ;;
     apollolake | broadwell | broadwellnk | v1000 | denverton | geminilake | broadwellnkv2 | broadwellntbap | purley | *)
