@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250424
+# Date : 250507
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.3d"
+BOOTVER="0.1.3e"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -123,10 +123,12 @@ function history() {
     0.1.2c Fix xTCRP web console URL guidance and error message output issues
     0.1.2d Change the path referenced by source to /root/menufunc.h
     0.1.2e Fix boot failure error when bootloader has more than 4 partitions
-    0.1.3a friend kernel version up from 6.4.16 to 6.6.x (expecting mmc module improvements)
+    0.1.3a friend kernel version up from 6.4.16 to 6.6.22 (expecting mmc module improvements)
     0.1.3b avoton (DS1515+ kernel 3) support started
     0.1.3c cedarview (DS713+ kernel 3) support started
     0.1.3d v1000nk (DS925+ kernel 5) support started
+    0.1.3e When processing "lsblk -nro UUID" in the getloadertype() function, 
+           limit the search to only the bootloader partition.
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -139,14 +141,11 @@ function showlastupdate() {
 0.1.1l Added manual update feature to specified version, added disable/enable automatic update feature
       ( usage : ./boot.sh update v0.1.1j | ./boot.sh autoupdate off | ./boot.sh autoupdate on )
 0.1.1o Added features for distribution of xTCRP (Tinycore Linux stripped down version)
-0.1.1r Improved getloaderdisk() processing, displayed the number of NVMe disks
 0.1.1y SynoDisk with bootloader injection uses UUID 8765-4321 instead of 6234-C863
-0.1.1z Changed to load the default loader first rather than the one injected into Synodisk
-0.1.3a friend kernel version up from 6.4.16 to 6.6.x (expecting mmc module improvements)
-0.1.3b avoton (DS1515+ kernel 3) support started
-0.1.3c cedarview (DS713+ kernel 3) support started
+0.1.3a friend kernel version up from 6.4.16 to 6.6.22 (expecting mmc module improvements)
 0.1.3d v1000nk (DS925+ kernel 5) support started
-
+0.1.3e When processing "lsblk -nro UUID" in the getloadertype() function, 
+       limit the search to only the bootloader partition.
 EOF
 }
 
@@ -1077,17 +1076,15 @@ function setnetwork() {
 }
 
 function getloadertype() {
-    # Define the UUID pattern
-    uuid_pattern='^[0-9a-fA-F]{4,8}(-[0-9a-fA-F]{4}){0,4}$'
     
-    # Get the list of UUIDs
-    uuids=$(lsblk -nro UUID)
+    # Get the list of loader partition's UUIDs
+    uuids=$(lsblk -nro UUID | awk 'length($0)==9')
     
     # Group UUIDs by disk
     declare -A disk_uuids
     while IFS= read -r uuid; do
         # Process only if UUID is not empty and matches the valid format
-        if [[ -n "$uuid" && "$uuid" =~ $uuid_pattern ]]; then
+        if [[ -n "$uuid" ]]; then
             disk=$(lsblk -nro PKNAME,UUID | grep "$uuid" | awk '{print $1}')
             if [[ -n "$disk" ]]; then
                 disk_uuids["$disk"]+="$uuid "
@@ -1137,7 +1134,7 @@ function getloadertype() {
         #echo "LDTYPE=$LDTYPE"
         #echo "LOADER_DISK=$LOADER_DISK"
     else 
-        echo "Invalid Loader Type. Exiting!"
+        echo "No Redpill loader partitions found. Exiting!!!"
         exit 99
     fi
 }
