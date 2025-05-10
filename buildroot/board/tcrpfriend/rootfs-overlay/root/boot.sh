@@ -1078,6 +1078,17 @@ function setnetwork() {
     fi
 }
 
+function wait_mmc() {
+    for i in {1..10}; do
+        if lsblk | grep -q mmcblk; then
+            echo "mmc device detected after $i second(s)."
+            return 0
+        fi
+        sleep 1
+    done
+    echo "mmc device not detected after waiting."
+}
+
 function getloadertype() {
     
     # Get the list of loader partition's UUIDs
@@ -1136,26 +1147,18 @@ function getloadertype() {
         LDTYPE="SHR"
         #echo "LDTYPE=$LDTYPE"
         #echo "LOADER_DISK=$LOADER_DISK"
+	return
     else 
         echo "No Redpill loader partitions found. Exiting!!!"
+	echo "Wait for additional time until mmc device is recognized..."
+	wait_mmc
+ 	getloadertype
         exit 99
     fi
 }
 
-function wait_mmc() {
-    for i in {1..3}; do
-        if lsblk | grep -q mmcblk; then
-            echo "mmc device detected after $i second(s)."
-            return 0
-        fi
-        sleep 1
-    done
-    echo "mmc device not detected after waiting."
-}
-
 function mountall() {
 
-    wait_mmc
     # get SHR or NORMAL
     getloadertype
     #echo "LOADER_DISK = ${LOADER_DISK}"
