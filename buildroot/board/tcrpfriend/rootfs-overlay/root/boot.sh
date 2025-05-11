@@ -1079,9 +1079,11 @@ function setnetwork() {
 }
 
 function wait_mmc() {
+    EMMCBOOT='false'
     for i in {1..10}; do
         if lsblk | grep -q mmcblk; then
             echo "mmc device detected after $i second(s)."
+            EMMCBOOT='true'            
             return 0
         fi
         sleep 1
@@ -1147,13 +1149,13 @@ function getloadertype() {
         LDTYPE="SHR"
         #echo "LDTYPE=$LDTYPE"
         #echo "LOADER_DISK=$LOADER_DISK"
-	return
+	    return
     else 
         echo "No Redpill loader partitions found. Exiting!!!"
-	echo "Wait for additional time until mmc device is recognized..."
-	wait_mmc
- 	getloadertype
-        exit 99
+	    echo "Wait for additional time until mmc device is recognized..."
+	    wait_mmc
+ 	    getloadertype
+        [ "${EMMCBOOT}" = "true" ] && exit 0 || exit 99
     fi
 }
 
