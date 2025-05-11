@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250507
+# Date : 250510
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.3e"
+BOOTVER="0.1.3f"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -129,6 +129,7 @@ function history() {
     0.1.3d v1000nk (DS925+ kernel 5) support started
     0.1.3e When processing "lsblk -nro UUID" in the getloadertype() function, 
            limit the search to only the bootloader partition.
+    0.1.3f Added delay processing function for recognition of eMMC module
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -146,6 +147,8 @@ function showlastupdate() {
 0.1.3d v1000nk (DS925+ kernel 5) support started
 0.1.3e When processing "lsblk -nro UUID" in the getloadertype() function, 
        limit the search to only the bootloader partition.
+0.1.3f Added delay processing function for recognition of eMMC module       
+       
 EOF
 }
 
@@ -1075,6 +1078,19 @@ function setnetwork() {
     fi
 }
 
+function wait_mmc() {
+    EMMCBOOT='false'
+    for i in {1..10}; do
+        if lsblk | grep -q mmcblk; then
+            echo "mmc device detected after $i second(s)."
+            EMMCBOOT='true'            
+            return 0
+        fi
+        sleep 1
+    done
+    echo "mmc device not detected after waiting."
+}
+
 function getloadertype() {
     
     # Get the list of loader partition's UUIDs
@@ -1133,9 +1149,13 @@ function getloadertype() {
         LDTYPE="SHR"
         #echo "LDTYPE=$LDTYPE"
         #echo "LOADER_DISK=$LOADER_DISK"
+	    return
     else 
         echo "No Redpill loader partitions found. Exiting!!!"
-        exit 99
+	    echo "Wait for additional time until mmc device is recognized..."
+	    wait_mmc
+ 	    getloadertype
+        [ "${EMMCBOOT}" = "true" ] && return || exit 99
     fi
 }
 
