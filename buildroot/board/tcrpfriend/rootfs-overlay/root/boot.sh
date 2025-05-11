@@ -1155,7 +1155,7 @@ function getloadertype() {
 	    echo "Wait for additional time until mmc device is recognized..."
 	    wait_mmc
  	    getloadertype
-        [ "${EMMCBOOT}" = "true" ] && exit 0 || exit 99
+        [ "${EMMCBOOT}" = "true" ] && return || exit 99
     fi
 }
 
