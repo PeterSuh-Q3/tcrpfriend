@@ -130,6 +130,7 @@ function history() {
     0.1.3e When processing "lsblk -nro UUID" in the getloadertype() function, 
            limit the search to only the bootloader partition.
     0.1.3f Added delay processing function for recognition of eMMC module
+    0.1.3g Change the way mmc devices are recognized
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -147,7 +148,8 @@ function showlastupdate() {
 0.1.3d v1000nk (DS925+ kernel 5) support started
 0.1.3e When processing "lsblk -nro UUID" in the getloadertype() function, 
        limit the search to only the bootloader partition.
-0.1.3f Added delay processing function for recognition of eMMC module       
+0.1.3f Added delay processing function for recognition of eMMC module
+0.1.3g Change the way mmc devices are recognized
        
 EOF
 }
@@ -1081,7 +1083,8 @@ function setnetwork() {
 function wait_mmc() {
     EMMCBOOT='false'
     for i in {1..10}; do
-        if lsblk | grep -q mmcblk; then
+        #if lsblk | grep -q mmcblk; then
+        if [ -d /sys/class/mmc_host/mmc0 ] && [ -n "$(ls /sys/bus/mmc/devices/ | grep mmc0:)" ]; then
             echo "mmc device detected after $i second(s)."
             EMMCBOOT='true'            
             return 0
