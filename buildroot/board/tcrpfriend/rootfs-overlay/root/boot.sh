@@ -1083,13 +1083,13 @@ function setnetwork() {
 function wait_mmc() {
     EMMCBOOT='false'
     for i in {1..10}; do
-        #if lsblk | grep -q mmcblk; then
-        if [ -d /sys/class/mmc_host/mmc0 ] && [ -n "$(ls /sys/bus/mmc/devices/ | grep mmc0:)" ]; then
+        sleep 1
+        if lsblk | grep -q mmcblk && lsblk -nro UUID | grep -q '6234-C863'; then
             echo "mmc device detected after $i second(s)."
-            EMMCBOOT='true'            
+            EMMCBOOT='true'
             return 0
         fi
-        sleep 1
+        echo "mmc device detecting in $i second(s)."
     done
     echo "mmc device not detected after waiting."
 }
