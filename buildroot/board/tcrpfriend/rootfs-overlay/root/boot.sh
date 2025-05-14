@@ -1419,11 +1419,11 @@ function boot() {
         CMDLINE_LINE+="withefi " && echo -en "\r$(msgwarning "$(TEXT "EFI booted system with no EFI option, adding withefi to cmdline")")\n"
     fi
 
-    if [ $(dmidecode -s system-manufacturer | grep VMware | wc -l) -eq 1 ]; then
-	CMDLINE_LINE+="mev=vmware "
-    elif [ $(dmidecode -s system-manufacturer | grep QEMU | wc -l) -eq 1 ]; then
-    	CMDLINE_LINE+="mev=qemu "
-    fi 
+    if [ "$(dmidecode -s system-manufacturer | grep -c VMware)" -eq 1 ]; then
+        CMDLINE_LINE+="mev=vmware "
+    elif [ "$(dmidecode -s system-manufacturer | grep -c QEMU)" -eq 1 ]; then
+        CMDLINE_LINE+="mev=qemu "
+    fi
 
     #if [ "${INTERNET}" = "ON" ]; then
     #    pip install click 2>&1 | awk '{ print strftime("%Y-%m-%d %H:%M:%S"), $0; }' >> $FRIENDLOG
