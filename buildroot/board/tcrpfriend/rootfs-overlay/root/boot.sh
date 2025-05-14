@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250510
+# Date : 250514
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.3f"
+BOOTVER="0.1.3h"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -131,6 +131,7 @@ function history() {
            limit the search to only the bootloader partition.
     0.1.3f Added delay processing function for recognition of eMMC module
     0.1.3g Change the way mmc devices are recognized
+    0.1.3h Add mev command line option for vmtools addon
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -150,6 +151,7 @@ function showlastupdate() {
        limit the search to only the bootloader partition.
 0.1.3f Added delay processing function for recognition of eMMC module
 0.1.3g Change the way mmc devices are recognized
+0.1.3h Add mev command line option for vmtools addon
        
 EOF
 }
@@ -1414,8 +1416,14 @@ function boot() {
 
     #If EFI then add withefi to CMDLINE_LINE
     if [ "$EFIMODE" = "yes" ] && [ $(echo ${CMDLINE_LINE} | grep withefi | wc -l) -le 0 ]; then
-        CMDLINE_LINE+=" withefi " && echo -en "\r$(msgwarning "$(TEXT "EFI booted system with no EFI option, adding withefi to cmdline")")\n"
+        CMDLINE_LINE+="withefi " && echo -en "\r$(msgwarning "$(TEXT "EFI booted system with no EFI option, adding withefi to cmdline")")\n"
     fi
+
+    if [ $(dmidecode -s system-manufacturer | grep VMware | wc -l) -eq 1 ]; then
+	CMDLINE_LINE+="mev=vmware "
+    elif [ $(dmidecode -s system-manufacturer | grep QEMU | wc -l) -eq 1 ]; then
+    	CMDLINE_LINE+="mev=qemu "
+    fi 
 
     #if [ "${INTERNET}" = "ON" ]; then
     #    pip install click 2>&1 | awk '{ print strftime("%Y-%m-%d %H:%M:%S"), $0; }' >> $FRIENDLOG
