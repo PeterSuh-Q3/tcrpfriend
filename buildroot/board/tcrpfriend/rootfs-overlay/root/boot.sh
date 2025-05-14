@@ -1377,6 +1377,17 @@ function boot() {
 
     #CMDLINE_LINE+="skip_vender_mac_interfaces=0,1,2,3,4,5,6,7 "
 
+    #If EFI then add withefi to CMDLINE_LINE
+    if [ "$EFIMODE" = "yes" ] && [ $(echo ${CMDLINE_LINE} | grep withefi | wc -l) -le 0 ]; then
+        CMDLINE_LINE+="withefi " && echo -en "\r$(msgwarning "$(TEXT "EFI booted system with no EFI option, adding withefi to cmdline")")\n"
+    fi
+
+    if [ "$(dmidecode -s system-manufacturer | grep -c VMware)" -eq 1 ]; then
+        CMDLINE_LINE+="mev=vmware "
+    elif [ "$(dmidecode -s system-manufacturer | grep -c QEMU)" -eq 1 ]; then
+        CMDLINE_LINE+="mev=qemu "
+    fi
+
     export MOD_ZIMAGE_FILE="/mnt/tcrp/zImage-dsm"
     export MOD_RDGZ_FILE="/mnt/tcrp/initrd-dsm"
 
@@ -1413,17 +1424,6 @@ function boot() {
     [ $(grep mac /tmp/cmdline.check | wc -l) -eq 0 ] && msgalert "FAILED to find mac# in CMDLINE, DSM will panic, exiting so you can fix this\n" && exit 99
     . /tmp/cmdline.check
     [ $(grep mac /tmp/cmdline.check | grep -v vender_mac | wc -l) != $netif_num ] && msgalert "FAILED to match the count of configured netif_num and mac addresses, DSM will panic, exiting so you can fix this\n" && exit 99
-
-    #If EFI then add withefi to CMDLINE_LINE
-    if [ "$EFIMODE" = "yes" ] && [ $(echo ${CMDLINE_LINE} | grep withefi | wc -l) -le 0 ]; then
-        CMDLINE_LINE+="withefi " && echo -en "\r$(msgwarning "$(TEXT "EFI booted system with no EFI option, adding withefi to cmdline")")\n"
-    fi
-
-    if [ "$(dmidecode -s system-manufacturer | grep -c VMware)" -eq 1 ]; then
-        CMDLINE_LINE+="mev=vmware "
-    elif [ "$(dmidecode -s system-manufacturer | grep -c QEMU)" -eq 1 ]; then
-        CMDLINE_LINE+="mev=qemu "
-    fi
 
     #if [ "${INTERNET}" = "ON" ]; then
     #    pip install click 2>&1 | awk '{ print strftime("%Y-%m-%d %H:%M:%S"), $0; }' >> $FRIENDLOG
