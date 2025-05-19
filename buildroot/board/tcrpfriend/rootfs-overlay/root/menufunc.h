@@ -154,7 +154,8 @@ function fixDSMRootPart() {
 function resetDSMPassword() {
   DSMROOTS="$(findDSMRoot)"
   if [ -z "${DSMROOTS}" ]; then
-    DIALOG --title "Advanced" \
+    dialog --backtitle "$(backtitle)" --colors --aspect 50 \
+      --title "Advanced" \
       --msgbox "No DSM system partition(md0) found!\nPlease insert all disks before continuing." 0 0
     return
   fi
@@ -181,11 +182,13 @@ function resetDSMPassword() {
   done
   rm -rf "${TMP_PATH}/mdX"
   if [ ! -f "${TMP_PATH}/menu" ]; then
-    DIALOG --title "Advanced" \
+    dialog --backtitle "$(backtitle)" --colors --aspect 50 \
+      --title "Advanced" \
       --msgbox "All existing users have been disabled. Please try adding new user." 0 0
     return
   fi
-  DIALOG --title "Advanced" \
+  dialog --backtitle "$(backtitle)" --colors --aspect 50 \
+    --title "Advanced" \
     --no-items --menu "Choose a user name" 0 0 20 --file "${TMP_PATH}/menu" \
     2>"${TMP_PATH}/resp"
   [ $? -ne 0 ] && return
@@ -193,13 +196,15 @@ function resetDSMPassword() {
   [ -z "${USER}" ] && return
   local STRPASSWD
   while true; do
-    DIALOG --title "Advanced" \
+    dialog --backtitle "$(backtitle)" --colors --aspect 50 \
+      --title "Advanced" \
       --inputbox "$(printf "Type a new password for user '%s'" "${USER}")" 0 70 "" \
       2>"${TMP_PATH}/resp"
     [ $? -ne 0 ] && break
     resp="$(cat "${TMP_PATH}/resp" 2>/dev/null)"
     if [ -z "${resp}" ]; then
-      DIALOG --title "Advanced" \
+      dialog --backtitle "$(backtitle)" --colors --aspect 50 \
+        --title "Advanced" \
         --msgbox "Invalid password" 0 0
     else
       STRPASSWD="${resp}"
@@ -224,14 +229,16 @@ function resetDSMPassword() {
       umount "${TMP_PATH}/mdX"
     done
     rm -rf "${TMP_PATH}/mdX"
-  ) 2>&1 | DIALOG --title "Advanced" \
+  ) 2>&1 | dialog --backtitle "$(backtitle)" --colors --aspect 50 \
+    --title "Advanced" \
     --progressbox "Resetting ..." 20 100
   if [ -f "${TMP_PATH}/isOk" ]; then
     MSG="$(printf "Reset password for user '%s' completed." "${USER}")"
   else
     MSG="$(printf "Reset password for user '%s' failed." "${USER}")"
   fi
-  DIALOG --title "Advanced" \
+  dialog --backtitle "$(backtitle)" --colors --aspect 50 \
+    --title "Advanced" \
     --msgbox "${MSG}" 0 0
   return
 }
@@ -241,6 +248,10 @@ function mainmenu() {
   
   readConfigMenu
 
+  # for test        
+  resetDSMPassword
+  exit 0
+          
   NEXT="m"
   while true; do
 
