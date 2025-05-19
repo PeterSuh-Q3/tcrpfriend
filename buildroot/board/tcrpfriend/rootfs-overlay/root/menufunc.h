@@ -8,6 +8,8 @@
 TMP_PATH=/tmp
 USER_CONFIG_FILE="/mnt/tcrp/user_config.json"
 
+alias DIALOG='dialog --backtitle "$(backtitle)" --colors --aspect 50'
+    
 ###############################################################################
 # Read json config file
 function readConfigMenu() {
