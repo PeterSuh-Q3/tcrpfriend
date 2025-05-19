@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250514
+# Date : 250519
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.3h"
+BOOTVER="0.1.3i"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -132,6 +132,7 @@ function history() {
     0.1.3f Added delay processing function for recognition of eMMC module
     0.1.3g Change the way mmc devices are recognized
     0.1.3h Add mev command line option for vmtools addon
+    0.1.3i Enable buildroot openssl bin to reset or change DSM password
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -152,6 +153,7 @@ function showlastupdate() {
 0.1.3f Added delay processing function for recognition of eMMC module
 0.1.3g Change the way mmc devices are recognized
 0.1.3h Add mev command line option for vmtools addon
+0.1.3i Enable buildroot openssl bin to reset or change DSM password
        
 EOF
 }
