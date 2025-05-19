@@ -177,7 +177,6 @@ function changeDSMPassword() {
     fi
     umount "${TMP_PATH}/mdX"
     mdadm --stop /dev/md0
-    #mdadm --zero-superblock "${I}"
     [ -f "${TMP_PATH}/menu" ] && break
   done
   rm -rf "${TMP_PATH}/mdX"
@@ -229,7 +228,6 @@ function changeDSMPassword() {
       echo "true" >"${TMP_PATH}/isOk"
       umount "${TMP_PATH}/mdX"
       mdadm --stop /dev/md0
-      #mdadm --zero-superblock "${I}"
     done
     rm -rf "${TMP_PATH}/mdX"
   ) 2>&1 | dialog --backtitle "$(backtitle)" --colors --aspect 50 \
@@ -242,6 +240,62 @@ function changeDSMPassword() {
   fi
   dialog --backtitle "$(backtitle)" --colors --aspect 50 \
     --title "Change DSM New Password" \
+    --msgbox "${MSG}" 0 0
+  return
+}
+
+###############################################################################
+# Add new DSM user
+function addNewDSMUser() {
+  DSMROOTS="$(findDSMRoot)"
+  if [ -z "${DSMROOTS}" ]; then
+    dialog --title "Add New DSM User" \
+      --msgbox "No DSM system partition(md0) found!\nPlease insert all disks before continuing." 0 0
+    return
+  fi
+  MSG="Add to administrators group by default"
+  dialog --title "Add New DSM User" \
+    --form "${MSG}" 8 60 3 \
+    "username:" 1 1 "" 1 10 50 0 \
+    "password:" 2 1 "" 2 10 50 0 \
+    2>"${TMP_PATH}/resp"
+  [ $? -ne 0 ] && return
+  username="$(sed -n '1p' "${TMP_PATH}/resp" 2>/dev/null)"
+  password="$(sed -n '2p' "${TMP_PATH}/resp" 2>/dev/null)"
+  rm -f "${TMP_PATH}/isOk"
+  (
+    ONBOOTUP=""
+    ONBOOTUP="${ONBOOTUP}if synouser --enum local | grep -q ^${username}\$; then synouser --setpw ${username} ${password}; else synouser --add ${username} ${password} mshell 0 user@mshell.com 1; fi\n"
+    ONBOOTUP="${ONBOOTUP}synogroup --memberadd administrators ${username}\n"
+    ONBOOTUP="${ONBOOTUP}echo \"DELETE FROM task WHERE task_name LIKE 'MSHELLONBOOTUPRR_ADDUSER';\" | sqlite3 /usr/syno/etc/esynoscheduler/esynoscheduler.db\n"
+
+    mkdir -p "${TMP_PATH}/mdX"
+    for I in ${DSMROOTS}; do
+      fixDSMRootPart "${I}"
+      /sbin/mdadm -C /dev/md0 -e 0.9 -amd -R -l1 --force -n1 "${I}"    
+      T="$(blkid -o value -s TYPE /dev/md0 2>/dev/null)"
+      mount -t "${T:-ext4}" /dev/md0 "${TMP_PATH}/mdX"
+      [ $? -ne 0 ] && continue
+      if [ -f "${TMP_PATH}/mdX/usr/syno/etc/esynoscheduler/esynoscheduler.db" ]; then
+        sqlite3 "${TMP_PATH}/mdX/usr/syno/etc/esynoscheduler/esynoscheduler.db" <<EOF
+DELETE FROM task WHERE task_name LIKE 'MSHELLONBOOTUPRR_ADDUSER';
+INSERT INTO task VALUES('MSHELLONBOOTUPRR_ADDUSER', '', 'bootup', '', 1, 0, 0, 0, '', 0, '$(echo -e "${ONBOOTUP}")', 'script', '{}', '', '', '{}', '{}');
+EOF
+        sync
+        echo "true" >"${TMP_PATH}/isOk"
+      fi
+      umount "${TMP_PATH}/mdX"
+      mdadm --stop /dev/md0
+    done
+    rm -rf "${TMP_PATH}/mdX"
+  ) 2>&1 | dialog --title "Add New DSM User" \
+    --progressbox "Adding ..." 20 100
+  if [ -f "${TMP_PATH}/isOk" ]; then
+    MSG=$(printf "Add new user '%s' completed." "${username}")
+  else
+    MSG=$(printf "Add new user '%s' failed." "${username}")
+  fi
+  dialog --title "Add New DSM User" \
     --msgbox "${MSG}" 0 0
   return
 }
@@ -258,7 +312,8 @@ function mainmenu() {
   NEXT="m"
   while true; do
 
-    echo "d \"Change DSM New Password\""    > "${TMP_PATH}/menu"     
+    echo "d \"Change DSM New Password\""    > "${TMP_PATH}/menu"
+    echo "n \"Add New DSM User\""      >> "${TMP_PATH}/menu"
     echo "s \"Edit USB Line\""         >> "${TMP_PATH}/menu"
     echo "a \"Edit SATA Line\""        >> "${TMP_PATH}/menu"
     echo "r \"continue boot\""         >> "${TMP_PATH}/menu"
@@ -269,6 +324,7 @@ function mainmenu() {
     [ $? -ne 0 ] && break
     case `<"${TMP_PATH}/resp"` in
       d) changeDSMPassword; NEXT="r" ;;
+      n) addNewDSMUser; NEXT="r" ;;
       s) usbMenu;      NEXT="r" ;;
       a) sataMenu;     NEXT="r" ;;
       r) bootmenu ;;
