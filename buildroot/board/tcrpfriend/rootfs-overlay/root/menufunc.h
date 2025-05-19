@@ -7,7 +7,7 @@
 
 TMP_PATH=/tmp
 USER_CONFIG_FILE="/mnt/tcrp/user_config.json"
-    
+
 ###############################################################################
 # Read json config file
 function readConfigMenu() {
@@ -127,138 +127,74 @@ function bootmenu() {
 }
 
 ###############################################################################
-# Find and mount the DSM root filesystem
-function findDSMRoot() {
-  local DSMROOTS=""
-  [ -z "${DSMROOTS}" ] && DSMROOTS="$(mdadm --detail --scan 2>/dev/null | grep -E "name=SynologyNAS:0|name=DiskStation:0|name=SynologyNVR:0|name=BeeStation:0" | awk '{print $2}' | uniq)"
-  [ -z "${DSMROOTS}" ] && DSMROOTS="$(lsblk -pno KNAME,PARTN,FSTYPE,FSVER,LABEL | grep -E "sd[a-z]{1,2}1" | grep -w "linux_raid_member" | grep "0.9" | awk '{print $1}' | head -n1)"
-  echo "${DSMROOTS}"
-  return 0
-}
+# Reset DSM password
+function resetPassword() {
 
-###############################################################################
-# check and fix the DSM root partition
-# 1 - DSM root path
-function fixDSMRootPart() {
-  if mdadm --detail "${1}" 2>/dev/null | grep -i "State" | grep -iEq "active|FAILED|Not Started"; then
-    mdadm --stop "${1}" >/dev/null 2>&1
-    mdadm --assemble --scan >/dev/null 2>&1
-    fsck "${1}" >/dev/null 2>&1
-  fi
-}
+  LOADER_DISK=$(blkid | grep "6234-C863" | cut -c 1-8 | awk -F\/ '{print $3}')
 
-###############################################################################
-# Reset DSM system password
-function changeDSMPassword() {
-  DSMROOTS="$(findDSMRoot)"
-  if [ -z "${DSMROOTS}" ]; then
-    dialog --backtitle "$(backtitle)" --colors --aspect 50 \
-      --title "Change DSM New Password" \
-      --msgbox "No DSM system partition(md0) found!\nPlease insert all disks before continuing." 0 0
-    return
-  fi
   rm -f "${TMP_PATH}/menu"
-  mkdir -p "${TMP_PATH}/mdX"
-  for I in ${DSMROOTS}; do
-    fixDSMRootPart "${I}"
-    /sbin/mdadm -C /dev/md0 -e 0.9 -amd -R -l1 --force -n1 "${I}"
-    T="$(blkid -o value -s TYPE /dev/md0 2>/dev/null)"
-    mount -t "${T:-ext4}" /dev/md0 "${TMP_PATH}/mdX"
-    [ $? -ne 0 ] && continue
-    if [ -f "${TMP_PATH}/mdX/etc/shadow" ]; then
-      while read -r L; do
-        U=$(echo "${L}" | awk -F ':' '{if ($2 != "*" && $2 != "!!") print $1;}')
-        [ -z "${U}" ] && continue
-        E=$(echo "${L}" | awk -F ':' '{if ($8 == "1") print "disabled"; else print "        ";}')
-        grep -q "status=on" "${TMP_PATH}/mdX/usr/syno/etc/packages/SecureSignIn/preference/${U}/method.config" 2>/dev/null
-        [ $? -eq 0 ] && S="SecureSignIn" || S="            "
-        printf "\"%-36s %-10s %-14s\"\n" "${U}" "${E}" "${S}" >>"${TMP_PATH}/menu"
-      done <<<"$(cat "${TMP_PATH}/mdX/etc/shadow" 2>/dev/null)"
+  mkdir -p "${TMP_PATH}/sdX1"
+  for I in $(ls /dev/sd*1 2>/dev/null | grep -v "${LOADER_DISK}1"); do
+    mount ${I} "${TMP_PATH}/sdX1"
+    if [ -f "${TMP_PATH}/sdX1/etc/shadow" ]; then
+      for U in $(cat "${TMP_PATH}/sdX1/etc/shadow" | awk -F ':' '{if ($2 != "*" && $2 != "!!") {print $1;}}'); do
+        grep -q "status=on" "${TMP_PATH}/sdX1/usr/syno/etc/packages/SecureSignIn/preference/${U}/method.config" 2>/dev/nulll
+        [ $? -eq 0 ] && SS="SecureSignIn" || SS="            "
+        printf "\"%-36s %-16s\"\n" "${U}" "${SS}" >>"${TMP_PATH}/menu"
+      done
     fi
-    umount "${TMP_PATH}/mdX"
-    mdadm --stop /dev/md0
-    #mdadm --zero-superblock "${I}"
+    umount "${I}"
     [ -f "${TMP_PATH}/menu" ] && break
   done
-  rm -rf "${TMP_PATH}/mdX"
+  rm -rf "${TMP_PATH}/sdX1"
   if [ ! -f "${TMP_PATH}/menu" ]; then
-    dialog --backtitle "$(backtitle)" --colors --aspect 50 \
-      --title "Change DSM New Password" \
-      --msgbox "All existing users have been disabled. Please try adding new user." 0 0
+    dialog --backtitle "$(backtitle)" --colors --title "Reset DSM Password" \
+      --msgbox "The installed Syno system not found in the currently inserted disks!" 0 0
     return
   fi
-  dialog --backtitle "$(backtitle)" --colors --aspect 50 \
-    --title "Change DSM New Password" \
-    --no-items --menu "Choose a user name" 0 0 20 --file "${TMP_PATH}/menu" \
-    2>"${TMP_PATH}/resp"
+  dialog --backtitle "$(backtitle)" --colors --title "Reset DSM Password" \
+    --no-items --menu "Choose a User" 0 0 0  --file "${TMP_PATH}/menu" \
+    2>${TMP_PATH}/resp
   [ $? -ne 0 ] && return
-  USER="$(cat "${TMP_PATH}/resp" 2>/dev/null | awk '{print $1}')"
+  USER="$(cat "${TMP_PATH}/resp" | awk '{print $1}')"
   [ -z "${USER}" ] && return
-  local STRPASSWD
   while true; do
-    dialog --backtitle "$(backtitle)" --colors --aspect 50 \
-      --title "Change DSM New Password" \
-      --inputbox "$(printf "Type a new password for user '%s'" "${USER}")" 0 70 "" \
-      2>"${TMP_PATH}/resp"
-    [ $? -ne 0 ] && break
-    resp="$(cat "${TMP_PATH}/resp" 2>/dev/null)"
-    if [ -z "${resp}" ]; then
-      dialog --backtitle "$(backtitle)" --colors --aspect 50 \
-        --title "Change DSM New Password" \
-        --msgbox "Invalid password" 0 0
-    else
-      STRPASSWD="${resp}"
-      break
-    fi
+    dialog --backtitle "$(backtitle)" --colors --title "Reset DSM Password" \
+      --inputbox "Type a new Password for User ${USER}" 0 70 \
+      2>${TMP_PATH}/resp
+    [ $? -ne 0 ] && break 2
+    VALUE="$(<"${TMP_PATH}/resp")"
+    [ -n "${VALUE}" ] && break
+    dialog --backtitle "$(backtitle)" --colors --title "Reset DSM Password" \
+      --msgbox "Invalid Password" 0 0
   done
-  rm -f "${TMP_PATH}/isOk"
+  NEWPASSWD="$(python -c "from passlib.hash import sha512_crypt;pw=\"${VALUE}\";print(sha512_crypt.using(rounds=5000).hash(pw))")"
   (
-    mkdir -p "${TMP_PATH}/mdX"
-    local NEWPASSWD
-    NEWPASSWD="$(openssl passwd -6 -salt "$(openssl rand -hex 8)" "${STRPASSWD}")"
-    for I in ${DSMROOTS}; do
-      fixDSMRootPart "${I}"
-      /sbin/mdadm -C /dev/md0 -e 0.9 -amd -R -l1 --force -n1 "${I}"    
-      T="$(blkid -o value -s TYPE /dev/md0 2>/dev/null)"
-      mount -t "${T:-ext4}" /dev/md0 "${TMP_PATH}/mdX"
-      [ $? -ne 0 ] && continue
-      sed -i "s|^${USER}:[^:]*|${USER}:${NEWPASSWD}|" "${TMP_PATH}/mdX/etc/shadow"
-      sed -i "/^${USER}:/ s/^\(${USER}:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:\)[^:]*:/\1:/" "${TMP_PATH}/mdX/etc/shadow"
-      sed -i "s|status=on|status=off|g" "${TMP_PATH}/mdX/usr/syno/etc/packages/SecureSignIn/preference/${USER}/method.config" 2>/dev/null
+    mkdir -p "${TMP_PATH}/sdX1"
+    for I in $(ls /dev/sd*1 2>/dev/null | grep -v "${LOADER_DISK}1"); do
+      mount "${I}" "${TMP_PATH}/sdX1"
+      OLDPASSWD="$(cat "${TMP_PATH}/sdX1/etc/shadow" | grep "^${USER}:" | awk -F ':' '{print $2}')"
+      [[ -n "${NEWPASSWD}" && -n "${OLDPASSWD}" ]] && sed -i "s|${OLDPASSWD}|${NEWPASSWD}|g" "${TMP_PATH}/sdX1/etc/shadow"
+      sed -i "s|status=on|status=off|g" "${TMP_PATH}/sdX1/usr/syno/etc/packages/SecureSignIn/preference/${USER}/method.config" 2>/dev/null
       sync
-      echo "true" >"${TMP_PATH}/isOk"
-      umount "${TMP_PATH}/mdX"
-      mdadm --stop /dev/md0
-      #mdadm --zero-superblock "${I}"
+      umount "${I}"
     done
-    rm -rf "${TMP_PATH}/mdX"
-  ) 2>&1 | dialog --backtitle "$(backtitle)" --colors --aspect 50 \
-    --title "Change DSM New Password" \
+    rm -rf "${TMP_PATH}/sdX1"
+  ) 2>&1 | dialog --backtitle "$(backtitle)" --colors --title "Reset DSM Password" \
     --progressbox "Resetting ..." 20 100
-  if [ -f "${TMP_PATH}/isOk" ]; then
-    MSG="$(printf "Reset password for user '%s' completed." "${USER}")"
-  else
-    MSG="$(printf "Reset password for user '%s' failed." "${USER}")"
-  fi
-  dialog --backtitle "$(backtitle)" --colors --aspect 50 \
-    --title "Change DSM New Password" \
-    --msgbox "${MSG}" 0 0
-  return
+  dialog --backtitle "$(backtitle)" --colors --title "Reset DSM Password" --aspect 18 \
+    --msgbox "Password reset completed." 0 0
 }
-          
+
 # Main function loop
 function mainmenu() {
   
   readConfigMenu
 
-  # for test        
-  #changeDSMPassword
-  #exit 0
-          
   NEXT="m"
   while true; do
 
-    echo "d \"Change DSM New Password\""    > "${TMP_PATH}/menu"     
+    echo "d \"Reset DSM Password\""    > "${TMP_PATH}/menu"     
     echo "s \"Edit USB Line\""         >> "${TMP_PATH}/menu"
     echo "a \"Edit SATA Line\""        >> "${TMP_PATH}/menu"
     echo "r \"continue boot\""         >> "${TMP_PATH}/menu"
@@ -268,7 +204,7 @@ function mainmenu() {
       2>${TMP_PATH}/resp
     [ $? -ne 0 ] && break
     case `<"${TMP_PATH}/resp"` in
-      d) changeDSMPassword; NEXT="r" ;;
+      d) resetPassword; NEXT="r" ;;
       s) usbMenu;      NEXT="r" ;;
       a) sataMenu;     NEXT="r" ;;
       r) bootmenu ;;
