@@ -1,5 +1,7 @@
 curl -kL "https://raw.githubusercontent.com/PeterSuh-Q3/tcrpfriend/main/buildroot/board/tcrpfriend/rootfs-overlay/root/boot.sh" -O
 curl -kL "https://raw.githubusercontent.com/PeterSuh-Q3/tcrpfriend/main/buildroot/board/tcrpfriend/rootfs-overlay/root/menufunc.h" -O
+curl -kL "https://raw.githubusercontent.com/PeterSuh-Q3/tcrpfriend/main/buildroot/board/tcrpfriend/rootfs-overlay/root/menutest.sh" -O
+chmod +x *.sh
 
 #HOMEPATH="/root/"
 #TOOLSPATH="https://raw.githubusercontent.com/PeterSuh-Q3/tcrpfriend/main/buildroot/board/tcrpfriend/rootfs-overlay/root/tools/"
