@@ -137,6 +137,16 @@ function findDSMRoot() {
 }
 
 ###############################################################################
+# check and fix the DSM root partition
+# 1 - DSM root path
+function fixDSMRootPart() {
+  if mdadm --detail "${1}" 2>/dev/null | grep -i "State" | grep -iEq "active|FAILED|Not Started"; then
+    mdadm --stop "${1}" >/dev/null 2>&1
+    mdadm --assemble --scan >/dev/null 2>&1
+    fsck "${1}" >/dev/null 2>&1
+  fi
+}
+###############################################################################
 # Reset DSM system password
 function resetDSMPassword() {
   DSMROOTS="$(findDSMRoot)"
