@@ -137,65 +137,91 @@ function findDSMRoot() {
 }
 
 ###############################################################################
-# Reset DSM password
-function resetPassword() {
-
-  LOADER_DISK=$(blkid | grep "6234-C863" | cut -c 1-8 | awk -F\/ '{print $3}')
-
-  rm -f "${TMP_PATH}/menu"
-  mkdir -p "${TMP_PATH}/sdX1"
-  for I in $(ls /dev/sd*1 2>/dev/null | grep -v "${LOADER_DISK}1"); do
-    mount ${I} "${TMP_PATH}/sdX1"
-    if [ -f "${TMP_PATH}/sdX1/etc/shadow" ]; then
-      for U in $(cat "${TMP_PATH}/sdX1/etc/shadow" | awk -F ':' '{if ($2 != "*" && $2 != "!!") {print $1;}}'); do
-        grep -q "status=on" "${TMP_PATH}/sdX1/usr/syno/etc/packages/SecureSignIn/preference/${U}/method.config" 2>/dev/nulll
-        [ $? -eq 0 ] && SS="SecureSignIn" || SS="            "
-        printf "\"%-36s %-16s\"\n" "${U}" "${SS}" >>"${TMP_PATH}/menu"
-      done
-    fi
-    umount "${I}"
-    [ -f "${TMP_PATH}/menu" ] && break
-  done
-  rm -rf "${TMP_PATH}/sdX1"
-  if [ ! -f "${TMP_PATH}/menu" ]; then
-    dialog --backtitle "$(backtitle)" --colors --title "Reset DSM Password" \
-      --msgbox "The installed Syno system not found in the currently inserted disks!" 0 0
+# Reset DSM system password
+function resetDSMPassword() {
+  DSMROOTS="$(findDSMRoot)"
+  if [ -z "${DSMROOTS}" ]; then
+    DIALOG --title "$(TEXT "Advanced")" \
+      --msgbox "$(TEXT "No DSM system partition(md0) found!\nPlease insert all disks before continuing.")" 0 0
     return
   fi
-  dialog --backtitle "$(backtitle)" --colors --title "Reset DSM Password" \
-    --no-items --menu "Choose a User" 0 0 0  --file "${TMP_PATH}/menu" \
-    2>${TMP_PATH}/resp
-  [ $? -ne 0 ] && return
-  USER="$(cat "${TMP_PATH}/resp" | awk '{print $1}')"
-  [ -z "${USER}" ] && return
-  while true; do
-    dialog --backtitle "$(backtitle)" --colors --title "Reset DSM Password" \
-      --inputbox "Type a new Password for User ${USER}" 0 70 \
-      2>${TMP_PATH}/resp
-    [ $? -ne 0 ] && break 2
-    VALUE="$(<"${TMP_PATH}/resp")"
-    [ -n "${VALUE}" ] && break
-    dialog --backtitle "$(backtitle)" --colors --title "Reset DSM Password" \
-      --msgbox "Invalid Password" 0 0
+  rm -f "${TMP_PATH}/menu"
+  mkdir -p "${TMP_PATH}/mdX"
+  for I in ${DSMROOTS}; do
+    fixDSMRootPart "${I}"
+    T="$(blkid -o value -s TYPE "${I}" 2>/dev/null)"
+    mount -t "${T:-ext4}" "${I}" "${TMP_PATH}/mdX"
+    [ $? -ne 0 ] && continue
+    if [ -f "${TMP_PATH}/mdX/etc/shadow" ]; then
+      while read -r L; do
+        U=$(echo "${L}" | awk -F ':' '{if ($2 != "*" && $2 != "!!") print $1;}')
+        [ -z "${U}" ] && continue
+        E=$(echo "${L}" | awk -F ':' '{if ($8 == "1") print "disabled"; else print "        ";}')
+        grep -q "status=on" "${TMP_PATH}/mdX/usr/syno/etc/packages/SecureSignIn/preference/${U}/method.config" 2>/dev/null
+        [ $? -eq 0 ] && S="SecureSignIn" || S="            "
+        printf "\"%-36s %-10s %-14s\"\n" "${U}" "${E}" "${S}" >>"${TMP_PATH}/menu"
+      done <<<"$(cat "${TMP_PATH}/mdX/etc/shadow" 2>/dev/null)"
+    fi
+    umount "${TMP_PATH}/mdX"
+    [ -f "${TMP_PATH}/menu" ] && break
   done
-  NEWPASSWD="$(python -c "from passlib.hash import sha512_crypt;pw=\"${VALUE}\";print(sha512_crypt.using(rounds=5000).hash(pw))")"
+  rm -rf "${TMP_PATH}/mdX"
+  if [ ! -f "${TMP_PATH}/menu" ]; then
+    DIALOG --title "$(TEXT "Advanced")" \
+      --msgbox "$(TEXT "All existing users have been disabled. Please try adding new user.")" 0 0
+    return
+  fi
+  DIALOG --title "$(TEXT "Advanced")" \
+    --no-items --menu "$(TEXT "Choose a user name")" 0 0 20 --file "${TMP_PATH}/menu" \
+    2>"${TMP_PATH}/resp"
+  [ $? -ne 0 ] && return
+  USER="$(cat "${TMP_PATH}/resp" 2>/dev/null | awk '{print $1}')"
+  [ -z "${USER}" ] && return
+  local STRPASSWD
+  while true; do
+    DIALOG --title "$(TEXT "Advanced")" \
+      --inputbox "$(printf "$(TEXT "Type a new password for user '%s'")" "${USER}")" 0 70 "" \
+      2>"${TMP_PATH}/resp"
+    [ $? -ne 0 ] && break 2
+    resp="$(cat "${TMP_PATH}/resp" 2>/dev/null)"
+    if [ -z "${resp}" ]; then
+      DIALOG --title "$(TEXT "Advanced")" \
+        --msgbox "$(TEXT "Invalid password")" 0 0
+    else
+      STRPASSWD="${resp}"
+      break
+    fi
+  done
+  rm -f "${TMP_PATH}/isOk"
   (
-    mkdir -p "${TMP_PATH}/sdX1"
-    for I in $(ls /dev/sd*1 2>/dev/null | grep -v "${LOADER_DISK}1"); do
-      mount "${I}" "${TMP_PATH}/sdX1"
-      OLDPASSWD="$(cat "${TMP_PATH}/sdX1/etc/shadow" | grep "^${USER}:" | awk -F ':' '{print $2}')"
-      [[ -n "${NEWPASSWD}" && -n "${OLDPASSWD}" ]] && sed -i "s|${OLDPASSWD}|${NEWPASSWD}|g" "${TMP_PATH}/sdX1/etc/shadow"
-      sed -i "s|status=on|status=off|g" "${TMP_PATH}/sdX1/usr/syno/etc/packages/SecureSignIn/preference/${USER}/method.config" 2>/dev/null
+    mkdir -p "${TMP_PATH}/mdX"
+    local NEWPASSWD
+    # NEWPASSWD="$(python3 -c "from passlib.hash import sha512_crypt;pw=\"${STRPASSWD}\";print(sha512_crypt.using(rounds=5000).hash(pw))")"
+    # NEWPASSWD="$(echo "${STRPASSWD}" | mkpasswd -m sha512)"
+    NEWPASSWD="$(openssl passwd -6 -salt "$(openssl rand -hex 8)" "${STRPASSWD}")"
+    for I in ${DSMROOTS}; do
+      fixDSMRootPart "${I}"
+      T="$(blkid -o value -s TYPE "${I}" 2>/dev/null)"
+      mount -t "${T:-ext4}" "${I}" "${TMP_PATH}/mdX"
+      [ $? -ne 0 ] && continue
+      sed -i "s|^${USER}:[^:]*|${USER}:${NEWPASSWD}|" "${TMP_PATH}/mdX/etc/shadow"
+      sed -i "/^${USER}:/ s/^\(${USER}:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:\)[^:]*:/\1:/" "${TMP_PATH}/mdX/etc/shadow"
+      sed -i "s|status=on|status=off|g" "${TMP_PATH}/mdX/usr/syno/etc/packages/SecureSignIn/preference/${USER}/method.config" 2>/dev/null
       sync
-      umount "${I}"
+      echo "true" >"${TMP_PATH}/isOk"
+      umount "${TMP_PATH}/mdX"
     done
-    rm -rf "${TMP_PATH}/sdX1"
-  ) 2>&1 | dialog --backtitle "$(backtitle)" --colors --title "Reset DSM Password" \
-    --progressbox "Resetting ..." 20 100
-  dialog --backtitle "$(backtitle)" --colors --title "Reset DSM Password" --aspect 18 \
-    --msgbox "Password reset completed." 0 0
+    rm -rf "${TMP_PATH}/mdX"
+  ) 2>&1 | DIALOG --title "$(TEXT "Advanced")" \
+    --progressbox "$(TEXT "Resetting ...")" 20 100
+  [ -f "${TMP_PATH}/isOk" ] &&
+    MSG="$(printf "$(TEXT "Reset password for user '%s' completed.")" "${USER}")" ||
+    MSG="$(printf "$(TEXT "Reset password for user '%s' failed.")" "${USER}")"
+  DIALOG --title "$(TEXT "Advanced")" \
+    --msgbox "${MSG}" 0 0
+  return
 }
-
+          
 # Main function loop
 function mainmenu() {
   
@@ -214,7 +240,7 @@ function mainmenu() {
       2>${TMP_PATH}/resp
     [ $? -ne 0 ] && break
     case `<"${TMP_PATH}/resp"` in
-      d) resetPassword; NEXT="r" ;;
+      d) resetDSMPassword; NEXT="r" ;;
       s) usbMenu;      NEXT="r" ;;
       a) sataMenu;     NEXT="r" ;;
       r) bootmenu ;;
