@@ -176,6 +176,8 @@ function resetDSMPassword() {
       done <<<"$(cat "${TMP_PATH}/mdX/etc/shadow" 2>/dev/null)"
     fi
     umount "${TMP_PATH}/mdX"
+    mdadm --stop /dev/md0
+    mdadm --zero-superblock "${I}"
     [ -f "${TMP_PATH}/menu" ] && break
   done
   rm -rf "${TMP_PATH}/mdX"
@@ -216,8 +218,9 @@ function resetDSMPassword() {
     NEWPASSWD="$(openssl passwd -6 -salt "$(openssl rand -hex 8)" "${STRPASSWD}")"
     for I in ${DSMROOTS}; do
       fixDSMRootPart "${I}"
-      T="$(blkid -o value -s TYPE "${I}" 2>/dev/null)"
-      mount -t "${T:-ext4}" "${I}" "${TMP_PATH}/mdX"
+      /sbin/mdadm -C /dev/md0 -e 0.9 -amd -R -l1 --force -n1 "${I}"    
+      T="$(blkid -o value -s TYPE /dev/md0 2>/dev/null)"
+      mount -t "${T:-ext4}" /dev/md0 "${TMP_PATH}/mdX"
       [ $? -ne 0 ] && continue
       sed -i "s|^${USER}:[^:]*|${USER}:${NEWPASSWD}|" "${TMP_PATH}/mdX/etc/shadow"
       sed -i "/^${USER}:/ s/^\(${USER}:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:\)[^:]*:/\1:/" "${TMP_PATH}/mdX/etc/shadow"
@@ -225,6 +228,8 @@ function resetDSMPassword() {
       sync
       echo "true" >"${TMP_PATH}/isOk"
       umount "${TMP_PATH}/mdX"
+      mdadm --stop /dev/md0
+      mdadm --zero-superblock "${I}"
     done
     rm -rf "${TMP_PATH}/mdX"
   ) 2>&1 | dialog --backtitle "$(backtitle)" --colors --aspect 50 \
