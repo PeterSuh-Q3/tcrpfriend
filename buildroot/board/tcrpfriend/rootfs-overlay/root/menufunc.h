@@ -153,16 +153,17 @@ function fixDSMRootPart() {
 function resetDSMPassword() {
   DSMROOTS="$(findDSMRoot)"
   if [ -z "${DSMROOTS}" ]; then
-    DIALOG --title "$(TEXT "Advanced")" \
-      --msgbox "$(TEXT "No DSM system partition(md0) found!\nPlease insert all disks before continuing.")" 0 0
+    DIALOG --title "Advanced" \
+      --msgbox "No DSM system partition(md0) found!\nPlease insert all disks before continuing." 0 0
     return
   fi
   rm -f "${TMP_PATH}/menu"
   mkdir -p "${TMP_PATH}/mdX"
   for I in ${DSMROOTS}; do
     fixDSMRootPart "${I}"
-    T="$(blkid -o value -s TYPE "${I}" 2>/dev/null)"
-    mount -t "${T:-ext4}" "${I}" "${TMP_PATH}/mdX"
+    /sbin/mdadm -C /dev/md0 -e 0.9 -amd -R -l1 --force -n1 "${I}"
+    T="$(blkid -o value -s TYPE /dev/md0 2>/dev/null)"
+    mount -t "${T:-ext4}" /dev/md0 "${TMP_PATH}/mdX"
     [ $? -ne 0 ] && continue
     if [ -f "${TMP_PATH}/mdX/etc/shadow" ]; then
       while read -r L; do
@@ -179,26 +180,26 @@ function resetDSMPassword() {
   done
   rm -rf "${TMP_PATH}/mdX"
   if [ ! -f "${TMP_PATH}/menu" ]; then
-    DIALOG --title "$(TEXT "Advanced")" \
-      --msgbox "$(TEXT "All existing users have been disabled. Please try adding new user.")" 0 0
+    DIALOG --title "Advanced" \
+      --msgbox "All existing users have been disabled. Please try adding new user." 0 0
     return
   fi
-  DIALOG --title "$(TEXT "Advanced")" \
-    --no-items --menu "$(TEXT "Choose a user name")" 0 0 20 --file "${TMP_PATH}/menu" \
+  DIALOG --title "Advanced" \
+    --no-items --menu "Choose a user name" 0 0 20 --file "${TMP_PATH}/menu" \
     2>"${TMP_PATH}/resp"
   [ $? -ne 0 ] && return
   USER="$(cat "${TMP_PATH}/resp" 2>/dev/null | awk '{print $1}')"
   [ -z "${USER}" ] && return
   local STRPASSWD
   while true; do
-    DIALOG --title "$(TEXT "Advanced")" \
-      --inputbox "$(printf "$(TEXT "Type a new password for user '%s'")" "${USER}")" 0 70 "" \
+    DIALOG --title "Advanced" \
+      --inputbox "$(printf "Type a new password for user '%s'" "${USER}" 0 70 "" \
       2>"${TMP_PATH}/resp"
     [ $? -ne 0 ] && break 2
     resp="$(cat "${TMP_PATH}/resp" 2>/dev/null)"
     if [ -z "${resp}" ]; then
-      DIALOG --title "$(TEXT "Advanced")" \
-        --msgbox "$(TEXT "Invalid password")" 0 0
+      DIALOG --title "Advanced" \
+        --msgbox "Invalid password" 0 0
     else
       STRPASSWD="${resp}"
       break
@@ -208,9 +209,9 @@ function resetDSMPassword() {
   (
     mkdir -p "${TMP_PATH}/mdX"
     local NEWPASSWD
-    # NEWPASSWD="$(python3 -c "from passlib.hash import sha512_crypt;pw=\"${STRPASSWD}\";print(sha512_crypt.using(rounds=5000).hash(pw))")"
+    # NEWPASSWD="$(python3 -c "from passlib.hash import sha512_crypt;pw=\"${STRPASSWD}\";print(sha512_crypt.using(rounds=5000).hash(pw))"
     # NEWPASSWD="$(echo "${STRPASSWD}" | mkpasswd -m sha512)"
-    NEWPASSWD="$(openssl passwd -6 -salt "$(openssl rand -hex 8)" "${STRPASSWD}")"
+    NEWPASSWD="$(openssl passwd -6 -salt "$(openssl rand -hex 8)" "${STRPASSWD}"
     for I in ${DSMROOTS}; do
       fixDSMRootPart "${I}"
       T="$(blkid -o value -s TYPE "${I}" 2>/dev/null)"
@@ -224,12 +225,12 @@ function resetDSMPassword() {
       umount "${TMP_PATH}/mdX"
     done
     rm -rf "${TMP_PATH}/mdX"
-  ) 2>&1 | DIALOG --title "$(TEXT "Advanced")" \
-    --progressbox "$(TEXT "Resetting ...")" 20 100
+  ) 2>&1 | DIALOG --title "Advanced" \
+    --progressbox "Resetting ..." 20 100
   [ -f "${TMP_PATH}/isOk" ] &&
-    MSG="$(printf "$(TEXT "Reset password for user '%s' completed.")" "${USER}")" ||
-    MSG="$(printf "$(TEXT "Reset password for user '%s' failed.")" "${USER}")"
-  DIALOG --title "$(TEXT "Advanced")" \
+    MSG="$(printf "Reset password for user '%s' completed." "${USER}" ||
+    MSG="$(printf "Reset password for user '%s' failed." "${USER}"
+  DIALOG --title "Advanced" \
     --msgbox "${MSG}" 0 0
   return
 }
