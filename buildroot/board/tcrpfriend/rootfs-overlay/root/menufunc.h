@@ -149,11 +149,11 @@ function fixDSMRootPart() {
 
 ###############################################################################
 # Reset DSM system password
-function resetDSMPassword() {
+function changeDSMPassword() {
   DSMROOTS="$(findDSMRoot)"
   if [ -z "${DSMROOTS}" ]; then
     dialog --backtitle "$(backtitle)" --colors --aspect 50 \
-      --title "Reset DSM Password" \
+      --title "Change DSM New Password" \
       --msgbox "No DSM system partition(md0) found!\nPlease insert all disks before continuing." 0 0
     return
   fi
@@ -183,12 +183,12 @@ function resetDSMPassword() {
   rm -rf "${TMP_PATH}/mdX"
   if [ ! -f "${TMP_PATH}/menu" ]; then
     dialog --backtitle "$(backtitle)" --colors --aspect 50 \
-      --title "Reset DSM Password" \
+      --title "Change DSM New Password" \
       --msgbox "All existing users have been disabled. Please try adding new user." 0 0
     return
   fi
   dialog --backtitle "$(backtitle)" --colors --aspect 50 \
-    --title "Reset DSM Password" \
+    --title "Change DSM New Password" \
     --no-items --menu "Choose a user name" 0 0 20 --file "${TMP_PATH}/menu" \
     2>"${TMP_PATH}/resp"
   [ $? -ne 0 ] && return
@@ -197,14 +197,14 @@ function resetDSMPassword() {
   local STRPASSWD
   while true; do
     dialog --backtitle "$(backtitle)" --colors --aspect 50 \
-      --title "Reset DSM Password" \
+      --title "Change DSM New Password" \
       --inputbox "$(printf "Type a new password for user '%s'" "${USER}")" 0 70 "" \
       2>"${TMP_PATH}/resp"
     [ $? -ne 0 ] && break
     resp="$(cat "${TMP_PATH}/resp" 2>/dev/null)"
     if [ -z "${resp}" ]; then
       dialog --backtitle "$(backtitle)" --colors --aspect 50 \
-        --title "Reset DSM Password" \
+        --title "Change DSM New Password" \
         --msgbox "Invalid password" 0 0
     else
       STRPASSWD="${resp}"
@@ -233,7 +233,7 @@ function resetDSMPassword() {
     done
     rm -rf "${TMP_PATH}/mdX"
   ) 2>&1 | dialog --backtitle "$(backtitle)" --colors --aspect 50 \
-    --title "Reset DSM Password" \
+    --title "Change DSM New Password" \
     --progressbox "Resetting ..." 20 100
   if [ -f "${TMP_PATH}/isOk" ]; then
     MSG="$(printf "Reset password for user '%s' completed." "${USER}")"
@@ -241,82 +241,7 @@ function resetDSMPassword() {
     MSG="$(printf "Reset password for user '%s' failed." "${USER}")"
   fi
   dialog --backtitle "$(backtitle)" --colors --aspect 50 \
-    --title "Reset DSM Password" \
-    --msgbox "${MSG}" 0 0
-  return
-}
-
-function changePassword() {
-  dialog --backtitle "$(backtitle)" --colors --aspect 50 \
-    --title "Settings" \
-    --inputbox "New password: (Empty for default value 'rr')" 0 70 \
-    2>"${TMP_PATH}/resp"
-  [ $? -ne 0 ] && return
-  
-  dialog --backtitle "$(backtitle)" --colors --aspect 50 \
-    --title "Settings" \
-    --infobox "Setting ..." 20 100
-  
-  resp="$(cat "${TMP_PATH}/resp" 2>/dev/null)"
-  [ -z "${resp}" ] && return
-  
-  local STRPASSWD NEWPASSWD
-  STRPASSWD="${resp}"
-  NEWPASSWD="$(openssl passwd -6 -salt "$(openssl rand -hex 8)" "${STRPASSWD:-rr}")"
-  cp -pf /etc/shadow /etc/shadow-
-  sed -i "s|^root:[^:]*|root:${NEWPASSWD}|" /etc/shadow
-
-  local RDXZ_PATH="${TMP_PATH}/rdxz_tmp"
-  rm -rf "${RDXZ_PATH}"
-  mkdir -p "${RDXZ_PATH}"
-  local INITRD_FORMAT
-  if [ -f "${RR_RAMUSER_FILE}" ]; then
-    INITRD_FORMAT=$(file -b --mime-type "${RR_RAMUSER_FILE}")
-    case "${INITRD_FORMAT}" in
-    *'x-cpio'*) (cd "${RDXZ_PATH}" && cpio -idm <"${RR_RAMUSER_FILE}") >/dev/null 2>&1 ;;
-    *'x-xz'*) (cd "${RDXZ_PATH}" && xz -dc "${RR_RAMUSER_FILE}" | cpio -idm) >/dev/null 2>&1 ;;
-    *'x-lz4'*) (cd "${RDXZ_PATH}" && lz4 -dc "${RR_RAMUSER_FILE}" | cpio -idm) >/dev/null 2>&1 ;;
-    *'x-lzma'*) (cd "${RDXZ_PATH}" && lzma -dc "${RR_RAMUSER_FILE}" | cpio -idm) >/dev/null 2>&1 ;;
-    *'x-bzip2'*) (cd "${RDXZ_PATH}" && bzip2 -dc "${RR_RAMUSER_FILE}" | cpio -idm) >/dev/null 2>&1 ;;
-    *'gzip'*) (cd "${RDXZ_PATH}" && gzip -dc "${RR_RAMUSER_FILE}" | cpio -idm) >/dev/null 2>&1 ;;
-    *'zstd'*) (cd "${RDXZ_PATH}" && zstd -dc "${RR_RAMUSER_FILE}" | cpio -idm) >/dev/null 2>&1 ;;
-    *) ;;
-    esac
-  else
-    INITRD_FORMAT="application/zstd"
-  fi
-
-  if [ "${STRPASSWD:-rr}" = "rr" ]; then
-    rm -f ${RDXZ_PATH}/etc/shadow* 2>/dev/null
-  else
-    mkdir -p "${RDXZ_PATH}/etc"
-    cp -pf /etc/shadow* ${RDXZ_PATH}/etc && chown root:root ${RDXZ_PATH}/etc/shadow* && chmod 600 ${RDXZ_PATH}/etc/shadow*
-  fi
-
-  if [ -n "$(ls -A "${RDXZ_PATH}" 2>/dev/null)" ] && [ -n "$(ls -A "${RDXZ_PATH}/etc" 2>/dev/null)" ]; then
-    # local RDSIZE=$(du -sb "${RDXZ_PATH}" 2>/dev/null | awk '{print $1}')
-    case "${INITRD_FORMAT}" in
-    *'x-cpio'*) (cd "${RDXZ_PATH}" && find . 2>/dev/null | cpio -o -H newc -R root:root >"${RR_RAMUSER_FILE}") >/dev/null 2>&1 ;;
-    *'x-xz'*) (cd "${RDXZ_PATH}" && find . 2>/dev/null | cpio -o -H newc -R root:root | xz -9 -C crc32 -c - >"${RR_RAMUSER_FILE}") >/dev/null 2>&1 ;;
-    *'x-lz4'*) (cd "${RDXZ_PATH}" && find . 2>/dev/null | cpio -o -H newc -R root:root | lz4 -9 -l -c - >"${RR_RAMUSER_FILE}") >/dev/null 2>&1 ;;
-    *'x-lzma'*) (cd "${RDXZ_PATH}" && find . 2>/dev/null | cpio -o -H newc -R root:root | lzma -9 -c - >"${RR_RAMUSER_FILE}") >/dev/null 2>&1 ;;
-    *'x-bzip2'*) (cd "${RDXZ_PATH}" && find . 2>/dev/null | cpio -o -H newc -R root:root | bzip2 -9 -c - >"${RR_RAMUSER_FILE}") >/dev/null 2>&1 ;;
-    *'gzip'*) (cd "${RDXZ_PATH}" && find . 2>/dev/null | cpio -o -H newc -R root:root | gzip -9 -c - >"${RR_RAMUSER_FILE}") >/dev/null 2>&1 ;;
-    *'zstd'*) (cd "${RDXZ_PATH}" && find . 2>/dev/null | cpio -o -H newc -R root:root | zstd -19 -T0 -f -c - >"${RR_RAMUSER_FILE}") >/dev/null 2>&1 ;;
-    *) ;;
-    esac
-  else
-    rm -f "${RR_RAMUSER_FILE}"
-  fi
-  rm -rf "${RDXZ_PATH}"
-
-  if [ "${STRPASSWD:-rr}" = "rr" ]; then
-    MSG="password for root restored."
-  else
-    MSG="password for root changed."
-  fi
-  dialog --backtitle "$(backtitle)" --colors --aspect 50 \
-    --title "Settings" \
+    --title "Change DSM New Password" \
     --msgbox "${MSG}" 0 0
   return
 }
@@ -327,13 +252,13 @@ function mainmenu() {
   readConfigMenu
 
   # for test        
-  resetDSMPassword
-  exit 0
+  #changeDSMPassword
+  #exit 0
           
   NEXT="m"
   while true; do
 
-    echo "d \"Reset DSM Password\""    > "${TMP_PATH}/menu"     
+    echo "d \"Change DSM New Password\""    > "${TMP_PATH}/menu"     
     echo "s \"Edit USB Line\""         >> "${TMP_PATH}/menu"
     echo "a \"Edit SATA Line\""        >> "${TMP_PATH}/menu"
     echo "r \"continue boot\""         >> "${TMP_PATH}/menu"
@@ -343,7 +268,7 @@ function mainmenu() {
       2>${TMP_PATH}/resp
     [ $? -ne 0 ] && break
     case `<"${TMP_PATH}/resp"` in
-      d) resetDSMPassword; NEXT="r" ;;
+      d) changeDSMPassword; NEXT="r" ;;
       s) usbMenu;      NEXT="r" ;;
       a) sataMenu;     NEXT="r" ;;
       r) bootmenu ;;
