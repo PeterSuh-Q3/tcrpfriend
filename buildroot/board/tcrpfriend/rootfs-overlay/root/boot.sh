@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250519
+# Date : 250520
 # User Variables :
 ###############################################################################
 
@@ -133,6 +133,7 @@ function history() {
     0.1.3g Change the way mmc devices are recognized
     0.1.3h Add mev command line option for vmtools addon
     0.1.3i Activate build root openssl bin for DSM password make and renewal Reset(Change) DSM Password function
+           Add menu for "Add New DSM User"
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -144,16 +145,14 @@ function showlastupdate() {
 0.1.0  friend kernel version up from 5.15.26 to 6.4.16
 0.1.1l Added manual update feature to specified version, added disable/enable automatic update feature
       ( usage : ./boot.sh update v0.1.1j | ./boot.sh autoupdate off | ./boot.sh autoupdate on )
-0.1.1o Added features for distribution of xTCRP (Tinycore Linux stripped down version)
 0.1.1y SynoDisk with bootloader injection uses UUID 8765-4321 instead of 6234-C863
 0.1.3a friend kernel version up from 6.4.16 to 6.6.22 (expecting mmc module improvements)
 0.1.3d v1000nk (DS925+ kernel 5) support started
-0.1.3e When processing "lsblk -nro UUID" in the getloadertype() function, 
-       limit the search to only the bootloader partition.
 0.1.3f Added delay processing function for recognition of eMMC module
 0.1.3g Change the way mmc devices are recognized
 0.1.3h Add mev command line option for vmtools addon
 0.1.3i Activate build root openssl bin for DSM password make and renewal Reset(Change) DSM Password function
+       Add menu for "Add New DSM User"
        
 EOF
 }
