@@ -240,6 +240,73 @@ function resetDSMPassword() {
     --msgbox "${MSG}" 0 0
   return
 }
+
+function changePassword() {
+  DIALOG --title "$(TEXT "Settings")" \
+    --inputbox "$(TEXT "New password: (Empty for default value 'rr')")" 0 70 \
+    2>"${TMP_PATH}/resp"
+  [ $? -ne 0 ] && return
+  DIALOG --title "$(TEXT "Settings")" \
+    --infobox "$(TEXT "Setting ...")" 20 100
+  resp="$(cat "${TMP_PATH}/resp" 2>/dev/null)"
+  [ -z "${resp}" ] && return
+  local STRPASSWD NEWPASSWD
+  STRPASSWD="${resp}"
+  # local NEWPASSWD="$(python3 -c "from passlib.hash import sha512_crypt;pw=\"${STRPASSWD:-rr}\";print(sha512_crypt.using(rounds=5000).hash(pw))")"
+  # local NEWPASSWD="$(echo "${STRPASSWD:-rr}" | mkpasswd -m sha512)"
+  NEWPASSWD="$(openssl passwd -6 -salt "$(openssl rand -hex 8)" "${STRPASSWD:-rr}")"
+  cp -pf /etc/shadow /etc/shadow-
+  sed -i "s|^root:[^:]*|root:${NEWPASSWD}|" /etc/shadow
+
+  local RDXZ_PATH="${TMP_PATH}/rdxz_tmp"
+  rm -rf "${RDXZ_PATH}"
+  mkdir -p "${RDXZ_PATH}"
+  local INITRD_FORMAT
+  if [ -f "${RR_RAMUSER_FILE}" ]; then
+    INITRD_FORMAT=$(file -b --mime-type "${RR_RAMUSER_FILE}")
+    case "${INITRD_FORMAT}" in
+    *'x-cpio'*) (cd "${RDXZ_PATH}" && cpio -idm <"${RR_RAMUSER_FILE}") >/dev/null 2>&1 ;;
+    *'x-xz'*) (cd "${RDXZ_PATH}" && xz -dc "${RR_RAMUSER_FILE}" | cpio -idm) >/dev/null 2>&1 ;;
+    *'x-lz4'*) (cd "${RDXZ_PATH}" && lz4 -dc "${RR_RAMUSER_FILE}" | cpio -idm) >/dev/null 2>&1 ;;
+    *'x-lzma'*) (cd "${RDXZ_PATH}" && lzma -dc "${RR_RAMUSER_FILE}" | cpio -idm) >/dev/null 2>&1 ;;
+    *'x-bzip2'*) (cd "${RDXZ_PATH}" && bzip2 -dc "${RR_RAMUSER_FILE}" | cpio -idm) >/dev/null 2>&1 ;;
+    *'gzip'*) (cd "${RDXZ_PATH}" && gzip -dc "${RR_RAMUSER_FILE}" | cpio -idm) >/dev/null 2>&1 ;;
+    *'zstd'*) (cd "${RDXZ_PATH}" && zstd -dc "${RR_RAMUSER_FILE}" | cpio -idm) >/dev/null 2>&1 ;;
+    *) ;;
+    esac
+  else
+    INITRD_FORMAT="application/zstd"
+  fi
+
+  if [ "${STRPASSWD:-rr}" = "rr" ]; then
+    rm -f ${RDXZ_PATH}/etc/shadow* 2>/dev/null
+  else
+    mkdir -p "${RDXZ_PATH}/etc"
+    cp -pf /etc/shadow* ${RDXZ_PATH}/etc && chown root:root ${RDXZ_PATH}/etc/shadow* && chmod 600 ${RDXZ_PATH}/etc/shadow*
+  fi
+
+  if [ -n "$(ls -A "${RDXZ_PATH}" 2>/dev/null)" ] && [ -n "$(ls -A "${RDXZ_PATH}/etc" 2>/dev/null)" ]; then
+    # local RDSIZE=$(du -sb "${RDXZ_PATH}" 2>/dev/null | awk '{print $1}')
+    case "${INITRD_FORMAT}" in
+    *'x-cpio'*) (cd "${RDXZ_PATH}" && find . 2>/dev/null | cpio -o -H newc -R root:root >"${RR_RAMUSER_FILE}") >/dev/null 2>&1 ;;
+    *'x-xz'*) (cd "${RDXZ_PATH}" && find . 2>/dev/null | cpio -o -H newc -R root:root | xz -9 -C crc32 -c - >"${RR_RAMUSER_FILE}") >/dev/null 2>&1 ;;
+    *'x-lz4'*) (cd "${RDXZ_PATH}" && find . 2>/dev/null | cpio -o -H newc -R root:root | lz4 -9 -l -c - >"${RR_RAMUSER_FILE}") >/dev/null 2>&1 ;;
+    *'x-lzma'*) (cd "${RDXZ_PATH}" && find . 2>/dev/null | cpio -o -H newc -R root:root | lzma -9 -c - >"${RR_RAMUSER_FILE}") >/dev/null 2>&1 ;;
+    *'x-bzip2'*) (cd "${RDXZ_PATH}" && find . 2>/dev/null | cpio -o -H newc -R root:root | bzip2 -9 -c - >"${RR_RAMUSER_FILE}") >/dev/null 2>&1 ;;
+    *'gzip'*) (cd "${RDXZ_PATH}" && find . 2>/dev/null | cpio -o -H newc -R root:root | gzip -9 -c - >"${RR_RAMUSER_FILE}") >/dev/null 2>&1 ;;
+    *'zstd'*) (cd "${RDXZ_PATH}" && find . 2>/dev/null | cpio -o -H newc -R root:root | zstd -19 -T0 -f -c - >"${RR_RAMUSER_FILE}") >/dev/null 2>&1 ;;
+    *) ;;
+    esac
+  else
+    rm -f "${RR_RAMUSER_FILE}"
+  fi
+  rm -rf "${RDXZ_PATH}"
+
+  [ "${STRPASSWD:-rr}" = "rr" ] && MSG="$(TEXT "password for root restored.")" || MSG="$(TEXT "password for root changed.")"
+  DIALOG --title "$(TEXT "Settings")" \
+    --msgbox "${MSG}" 0 0
+  return
+}
           
 # Main function loop
 function mainmenu() {
