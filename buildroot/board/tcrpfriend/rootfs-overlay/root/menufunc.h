@@ -153,7 +153,7 @@ function resetDSMPassword() {
   DSMROOTS="$(findDSMRoot)"
   if [ -z "${DSMROOTS}" ]; then
     dialog --backtitle "$(backtitle)" --colors --aspect 50 \
-      --title "Advanced" \
+      --title "Reset DSM Password" \
       --msgbox "No DSM system partition(md0) found!\nPlease insert all disks before continuing." 0 0
     return
   fi
@@ -181,12 +181,12 @@ function resetDSMPassword() {
   rm -rf "${TMP_PATH}/mdX"
   if [ ! -f "${TMP_PATH}/menu" ]; then
     dialog --backtitle "$(backtitle)" --colors --aspect 50 \
-      --title "Advanced" \
+      --title "Reset DSM Password" \
       --msgbox "All existing users have been disabled. Please try adding new user." 0 0
     return
   fi
   dialog --backtitle "$(backtitle)" --colors --aspect 50 \
-    --title "Advanced" \
+    --title "Reset DSM Password" \
     --no-items --menu "Choose a user name" 0 0 20 --file "${TMP_PATH}/menu" \
     2>"${TMP_PATH}/resp"
   [ $? -ne 0 ] && return
@@ -195,14 +195,14 @@ function resetDSMPassword() {
   local STRPASSWD
   while true; do
     dialog --backtitle "$(backtitle)" --colors --aspect 50 \
-      --title "Advanced" \
+      --title "Reset DSM Password" \
       --inputbox "$(printf "Type a new password for user '%s'" "${USER}")" 0 70 "" \
       2>"${TMP_PATH}/resp"
     [ $? -ne 0 ] && break
     resp="$(cat "${TMP_PATH}/resp" 2>/dev/null)"
     if [ -z "${resp}" ]; then
       dialog --backtitle "$(backtitle)" --colors --aspect 50 \
-        --title "Advanced" \
+        --title "Reset DSM Password" \
         --msgbox "Invalid password" 0 0
     else
       STRPASSWD="${resp}"
@@ -228,7 +228,7 @@ function resetDSMPassword() {
     done
     rm -rf "${TMP_PATH}/mdX"
   ) 2>&1 | dialog --backtitle "$(backtitle)" --colors --aspect 50 \
-    --title "Advanced" \
+    --title "Reset DSM Password" \
     --progressbox "Resetting ..." 20 100
   if [ -f "${TMP_PATH}/isOk" ]; then
     MSG="$(printf "Reset password for user '%s' completed." "${USER}")"
@@ -236,7 +236,7 @@ function resetDSMPassword() {
     MSG="$(printf "Reset password for user '%s' failed." "${USER}")"
   fi
   dialog --backtitle "$(backtitle)" --colors --aspect 50 \
-    --title "Advanced" \
+    --title "Reset DSM Password" \
     --msgbox "${MSG}" 0 0
   return
 }
