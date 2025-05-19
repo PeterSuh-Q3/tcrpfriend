@@ -148,6 +148,7 @@ function fixDSMRootPart() {
     fsck "${1}" >/dev/null 2>&1
   fi
 }
+
 ###############################################################################
 # Reset DSM system password
 function resetDSMPassword() {
@@ -193,9 +194,9 @@ function resetDSMPassword() {
   local STRPASSWD
   while true; do
     DIALOG --title "Advanced" \
-      --inputbox "$(printf "Type a new password for user '%s'" "${USER}" 0 70 "" \
+      --inputbox "$(printf "Type a new password for user '%s'" "${USER}")" 0 70 "" \
       2>"${TMP_PATH}/resp"
-    [ $? -ne 0 ] && break 2
+    [ $? -ne 0 ] && break
     resp="$(cat "${TMP_PATH}/resp" 2>/dev/null)"
     if [ -z "${resp}" ]; then
       DIALOG --title "Advanced" \
@@ -209,9 +210,7 @@ function resetDSMPassword() {
   (
     mkdir -p "${TMP_PATH}/mdX"
     local NEWPASSWD
-    # NEWPASSWD="$(python3 -c "from passlib.hash import sha512_crypt;pw=\"${STRPASSWD}\";print(sha512_crypt.using(rounds=5000).hash(pw))"
-    # NEWPASSWD="$(echo "${STRPASSWD}" | mkpasswd -m sha512)"
-    NEWPASSWD="$(openssl passwd -6 -salt "$(openssl rand -hex 8)" "${STRPASSWD}"
+    NEWPASSWD="$(openssl passwd -6 -salt "$(openssl rand -hex 8)" "${STRPASSWD}")"
     for I in ${DSMROOTS}; do
       fixDSMRootPart "${I}"
       T="$(blkid -o value -s TYPE "${I}" 2>/dev/null)"
@@ -227,9 +226,11 @@ function resetDSMPassword() {
     rm -rf "${TMP_PATH}/mdX"
   ) 2>&1 | DIALOG --title "Advanced" \
     --progressbox "Resetting ..." 20 100
-  [ -f "${TMP_PATH}/isOk" ] &&
-    MSG="$(printf "Reset password for user '%s' completed." "${USER}" ||
-    MSG="$(printf "Reset password for user '%s' failed." "${USER}"
+  if [ -f "${TMP_PATH}/isOk" ]; then
+    MSG="$(printf "Reset password for user '%s' completed." "${USER}")"
+  else
+    MSG="$(printf "Reset password for user '%s' failed." "${USER}")"
+  fi
   DIALOG --title "Advanced" \
     --msgbox "${MSG}" 0 0
   return
