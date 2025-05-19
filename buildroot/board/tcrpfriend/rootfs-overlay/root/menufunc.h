@@ -242,18 +242,21 @@ function resetDSMPassword() {
 }
 
 function changePassword() {
-  DIALOG --title "$(TEXT "Settings")" \
-    --inputbox "$(TEXT "New password: (Empty for default value 'rr')")" 0 70 \
+  dialog --backtitle "$(backtitle)" --colors --aspect 50 \
+    --title "Settings" \
+    --inputbox "New password: (Empty for default value 'rr')" 0 70 \
     2>"${TMP_PATH}/resp"
   [ $? -ne 0 ] && return
-  DIALOG --title "$(TEXT "Settings")" \
-    --infobox "$(TEXT "Setting ...")" 20 100
+  
+  dialog --backtitle "$(backtitle)" --colors --aspect 50 \
+    --title "Settings" \
+    --infobox "Setting ..." 20 100
+  
   resp="$(cat "${TMP_PATH}/resp" 2>/dev/null)"
   [ -z "${resp}" ] && return
+  
   local STRPASSWD NEWPASSWD
   STRPASSWD="${resp}"
-  # local NEWPASSWD="$(python3 -c "from passlib.hash import sha512_crypt;pw=\"${STRPASSWD:-rr}\";print(sha512_crypt.using(rounds=5000).hash(pw))")"
-  # local NEWPASSWD="$(echo "${STRPASSWD:-rr}" | mkpasswd -m sha512)"
   NEWPASSWD="$(openssl passwd -6 -salt "$(openssl rand -hex 8)" "${STRPASSWD:-rr}")"
   cp -pf /etc/shadow /etc/shadow-
   sed -i "s|^root:[^:]*|root:${NEWPASSWD}|" /etc/shadow
@@ -302,8 +305,13 @@ function changePassword() {
   fi
   rm -rf "${RDXZ_PATH}"
 
-  [ "${STRPASSWD:-rr}" = "rr" ] && MSG="$(TEXT "password for root restored.")" || MSG="$(TEXT "password for root changed.")"
-  DIALOG --title "$(TEXT "Settings")" \
+  if [ "${STRPASSWD:-rr}" = "rr" ]; then
+    MSG="password for root restored."
+  else
+    MSG="password for root changed."
+  fi
+  dialog --backtitle "$(backtitle)" --colors --aspect 50 \
+    --title "Settings" \
     --msgbox "${MSG}" 0 0
   return
 }
