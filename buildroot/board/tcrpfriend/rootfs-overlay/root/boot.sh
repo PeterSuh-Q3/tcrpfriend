@@ -132,7 +132,7 @@ function history() {
     0.1.3f Added delay processing function for recognition of eMMC module
     0.1.3g Change the way mmc devices are recognized
     0.1.3h Add mev command line option for vmtools addon
-    0.1.3i Enable buildroot openssl bin to reset or change DSM password
+    0.1.3i Activate build root openssl bin for DSM password make and renewal Reset(Change) DSM Password function
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -153,7 +153,7 @@ function showlastupdate() {
 0.1.3f Added delay processing function for recognition of eMMC module
 0.1.3g Change the way mmc devices are recognized
 0.1.3h Add mev command line option for vmtools addon
-0.1.3i Enable buildroot openssl bin to reset or change DSM password
+0.1.3i Activate build root openssl bin for DSM password make and renewal Reset(Change) DSM Password function
        
 EOF
 }
