@@ -177,7 +177,7 @@ function resetDSMPassword() {
     fi
     umount "${TMP_PATH}/mdX"
     mdadm --stop /dev/md0
-    mdadm --zero-superblock "${I}"
+    #mdadm --zero-superblock "${I}"
     [ -f "${TMP_PATH}/menu" ] && break
   done
   rm -rf "${TMP_PATH}/mdX"
@@ -229,7 +229,7 @@ function resetDSMPassword() {
       echo "true" >"${TMP_PATH}/isOk"
       umount "${TMP_PATH}/mdX"
       mdadm --stop /dev/md0
-      mdadm --zero-superblock "${I}"
+      #mdadm --zero-superblock "${I}"
     done
     rm -rf "${TMP_PATH}/mdX"
   ) 2>&1 | dialog --backtitle "$(backtitle)" --colors --aspect 50 \
