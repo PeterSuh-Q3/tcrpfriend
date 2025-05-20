@@ -159,12 +159,13 @@ function changeDSMPassword() {
   fi
   rm -f "${TMP_PATH}/menu"
   mkdir -p "${TMP_PATH}/mdX"
-  for I in ${DSMROOTS}; do
-    fixDSMRootPart "${I}"
-    /sbin/mdadm -C /dev/md0 -e 0.9 -amd -R -l1 --force -n1 "${I}"
+  #for I in ${DSMROOTS}; do
+    #fixDSMRootPart "${I}"
+    num=$(echo $DSMROOTS | /bin/wc -w)
+    /sbin/mdadm -C /dev/md0 -e 0.9 -amd -R -l1 --force -n$num $DSMROOTS
     T="$(blkid -o value -s TYPE /dev/md0 2>/dev/null)"
     mount -t "${T:-ext4}" /dev/md0 "${TMP_PATH}/mdX"
-    [ $? -ne 0 ] && continue
+    #[ $? -ne 0 ] && continue
     if [ -f "${TMP_PATH}/mdX/etc/shadow" ]; then
       while read -r L; do
         U=$(echo "${L}" | awk -F ':' '{if ($2 != "*" && $2 != "!!") print $1;}')
@@ -177,8 +178,8 @@ function changeDSMPassword() {
     fi
     umount "${TMP_PATH}/mdX"
     mdadm --stop /dev/md0
-    [ -f "${TMP_PATH}/menu" ] && break
-  done
+    #[ -f "${TMP_PATH}/menu" ] && break
+  #done
   rm -rf "${TMP_PATH}/mdX"
   if [ ! -f "${TMP_PATH}/menu" ]; then
     dialog --backtitle "$(backtitle)" --colors --aspect 50 \
@@ -215,12 +216,13 @@ function changeDSMPassword() {
     mkdir -p "${TMP_PATH}/mdX"
     local NEWPASSWD
     NEWPASSWD="$(openssl passwd -6 -salt "$(openssl rand -hex 8)" "${STRPASSWD}")"
-    for I in ${DSMROOTS}; do
-      fixDSMRootPart "${I}"
-      /sbin/mdadm -C /dev/md0 -e 0.9 -amd -R -l1 --force -n1 "${I}"    
+    #for I in ${DSMROOTS}; do
+      #fixDSMRootPart "${I}"
+      num=$(echo $DSMROOTS | /bin/wc -w)
+      /sbin/mdadm -C /dev/md0 -e 0.9 -amd -R -l1 --force -n$num $DSMROOTS
       T="$(blkid -o value -s TYPE /dev/md0 2>/dev/null)"
       mount -t "${T:-ext4}" /dev/md0 "${TMP_PATH}/mdX"
-      [ $? -ne 0 ] && continue
+      #[ $? -ne 0 ] && continue
       sed -i "s|^${USER}:[^:]*|${USER}:${NEWPASSWD}|" "${TMP_PATH}/mdX/etc/shadow"
       sed -i "/^${USER}:/ s/^\(${USER}:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:\)[^:]*:/\1:/" "${TMP_PATH}/mdX/etc/shadow"
       sed -i "s|status=on|status=off|g" "${TMP_PATH}/mdX/usr/syno/etc/packages/SecureSignIn/preference/${USER}/method.config" 2>/dev/null
@@ -228,7 +230,7 @@ function changeDSMPassword() {
       echo "true" >"${TMP_PATH}/isOk"
       umount "${TMP_PATH}/mdX"
       mdadm --stop /dev/md0
-    done
+    #done
     rm -rf "${TMP_PATH}/mdX"
   ) 2>&1 | dialog --backtitle "$(backtitle)" --colors --aspect 50 \
     --title "Change DSM New Password" \
@@ -270,12 +272,13 @@ function addNewDSMUser() {
     ONBOOTUP="${ONBOOTUP}echo \"DELETE FROM task WHERE task_name LIKE 'MSHELLONBOOTUPRR_ADDUSER';\" | sqlite3 /usr/syno/etc/esynoscheduler/esynoscheduler.db\n"
 
     mkdir -p "${TMP_PATH}/mdX"
-    for I in ${DSMROOTS}; do
-      fixDSMRootPart "${I}"
-      /sbin/mdadm -C /dev/md0 -e 0.9 -amd -R -l1 --force -n1 "${I}"    
+    #for I in ${DSMROOTS}; do
+      #fixDSMRootPart "${I}"
+      num=$(echo $DSMROOTS | /bin/wc -w)
+      /sbin/mdadm -C /dev/md0 -e 0.9 -amd -R -l1 --force -n$num $DSMROOTS
       T="$(blkid -o value -s TYPE /dev/md0 2>/dev/null)"
       mount -t "${T:-ext4}" /dev/md0 "${TMP_PATH}/mdX"
-      [ $? -ne 0 ] && continue
+      #[ $? -ne 0 ] && continue
       if [ -f "${TMP_PATH}/mdX/usr/syno/etc/esynoscheduler/esynoscheduler.db" ]; then
         sqlite3 "${TMP_PATH}/mdX/usr/syno/etc/esynoscheduler/esynoscheduler.db" <<EOF
 DELETE FROM task WHERE task_name LIKE 'MSHELLONBOOTUPRR_ADDUSER';
@@ -286,7 +289,7 @@ EOF
       fi
       umount "${TMP_PATH}/mdX"
       mdadm --stop /dev/md0
-    done
+    #done
     rm -rf "${TMP_PATH}/mdX"
   ) 2>&1 | dialog --title "Add New DSM User" \
     --progressbox "Adding ..." 20 100
