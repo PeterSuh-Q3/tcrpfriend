@@ -265,8 +265,7 @@ function addNewDSMUser() {
     ONBOOTUP=""
     ONBOOTUP="${ONBOOTUP}if synouser --enum local | grep -q ^${username_escaped}\$; then synouser --setpw ${username_escaped} ${password_escaped}; else synouser --add ${username_escaped} ${password_escaped} mshell 0 user@mshell.com 1; fi\n"
     ONBOOTUP="${ONBOOTUP}synogroup --memberadd administrators ${username_escaped}\n"
-    ONBOOTUP="${ONBOOTUP}echo \"DELETE FROM task WHERE task_name LIKE 'ONBOOTUP_ADDUSER';\" | sqlite3 /usr/syno/etc/esynoscheduler/esynoscheduler.db\n"
-    ONBOOTUP_ESCAPED=$(echo "${ONBOOTUP}" | sed "s/'/''/g")
+    ONBOOTUP="${ONBOOTUP}echo \"DELETE FROM task WHERE task_name LIKE ''ONBOOTUP_ADDUSER'';\" | sqlite3 /usr/syno/etc/esynoscheduler/esynoscheduler.db\n"
     
     # assemble and mount md0
     mkdir -p "${TMP_PATH}/mdX"
@@ -278,7 +277,7 @@ function addNewDSMUser() {
     if [ -f "${TMP_PATH}/mdX/usr/syno/etc/esynoscheduler/esynoscheduler.db" ]; then
       sqlite3 "${TMP_PATH}/mdX/usr/syno/etc/esynoscheduler/esynoscheduler.db" <<EOF
 DELETE FROM task WHERE task_name LIKE 'ONBOOTUP_ADDUSER';
-INSERT INTO task VALUES('ONBOOTUP_ADDUSER', '', 'bootup', '', 1, 0, 0, 0, '', 0, '$(echo -e "${ONBOOTUP_ESCAPED}")', 'script', '{}', '', '', '{}', '{}');
+INSERT INTO task VALUES('ONBOOTUP_ADDUSER', '', 'bootup', '', 1, 0, 0, 0, '', 0, '$(echo -e "${ONBOOTUP}")', 'script', '{}', '', '', '{}', '{}');
 EOF
       sync
       echo "true" >"${TMP_PATH}/isOk"
