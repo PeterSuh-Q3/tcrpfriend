@@ -7,6 +7,9 @@
 
 TMP_PATH=/tmp
 USER_CONFIG_FILE="/mnt/tcrp/user_config.json"
+
+export LC_ALL=en_US.UTF-8
+export NCURSES_NO_UTF8_ACS=1
     
 ###############################################################################
 # Read json config file
@@ -251,13 +254,17 @@ function addNewDSMUser() {
     "password:" 2 1 "" 2 10 50 0 \
     2>"${TMP_PATH}/resp"
   [ $? -ne 0 ] && return
-  username="$(sed -n '1p' "${TMP_PATH}/resp" 2>/dev/null)"
-  password="$(sed -n '2p' "${TMP_PATH}/resp" 2>/dev/null)"
+  username=$(sed -n '1p' "${TMP_PATH}/resp")
+  password=$(sed -n '2p' "${TMP_PATH}/resp")
+
+  username_escaped=$(printf "%q" "$username")
+  password_escaped=$(printf "%q" "$password")
+      
   rm -f "${TMP_PATH}/isOk"
   (
     ONBOOTUP=""
-    ONBOOTUP="${ONBOOTUP}if synouser --enum local | grep -q ^${username}\$; then synouser --setpw ${username} ${password}; else synouser --add ${username} ${password} mshell 0 user@mshell.com 1; fi\n"
-    ONBOOTUP="${ONBOOTUP}synogroup --memberadd administrators ${username}\n"
+    ONBOOTUP="${ONBOOTUP}if synouser --enum local | grep -q ^${username_escaped}\$; then synouser --setpw ${username_escaped} ${password_escaped}; else synouser --add ${username_escaped} ${password_escaped} mshell 0 user@mshell.com 1; fi\n"
+    ONBOOTUP="${ONBOOTUP}synogroup --memberadd administrators ${username_escaped}\n"
     ONBOOTUP="${ONBOOTUP}echo \"DELETE FROM task WHERE task_name LIKE 'ONBOOTUP_ADDUSER';\" | sqlite3 /usr/syno/etc/esynoscheduler/esynoscheduler.db\n"
     ONBOOTUP_ESCAPED=$(echo "${ONBOOTUP}" | sed "s/'/''/g")
     
