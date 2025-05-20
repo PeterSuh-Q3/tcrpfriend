@@ -137,17 +137,6 @@ function findDSMRoot() {
 }
 
 ###############################################################################
-# check and fix the DSM root partition
-# 1 - DSM root path
-function fixDSMRootPart() {
-  if mdadm --detail "${1}" 2>/dev/null | grep -i "State" | grep -iEq "active|FAILED|Not Started"; then
-    mdadm --stop "${1}" >/dev/null 2>&1
-    mdadm --assemble --scan >/dev/null 2>&1
-    fsck "${1}" >/dev/null 2>&1
-  fi
-}
-
-###############################################################################
 # Reset DSM system password
 function changeDSMPassword() {
   DSMROOTS="$(findDSMRoot)"
@@ -157,29 +146,28 @@ function changeDSMPassword() {
       --msgbox "No DSM system partition(md0) found!\nPlease insert all disks before continuing." 0 0
     return
   fi
+
+  # assemble and mount md0
   rm -f "${TMP_PATH}/menu"
   mkdir -p "${TMP_PATH}/mdX"
-  #for I in ${DSMROOTS}; do
-    #fixDSMRootPart "${I}"
-    num=$(echo $DSMROOTS | /bin/wc -w)
-    /sbin/mdadm -C /dev/md0 -e 0.9 -amd -R -l1 --force -n$num $DSMROOTS
-    T="$(blkid -o value -s TYPE /dev/md0 2>/dev/null)"
-    mount -t "${T:-ext4}" /dev/md0 "${TMP_PATH}/mdX"
-    #[ $? -ne 0 ] && continue
-    if [ -f "${TMP_PATH}/mdX/etc/shadow" ]; then
-      while read -r L; do
-        U=$(echo "${L}" | awk -F ':' '{if ($2 != "*" && $2 != "!!") print $1;}')
-        [ -z "${U}" ] && continue
-        E=$(echo "${L}" | awk -F ':' '{if ($8 == "1") print "disabled"; else print "        ";}')
-        grep -q "status=on" "${TMP_PATH}/mdX/usr/syno/etc/packages/SecureSignIn/preference/${U}/method.config" 2>/dev/null
-        [ $? -eq 0 ] && S="SecureSignIn" || S="            "
-        printf "\"%-36s %-10s %-14s\"\n" "${U}" "${E}" "${S}" >>"${TMP_PATH}/menu"
-      done <<<"$(cat "${TMP_PATH}/mdX/etc/shadow" 2>/dev/null)"
-    fi
-    umount "${TMP_PATH}/mdX"
-    mdadm --stop /dev/md0
-    #[ -f "${TMP_PATH}/menu" ] && break
-  #done
+  num=$(echo $DSMROOTS | /bin/wc -w)
+  /sbin/mdadm -C /dev/md0 -e 0.9 -amd -R -l1 --force -n$num $DSMROOTS 2>/dev/null
+  T="$(blkid -o value -s TYPE /dev/md0 2>/dev/null)"
+  mount -t "${T:-ext4}" /dev/md0 "${TMP_PATH}/mdX"
+
+  if [ -f "${TMP_PATH}/mdX/etc/shadow" ]; then
+    while read -r L; do
+      U=$(echo "${L}" | awk -F ':' '{if ($2 != "*" && $2 != "!!") print $1;}')
+      [ -z "${U}" ] && continue
+      E=$(echo "${L}" | awk -F ':' '{if ($8 == "1") print "disabled"; else print "        ";}')
+      grep -q "status=on" "${TMP_PATH}/mdX/usr/syno/etc/packages/SecureSignIn/preference/${U}/method.config" 2>/dev/null
+      [ $? -eq 0 ] && S="SecureSignIn" || S="            "
+      printf "\"%-36s %-10s %-14s\"\n" "${U}" "${E}" "${S}" >>"${TMP_PATH}/menu"
+    done <<<"$(cat "${TMP_PATH}/mdX/etc/shadow" 2>/dev/null)"
+  fi
+  
+  umount "${TMP_PATH}/mdX"
+  mdadm --stop /dev/md0
   rm -rf "${TMP_PATH}/mdX"
   if [ ! -f "${TMP_PATH}/menu" ]; then
     dialog --backtitle "$(backtitle)" --colors --aspect 50 \
@@ -216,21 +204,22 @@ function changeDSMPassword() {
     mkdir -p "${TMP_PATH}/mdX"
     local NEWPASSWD
     NEWPASSWD="$(openssl passwd -6 -salt "$(openssl rand -hex 8)" "${STRPASSWD}")"
-    #for I in ${DSMROOTS}; do
-      #fixDSMRootPart "${I}"
-      num=$(echo $DSMROOTS | /bin/wc -w)
-      /sbin/mdadm -C /dev/md0 -e 0.9 -amd -R -l1 --force -n$num $DSMROOTS
-      T="$(blkid -o value -s TYPE /dev/md0 2>/dev/null)"
-      mount -t "${T:-ext4}" /dev/md0 "${TMP_PATH}/mdX"
-      #[ $? -ne 0 ] && continue
-      sed -i "s|^${USER}:[^:]*|${USER}:${NEWPASSWD}|" "${TMP_PATH}/mdX/etc/shadow"
-      sed -i "/^${USER}:/ s/^\(${USER}:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:\)[^:]*:/\1:/" "${TMP_PATH}/mdX/etc/shadow"
-      sed -i "s|status=on|status=off|g" "${TMP_PATH}/mdX/usr/syno/etc/packages/SecureSignIn/preference/${USER}/method.config" 2>/dev/null
-      sync
-      echo "true" >"${TMP_PATH}/isOk"
-      umount "${TMP_PATH}/mdX"
-      mdadm --stop /dev/md0
-    #done
+  
+    # assemble and mount md0
+    num=$(echo $DSMROOTS | /bin/wc -w)
+    /sbin/mdadm -C /dev/md0 -e 0.9 -amd -R -l1 --force -n$num $DSMROOTS 2>/dev/null
+    T="$(blkid -o value -s TYPE /dev/md0 2>/dev/null)"
+    mount -t "${T:-ext4}" /dev/md0 "${TMP_PATH}/mdX"
+
+    sed -i "s|^${USER}:[^:]*|${USER}:${NEWPASSWD}|" "${TMP_PATH}/mdX/etc/shadow"
+    sed -i "/^${USER}:/ s/^\(${USER}:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:\)[^:]*:/\1:/" "${TMP_PATH}/mdX/etc/shadow"
+    sed -i "s|status=on|status=off|g" "${TMP_PATH}/mdX/usr/syno/etc/packages/SecureSignIn/preference/${USER}/method.config" 2>/dev/null
+    sync
+  
+    echo "true" >"${TMP_PATH}/isOk"
+    umount "${TMP_PATH}/mdX"
+    mdadm --stop /dev/md0
+
     rm -rf "${TMP_PATH}/mdX"
   ) 2>&1 | dialog --backtitle "$(backtitle)" --colors --aspect 50 \
     --title "Change DSM New Password" \
@@ -271,26 +260,25 @@ function addNewDSMUser() {
     ONBOOTUP="${ONBOOTUP}synogroup --memberadd administrators ${username}\n"
     ONBOOTUP="${ONBOOTUP}echo \"DELETE FROM task WHERE task_name LIKE 'ONBOOTUP_ADDUSER';\" | sqlite3 /usr/syno/etc/esynoscheduler/esynoscheduler.db\n"
     ONBOOTUP_ESCAPED=$(echo "${ONBOOTUP}" | sed "s/'/''/g")
-
+    
+    # assemble and mount md0
     mkdir -p "${TMP_PATH}/mdX"
-    #for I in ${DSMROOTS}; do
-      #fixDSMRootPart "${I}"
-      num=$(echo $DSMROOTS | /bin/wc -w)
-      /sbin/mdadm -C /dev/md0 -e 0.9 -amd -R -l1 --force -n$num $DSMROOTS
-      T="$(blkid -o value -s TYPE /dev/md0 2>/dev/null)"
-      mount -t "${T:-ext4}" /dev/md0 "${TMP_PATH}/mdX"
-      #[ $? -ne 0 ] && continue
-      if [ -f "${TMP_PATH}/mdX/usr/syno/etc/esynoscheduler/esynoscheduler.db" ]; then
-        sqlite3 "${TMP_PATH}/mdX/usr/syno/etc/esynoscheduler/esynoscheduler.db" <<EOF
+    num=$(echo $DSMROOTS | /bin/wc -w)
+    /sbin/mdadm -C /dev/md0 -e 0.9 -amd -R -l1 --force -n$num $DSMROOTS 2>/dev/null
+    T="$(blkid -o value -s TYPE /dev/md0 2>/dev/null)"
+    mount -t "${T:-ext4}" /dev/md0 "${TMP_PATH}/mdX"
+
+    if [ -f "${TMP_PATH}/mdX/usr/syno/etc/esynoscheduler/esynoscheduler.db" ]; then
+      sqlite3 "${TMP_PATH}/mdX/usr/syno/etc/esynoscheduler/esynoscheduler.db" <<EOF
 DELETE FROM task WHERE task_name LIKE 'ONBOOTUP_ADDUSER';
 INSERT INTO task VALUES('ONBOOTUP_ADDUSER', '', 'bootup', '', 1, 0, 0, 0, '', 0, '$(echo -e "${ONBOOTUP_ESCAPED}")', 'script', '{}', '', '', '{}', '{}');
 EOF
-        sync
-        echo "true" >"${TMP_PATH}/isOk"
-      fi
-      umount "${TMP_PATH}/mdX"
-      mdadm --stop /dev/md0
-    #done
+      sync
+      echo "true" >"${TMP_PATH}/isOk"
+    fi
+    umount "${TMP_PATH}/mdX"
+    mdadm --stop /dev/md0
+
     rm -rf "${TMP_PATH}/mdX"
   ) 2>&1 | dialog --title "Add New DSM User" \
     --progressbox "Adding ..." 20 100
