@@ -27,7 +27,7 @@ def makeqr(data, location, output):
     """
     import qrcode
     from PIL import Image
-    qr = qrcode.QRCode(version=1, box_size=5, error_correction=qrcode.constants.ERROR_CORRECT_H, border=4)
+    qr = qrcode.QRCode(version=1, box_size=10, error_correction=qrcode.constants.ERROR_CORRECT_H, border=4)
     qr.add_data(data)
     qr.make(fit=True)
     img = qr.make_image(fill_color="purple", back_color="white")
@@ -56,13 +56,8 @@ def makeqr(data, location, output):
         loc = (int((alpha.size[0] - img.size[0]) / 2), int((alpha.size[1] - img.size[1]) / 2))
 
     alpha.paste(img, loc)
-
-    # alpha 배경 이미지를 50%로 축소
-    alpha = alpha.resize(
-        (int(alpha.size[0] * 0.5), int(alpha.size[1] * 0.5)),
-        resample=Image.NEAREST  # QR코드의 또렷함을 위해 NEAREST 권장
-    )    
     alpha.save(output)
+
 
 if __name__ == "__main__":
     cli()
