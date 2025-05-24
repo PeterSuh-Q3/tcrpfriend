@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250520
+# Date : 250524
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.3i"
+BOOTVER="0.1.3j"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -134,6 +134,7 @@ function history() {
     0.1.3h Add mev command line option for vmtools addon
     0.1.3i Activate build root openssl bin for DSM password make and renewal Reset(Change) DSM Password function
            Add menu for "Add New DSM User"
+    0.1.3j Resize QR CODE
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -153,6 +154,7 @@ function showlastupdate() {
 0.1.3h Add mev command line option for vmtools addon
 0.1.3i Activate build root openssl bin for DSM password make and renewal Reset(Change) DSM Password function
        Add menu for "Add New DSM User"
+0.1.3j Resize QR CODE
        
 EOF
 }
@@ -1456,10 +1458,9 @@ function boot() {
         echo " http://${IP}:5000"        
 
         if [ "${INTERNET}" = "ON" ]; then
-            [ -n "${IP}" ] && URL="http://${IP}:5000" || URL="http://find.synology.com/"
-            python /root/functions.py makeqr -d "${URL}" -l "br" -o "/tmp/qrcode.png"
-            #curl -skL https://quickchart.io/qr?text="${URL}" -o /tmp/qrcode.png
-            [ -f "/tmp/qrcode.png" ] && echo | fbv -acufi "/tmp/qrcode.png" >/dev/null 2>/dev/null || true
+            [ -n "${IP}" ] && URL="http://${IP}:5000" || URL="https://finds.synology.com/"
+	    python3 /root/functions.py makeqr -d "${URL}" -l "7" -o "/tmp/qrcode.png"
+            [ -f "/tmp/qrcode.png" ] && echo | fbv -acufi "/tmp/qrcode.png" >/dev/null 2>&1 || true
         fi    
         
         [ "${hidesensitive}" = "true" ] && clear
