@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250524
+# Date : 250610
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.3j"
+BOOTVER="0.1.3k"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -135,6 +135,7 @@ function history() {
     0.1.3i Activate build root openssl bin for DSM password make and renewal Reset(Change) DSM Password function
            Add menu for "Add New DSM User"
     0.1.3j Resize QR CODE
+    0.1.3k Add config of r1000nk, geminilakenk
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -150,11 +151,9 @@ function showlastupdate() {
 0.1.3a friend kernel version up from 6.4.16 to 6.6.22 (expecting mmc module improvements)
 0.1.3d v1000nk (DS925+ kernel 5) support started
 0.1.3f Added delay processing function for recognition of eMMC module
-0.1.3g Change the way mmc devices are recognized
-0.1.3h Add mev command line option for vmtools addon
 0.1.3i Activate build root openssl bin for DSM password make and renewal Reset(Change) DSM Password function
        Add menu for "Add New DSM User"
-0.1.3j Resize QR CODE
+0.1.3k Add config of r1000nk, geminilakenk
        
 EOF
 }
@@ -945,7 +944,7 @@ function getip() {
             fi
             sleep 1
         done
-        echo "IP Addr : $(msgnormal "${IP}"), Network Interface Card : ${BUSID}, ${eth} [${VENDOR}:${DEVICE}] (${DRIVER}) "
+        [ -n "${IP}" ] && echo "IP Addr : $(msgnormal "${IP}"), Network Interface Card : ${BUSID}, ${eth} [${VENDOR}:${DEVICE}] (${DRIVER}) "
     done
     IP="${LASTIP}"
 }
