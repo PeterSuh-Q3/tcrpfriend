@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250610
+# Date : 250611
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.3k"
+BOOTVER="0.1.3l"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -136,6 +136,7 @@ function history() {
            Add menu for "Add New DSM User"
     0.1.3j Resize QR CODE
     0.1.3k Add config of r1000nk, geminilakenk
+    0.1.3l QR Code is activated regardless of internet connection
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -154,6 +155,7 @@ function showlastupdate() {
 0.1.3i Activate build root openssl bin for DSM password make and renewal Reset(Change) DSM Password function
        Add menu for "Add New DSM User"
 0.1.3k Add config of r1000nk, geminilakenk
+0.1.3l QR Code is activated regardless of internet connection
        
 EOF
 }
@@ -192,7 +194,7 @@ function checkinternet() {
         msgwarning " OK!\n"
     else
         INTERNET="OFF"
-        echo -e "$(msgwarning "$(TEXT "No internet found, Skip updating friends and installing Python libraries for QR codes!")")"
+        echo -e "$(msgwarning "$(TEXT "No internet found, Skip updating friends !!!")")"
     fi
 
 }
@@ -1427,12 +1429,6 @@ function boot() {
     . /tmp/cmdline.check
     [ $(grep mac /tmp/cmdline.check | grep -v vender_mac | wc -l) != $netif_num ] && msgalert "FAILED to match the count of configured netif_num and mac addresses, DSM will panic, exiting so you can fix this\n" && exit 99
 
-    #if [ "${INTERNET}" = "ON" ]; then
-    #    pip install click 2>&1 | awk '{ print strftime("%Y-%m-%d %H:%M:%S"), $0; }' >> $FRIENDLOG
-    #    pip install qrcode 2>&1 | awk '{ print strftime("%Y-%m-%d %H:%M:%S"), $0; }' >> $FRIENDLOG
-    #    pip install Image 2>&1 | awk '{ print strftime("%Y-%m-%d %H:%M:%S"), $0; }' >> $FRIENDLOG
-    #fi   
-
     if [ "$staticboot" = "true" ]; then
         TEXT "Static boot set, rebooting to static ..."
         cp tools/libdevmapper.so.1.02 /usr/lib
@@ -1456,11 +1452,9 @@ function boot() {
         echo -en "$(msgnormal "$(TEXT "Enter the following address in your web browser :")")"
         echo " http://${IP}:5000"        
 
-        if [ "${INTERNET}" = "ON" ]; then
-            [ -n "${IP}" ] && URL="http://${IP}:5000" || URL="https://finds.synology.com/"
-	    python3 /root/functions.py makeqr -d "${URL}" -l "7" -o "/tmp/qrcode.png"
-            [ -f "/tmp/qrcode.png" ] && echo | fbv -acufi "/tmp/qrcode.png" >/dev/null 2>&1 || true
-        fi    
+		[ -n "${IP}" ] && URL="http://${IP}:5000" || URL="https://finds.synology.com/"
+		python3 /root/functions.py makeqr -d "${URL}" -l "7" -o "/tmp/qrcode.png"
+		[ -f "/tmp/qrcode.png" ] && echo | fbv -acufi "/tmp/qrcode.png" >/dev/null 2>&1 || true
         
         [ "${hidesensitive}" = "true" ] && clear
 
