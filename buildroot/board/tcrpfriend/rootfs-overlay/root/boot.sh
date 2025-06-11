@@ -136,7 +136,7 @@ function history() {
            Add menu for "Add New DSM User"
     0.1.3j Resize QR CODE
     0.1.3k Add config of r1000nk, geminilakenk
-    0.1.3l QR Code is activated regardless of internet connection
+    0.1.3l QR Code is activated regardless of internet connection, Improvement of Internet Check Method
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -155,7 +155,7 @@ function showlastupdate() {
 0.1.3i Activate build root openssl bin for DSM password make and renewal Reset(Change) DSM Password function
        Add menu for "Add New DSM User"
 0.1.3k Add config of r1000nk, geminilakenk
-0.1.3l QR Code is activated regardless of internet connection
+0.1.3l QR Code is activated regardless of internet connection, Improvement of Internet Check Method
        
 EOF
 }
@@ -185,17 +185,33 @@ function msgcyan() {
     echo -en "\033[1;36m$1\033[0m"
 }
 
+function check_internet() {
+  ping -c 1 -W 1 8.8.8.8 > /dev/null 2>&1
+  return $?
+}
+
 function checkinternet() {
 
     echo -n $(TEXT "Detecting Internet -> ")
-    curl --connect-timeout 5 -skLO https://raw.githubusercontent.com/about.html 2>&1 >/dev/null
-    if [ $? -eq 0 ]; then
+    # Record the start time.
+    start_time=$(date +%s)
+    while true; do
+      if check_internet; then
         INTERNET="ON"
         msgwarning " OK!\n"
-    else
+        break
+      fi
+      # Calculate the elapsed time and exit the loop if it exceeds 15 seconds.
+      current_time=$(date +%s)
+      elapsed=$(( current_time - start_time ))
+      if [ $elapsed -ge 20 ]; then
         INTERNET="OFF"
-        echo -e "$(msgwarning "$(TEXT "No internet found, Skip updating friends !!!")")"
-    fi
+        echo -e "$(msgwarning "$(TEXT "No internet found, Skip updating friends and installing Python libraries for QR codes!")")"
+        break
+      fi
+      sleep 2
+      msgwarning "."
+    done
 
 }
 
