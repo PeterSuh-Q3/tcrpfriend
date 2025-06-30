@@ -21,6 +21,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@main
+      - name: Download AMD CodeBench toolchain
+        run: |
+          wget https://sourcery.mentor.com/GNUToolchain/package12874/public/x86_64-amd-linux-gnu/amd-2016.11-19-x86_64-linux-gnu.tar.bz2
+          sudo tar -xjf amd-2016.11-19-x86_64-linux-gnu.tar.bz2 -C /opt/
+
+      - name: Apply AMD toolchain config
+        run: |
+          cd /opt/buildroot
+          make ${{github.event.inputs.board}}_defconfig
+          echo "BR2_TOOLCHAIN_EXTERNAL=y" >> .config
+          echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y" >> .config
+          echo 'BR2_TOOLCHAIN_EXTERNAL_PATH="/opt/amd-2016.11-19-x86_64-linux-gnu"' >> .config
+          echo 'BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="x86_64-linux-gnu"' >> .config
+          
       - name: Clone source code
         run: |
           git clone ${{github.event.inputs.git-address}} /opt/buildroot
