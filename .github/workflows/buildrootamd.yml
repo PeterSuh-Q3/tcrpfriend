@@ -23,8 +23,10 @@ jobs:
       - uses: actions/checkout@main
       - name: Download AMD CodeBench toolchain
         run: |
-          wget https://sourcery.mentor.com/GNUToolchain/package12874/public/x86_64-amd-linux-gnu/amd-2016.11-19-x86_64-linux-gnu.tar.bz2
-          sudo tar -xjf amd-2016.11-19-x86_64-linux-gnu.tar.bz2 -C /opt/
+          #wget https://sourcery.mentor.com/GNUToolchain/package12874/public/x86_64-amd-linux-gnu/amd-2016.11-19-x86_64-linux-gnu.tar.bz2
+          #sudo tar -xjf amd-2016.11-19-x86_64-linux-gnu.tar.bz2 -C /opt/
+          wget https://git.buildroot.net/buildroot/snapshot/buildroot-ae84d5633101fef22f58bf8fc6c1783d97265621.tar.bz2          
+          sudo tar -xjf buildroot-ae84d5633101fef22f58bf8fc6c1783d97265621.tar.bz2 -C /opt/
 
       - name: Apply AMD toolchain config
         run: |
