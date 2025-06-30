@@ -1,0 +1,60 @@
+name: buildroot(apply amd CodeBench toolchain)
+
+on:
+  workflow_dispatch:
+    inputs:
+      git-address:
+        description: 'git-address'
+        required: true
+        default: 'https://github.com/buildroot/buildroot.git'
+      branches-tags:
+        description: 'branches-tags'
+        required: true
+        default: '2023.11.x'
+      board:
+        description: 'board'
+        required: true
+        default: 'tcrpfriend'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@main
+      - name: Clone source code
+        run: |
+          git clone ${{github.event.inputs.git-address}} /opt/buildroot
+          cd /opt/buildroot
+      - name: Install packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libelf-dev locales busybox dialog curl xz-utils cpio sed
+          
+      - name: Bring over config files from redpill-load
+        run: |
+          mkdir /opt/config-files
+          cd /opt/config-files
+          git clone -b master https://github.com/PeterSuh-Q3/redpill-load.git
+          ls -ltr /opt/config-files/redpill-load/config 
+      - name: Build
+        run: |
+          mkdir /opt/firmware
+          cd /opt/buildroot
+          git checkout ${{github.event.inputs.branches-tags}}
+          git pull origin ${{github.event.inputs.branches-tags}}
+          cp -rf /home/runner/work/tcrpfriend/tcrpfriend/buildroot/* .
+          cp -rf /opt/config-files/redpill-load/config /home/runner/work/tcrpfriend/tcrpfriend/buildroot/board/tcrpfriend/rootfs-overlay/root/
+          chmod 777 board/tcrpfriend/rootfs-overlay/root/*.sh
+          chmod 777 board/tcrpfriend/rootfs-overlay/root/tools/*
+          VERSION=`grep "BOOTVER=" /home/runner/work/tcrpfriend/tcrpfriend/buildroot/board/tcrpfriend/rootfs-overlay/root/boot.sh | awk -F\" '{print $2}'`
+          echo "Version: ${VERSION}"
+          echo '---start make---'
+          make -j$(nproc) ${{github.event.inputs.board}}_defconfig
+          make -j$(nproc)
+          cp -vf /opt/buildroot/output/images/bzImage /opt/firmware/bzImage-friend || exit 1
+          cp -vf /opt/buildroot/output/images/rootfs.cpio.xz /opt/firmware/initrd-friend || exit 1
+      - name: Upload buildroot-${{github.event.inputs.branches-tags}}-${{github.event.inputs.board}}
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildroot-${{github.event.inputs.branches-tags}}-${{github.event.inputs.board}}
+          path: /opt/firmware
