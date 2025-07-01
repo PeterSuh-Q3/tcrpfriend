@@ -10,7 +10,7 @@ on:
       branches-tags:
         description: 'branches-tags'
         required: true
-        default: '2023.11.x'
+        default: '2013.08.x'
       board:
         description: 'board'
         required: true
