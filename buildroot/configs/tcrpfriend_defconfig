@@ -476,7 +476,7 @@ BR2_LINUX_KERNEL_LATEST_VERSION=y
 # BR2_LINUX_KERNEL_CUSTOM_HG is not set
 # BR2_LINUX_KERNEL_CUSTOM_SVN is not set
 BR2_LINUX_KERNEL_VERSION="6.6.79"
-BR2_LINUX_KERNEL_PATCH="https://raw.githubusercontent.com/zhmars/cjktty-patches/master/v6.x/cjktty-$(BR2_TOOLCHAIN_HEADERS_AT_LEAST).patch https://raw.githubusercontent.com/zhmars/cjktty-patches/master/cjktty-add-cjk32x32-font-data.patch"
+BR2_LINUX_KERNEL_PATCH="https://raw.githubusercontent.com/zhmars/cjktty-patches/master/v6.x/cjktty-6.6.patch https://raw.githubusercontent.com/zhmars/cjktty-patches/master/cjktty-add-cjk32x32-font-data.patch"
 # BR2_LINUX_KERNEL_USE_DEFCONFIG is not set
 # BR2_LINUX_KERNEL_USE_ARCH_DEFAULT_CONFIG is not set
 BR2_LINUX_KERNEL_USE_CUSTOM_CONFIG=y
