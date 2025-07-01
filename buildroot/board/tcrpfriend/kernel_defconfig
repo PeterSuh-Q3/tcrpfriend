@@ -630,3 +630,23 @@ CONFIG_LOGO=y
 CONFIG_LOGO_LINUX_MONO=y
 CONFIG_LOGO_LINUX_VGA16=y
 CONFIG_LOGO_LINUX_CLUT224=y
+
+############################
+## FOR OLD AMD CPU
+############################
+# Generic x86 support for legacy CPUs
+CONFIG_X86_GENERIC=y
+CONFIG_X86_64=y
+
+# Disable modern AMD features
+# CONFIG_CPU_SUP_AMD_PSTATE is not set
+# CONFIG_SENSORS_K8TEMP is not set
+# CONFIG_SENSORS_FAM15H_POWER is not set
+
+# Enable legacy support
+CONFIG_X86_32_SMP=y
+CONFIG_X86_LOCAL_APIC=y
+CONFIG_X86_IO_APIC=y
+############################
+## FOR OLD AMD CPU
+############################
