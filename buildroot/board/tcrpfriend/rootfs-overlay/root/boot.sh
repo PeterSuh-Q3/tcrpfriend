@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250611
+# Date : 250702
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.3l"
+BOOTVER="0.1.3m"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -137,6 +137,7 @@ function history() {
     0.1.3j Resize QR CODE
     0.1.3k Add config of r1000nk, geminilakenk
     0.1.3l QR Code is activated regardless of internet connection, Improvement of Internet Check Method
+    0.1.3m Enable FRIEND Kernel on HP N36L/N40L/N54L (Supports Older AMD CPUs)
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -156,6 +157,7 @@ function showlastupdate() {
        Add menu for "Add New DSM User"
 0.1.3k Add config of r1000nk, geminilakenk
 0.1.3l QR Code is activated regardless of internet connection, Improvement of Internet Check Method
+0.1.3m Enable FRIEND Kernel on HP N36L/N40L/N54L (Supports Older AMD CPUs)
        
 EOF
 }
