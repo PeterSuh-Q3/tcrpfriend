@@ -637,6 +637,9 @@ CONFIG_LOGO_LINUX_CLUT224=y
 # Generic x86 support for legacy CPUs
 CONFIG_X86_GENERIC=y
 CONFIG_X86_64=y
+# Activate support for intel, ryzen amd CPUs
+CONFIG_CPU_SUP_INTEL=y
+CONFIG_CPU_SUP_AMD=y
 
 # Disable modern AMD features
 # CONFIG_CPU_SUP_AMD_PSTATE is not set
