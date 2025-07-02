@@ -1,0 +1,77 @@
+name: release old amd
+
+on:
+  workflow_dispatch:
+      
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bring over config files from redpill-load
+        run: |
+          mkdir /opt/config-files
+          cd /opt/config-files
+          git clone -b master --single-branch --depth=1 https://github.com/PeterSuh-Q3/redpill-load.git
+          ls -ltr /opt/config-files/redpill-load/config 
+      - name: Clone source code
+        id: updaterootfs
+        run: |
+          mkdir /opt/updaterootfs
+          cd /opt/updaterootfs
+          URLS="`curl -s https://api.github.com/repos/PeterSuh-Q3/tcrpfriend/releases/tags/v0.0.0f | jq -r -e .assets[].browser_download_url`"
+          for file in $URLS; do curl --insecure --silent --location "$file" -O ; done
+          ls -ltr 
+          mkdir /opt/updaterootfs/temprd && cd /opt/updaterootfs/temprd
+          xz -dc ../initrd-friend | sudo cpio -idm 2>&1 > /dev/null 
+          echo "BEFORE UPDATE ..."
+          ls -ltr
+          rm -f ../initrd-friend
+          ls -ltr /home/runner/work/tcrpfriend/tcrpfriend/buildroot/board/tcrpfriend/rootfs-overlay/root 
+          sudo cp -rf /home/runner/work/tcrpfriend/tcrpfriend/buildroot/board/tcrpfriend/rootfs-overlay/root/* /opt/updaterootfs/temprd/root/
+          sudo cp -rf /opt/config-files/redpill-load/config /opt/updaterootfs/temprd/root/
+          sudo cp -rf /home/runner/work/tcrpfriend/tcrpfriend/buildroot/board/tcrpfriend/rootfs-overlay/etc/* /opt/updaterootfs/temprd/etc/
+          sudo cp -rf /home/runner/work/tcrpfriend/tcrpfriend/buildroot/board/tcrpfriend/rootfs-overlay/usr/* /opt/updaterootfs/temprd/usr/
+          sudo chmod +x /opt/updaterootfs/temprd/usr/bin/jq
+          sudo chmod +x /opt/updaterootfs/temprd/etc/init.d/S41dhcpcd
+          for script in $(sudo find /opt/updaterootfs/temprd/root/ -name "*.sh" ); do echo "Setting +x on $script" ; sudo chmod +x $script; done
+          for patch in $(sudo find /opt/updaterootfs/temprd/root/tools ); do echo "Setting +x on $patch" ; sudo chmod +x $patch; done
+          echo "Fix DHCPCD client id"
+          sudo sed -i 's|#clientid|clientid|' "/opt/updaterootfs/temprd/etc/dhcpcd.conf"
+          sudo sed -i 's|duid|#duid|' "/opt/updaterootfs/temprd/etc/dhcpcd.conf"
+          echo "AFTER UPDATE ..."
+          sudo ls -ltr /opt/updaterootfs/temprd/root
+          sudo ls -ltr /opt/updaterootfs/temprd/etc
+          sudo ls -ltr /opt/updaterootfs/temprd/usr
+          sudo df -h /
+          VERSION="`cat /home/runner/work/tcrpfriend/tcrpfriend/buildroot/board/tcrpfriend/rootfs-overlay/root/VERSION`"
+          echo "Version: ${VERSION}"
+          echo "::set-output name=VERSION::${VERSION}"
+          
+      - name: Recreate Ramdisk
+        run: |
+          mkdir /opt/output
+          echo "Recreating ramdisk " && cd /opt/updaterootfs/temprd && sudo find . 2>/dev/null | sudo cpio -o -H newc -R root:root | xz -9 --format=lzma >/opt/output/initrd-friend
+          cp /opt/updaterootfs/bzImage-friend /opt/output
+          ls -ltr /opt/output
+          touch /opt/output/chksum
+          echo "VERSION=`cat /home/runner/work/tcrpfriend/tcrpfriend/buildroot/board/tcrpfriend/rootfs-overlay/root/VERSION`" >> /opt/output/chksum
+          sha256sum /opt/output/bzImage-friend >> /opt/output/chksum
+          sha256sum /opt/output/initrd-friend >> /opt/output/chksum
+      - name: Upload FriendFiles-${{ steps.updaterootfs.outputs.VERSION }}
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FriendFiles-${{ steps.updaterootfs.outputs.VERSION }}
+          path: /opt/output
+      # Publish a release if is a tag
+      #- name: Release
+      #  uses: softprops/action-gh-release@v1
+      #  with:
+      #    tag_name: ${{ inputs.version }}
+      #    files: |
+      #      /opt/output/bzImage-friend
+      #      /opt/output/initrd-friend
+      #      /opt/output/chksum
+      #    body: |
+      #      ${{ inputs.version }}
