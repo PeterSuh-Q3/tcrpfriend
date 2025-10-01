@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 250702
+# Date : 251001
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.3m"
+BOOTVER="0.1.3n"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -138,6 +138,7 @@ function history() {
     0.1.3k Add config of r1000nk, geminilakenk
     0.1.3l QR Code is activated regardless of internet connection, Improvement of Internet Check Method
     0.1.3m Enable FRIEND Kernel on HP N36L/N40L/N54L (Supports Older AMD CPUs)
+	0.1.3n Improved method for retrieving vendor/device information for USB type NICs
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -151,13 +152,10 @@ function showlastupdate() {
       ( usage : ./boot.sh update v0.1.1j | ./boot.sh autoupdate off | ./boot.sh autoupdate on )
 0.1.1y SynoDisk with bootloader injection uses UUID 8765-4321 instead of 6234-C863
 0.1.3a friend kernel version up from 6.4.16 to 6.6.22 (expecting mmc module improvements)
-0.1.3d v1000nk (DS925+ kernel 5) support started
-0.1.3f Added delay processing function for recognition of eMMC module
 0.1.3i Activate build root openssl bin for DSM password make and renewal Reset(Change) DSM Password function
        Add menu for "Add New DSM User"
-0.1.3k Add config of r1000nk, geminilakenk
-0.1.3l QR Code is activated regardless of internet connection, Improvement of Internet Check Method
 0.1.3m Enable FRIEND Kernel on HP N36L/N40L/N54L (Supports Older AMD CPUs)
+0.1.3n Improved method for retrieving vendor/device information for USB type NICs
        
 EOF
 }
@@ -922,6 +920,26 @@ function sortnetif() {
   sleep 2
 }
 
+function get_vendor_device() {
+    local base_path="/sys/class/net/$1/device"
+    local vendor=""
+    local device=""
+    # 최대 3단계 상위 폴더까지 vendor/device 확인
+    for i in 0 1 2 3; do
+        local path="$base_path"
+        for ((j=0;j<i;j++)); do
+            path=$(dirname "$path")
+        done
+        if [ -f "$path/vendor" ] && [ -f "$path/device" ]; then
+            vendor=$(cat "$path/vendor" | sed 's/0x//')
+            device=$(cat "$path/device" | sed 's/0x//')
+            echo "$vendor $device"
+            return
+        fi
+    done
+    echo "" ""
+}
+
 function getip() {
 
     ethdevs=$(ls /sys/class/net/ | grep -v lo || true)
@@ -936,18 +954,17 @@ function getip() {
         else
             BUSID=""
         fi
-        if [ -f /sys/class/net/${eth}/device/vendor ] && [ -f /sys/class/net/${eth}/device/device ]; then        
-            VENDOR=$(cat /sys/class/net/${eth}/device/vendor | sed 's/0x//')
-            DEVICE=$(cat /sys/class/net/${eth}/device/device | sed 's/0x//')
-            if [ ! -z "${VENDOR}" ] && [ ! -z "${DEVICE}" ]; then
-                MATCHDRIVER=$(echo "$(matchpciidmodule ${VENDOR} ${DEVICE})")
-                if [ ! -z "${MATCHDRIVER}" ]; then
-                    if [ "${MATCHDRIVER}" != "${DRIVER}" ]; then
-                        DRIVER=${MATCHDRIVER}
-                    fi
-                fi
-            fi
-        fi    
+		
+		read VENDOR DEVICE < <(get_vendor_device $eth)
+		if [ ! -z "${VENDOR}" ] && [ ! -z "${DEVICE}" ]; then
+			MATCHDRIVER=$(echo "$(matchpciidmodule ${VENDOR} ${DEVICE})")
+			if [ ! -z "${MATCHDRIVER}" ]; then
+				if [ "${MATCHDRIVER}" != "${DRIVER}" ]; then
+					DRIVER=${MATCHDRIVER}
+				fi
+			fi
+		fi
+
         while true; do
             if [ ${COUNT} -eq 5 ]; then
                 break
@@ -965,6 +982,11 @@ function getip() {
             sleep 1
         done
         [ -n "${IP}" ] && echo "IP Addr : $(msgnormal "${IP}"), Network Interface Card : ${BUSID}, ${eth} [${VENDOR}:${DEVICE}] (${DRIVER}) "
+		IP=""
+		BUSID=""
+		VENDOR=""
+		DEVICE=""
+		DRIVER=""
     done
     IP="${LASTIP}"
 }
