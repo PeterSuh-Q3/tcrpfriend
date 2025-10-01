@@ -921,22 +921,32 @@ function sortnetif() {
 }
 
 function get_vendor_device() {
-    local base_path="/sys/class/net/$1/device"
+    local eth=$1
+    local base_path="/sys/class/net/$eth/device"
     local vendor=""
     local device=""
-    # 최대 3단계 상위 폴더까지 vendor/device 확인
-    for i in 0 1 2 3; do
-        local path="$base_path"
-        for ((j=0;j<i;j++)); do
-            path=$(dirname "$path")
-        done
-        if [ -f "$path/vendor" ] && [ -f "$path/device" ]; then
-            vendor=$(cat "$path/vendor" | sed 's/0x//')
-            device=$(cat "$path/device" | sed 's/0x//')
-            echo "$vendor $device"
-            return
-        fi
-    done
+
+    # 0단계 경로 시도
+    if [ -f "$base_path/vendor" ] && [ -f "$base_path/device" ]; then
+        vendor=$(cat "$base_path/vendor" | sed 's/0x//')
+        device=$(cat "$base_path/device" | sed 's/0x//')
+        echo "$vendor $device"
+        return
+    fi
+
+    # lsusb 명령어에서 LAN 관련 디바이스 검색
+    # lsusb 출력 예: Bus 001 Device 002: ID 0bda:8153 Realtek Semiconductor Corp. RTL8153 Gigabit Ethernet Adapter
+    local lsusb_line=$(lsusb | grep -i LAN | head -n 1)
+    if [ -n "$lsusb_line" ]; then
+        # 6번째 필드는 ID, 예: 0bda:8153
+        local id_field=$(echo "$lsusb_line" | awk '{print $6}')
+        vendor=${id_field%:*} # ID 앞부분 (벤더)
+        device=${id_field#*:} # ID 뒷부분 (장치)
+        echo "$vendor $device"
+        return
+    fi
+
+    # 없으면 빈값 반환
     echo "" ""
 }
 
@@ -951,6 +961,8 @@ function getip() {
         DRIVER=$(ls -ld /sys/class/net/${eth}/device/driver 2>/dev/null | awk -F '/' '{print $NF}')
         if [ $(ls -l /sys/class/net/${eth}/device | grep "0000:" | wc -l) -gt 0 ]; then
             BUSID=$(ls -ld /sys/class/net/${eth}/device 2>/dev/null | awk -F '0000:' '{print $NF}')
+        elif [ $(ls -l /sys/class/net/${eth} | grep "usb" | wc -l) -gt 0 ]; then
+            BUSID="USB"
         else
             BUSID=""
         fi
