@@ -936,7 +936,7 @@ function get_vendor_device() {
 
     # lsusb 명령어에서 LAN 관련 디바이스 검색
     # lsusb 출력 예: Bus 001 Device 002: ID 0bda:8153 Realtek Semiconductor Corp. RTL8153 Gigabit Ethernet Adapter
-    local lsusb_line=$(lsusb | grep -i LAN | head -n 1)
+    local lsusb_line=$(lsusb | grep -i -E 'LAN|Ethernet' | head -n 1)
     if [ -n "$lsusb_line" ]; then
         # 6번째 필드는 ID, 예: 0bda:8153
         local id_field=$(echo "$lsusb_line" | awk '{print $6}')
