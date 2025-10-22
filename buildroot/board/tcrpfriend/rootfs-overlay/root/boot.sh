@@ -356,28 +356,6 @@ function getredpillko() {
 
     echo "Removing any old redpill.ko modules"
     [ -f /root/redpill.ko ] && rm -f /root/redpill.ko
-
-    DSM_VERSION=$(cat /mnt/tcrp-p1/GRUB_VER | grep DSM_VERSION | cut -d "=" -f2 | sed 's/"//g')
-
-    if [ "${ORIGIN_PLATFORM}" = "epyc7002" ]; then    
-        KVER="5.10.55"
-    elif [ "${ORIGIN_PLATFORM}" = "v1000nk" ]; then
-        KVER="5.10.55"
-    elif [ "${ORIGIN_PLATFORM}" = "bromolow" ]; then
-        KVER="3.10.108"    
-    elif [ "${ORIGIN_PLATFORM}" = "avoton" ]; then
-        KVER="3.10.108"
-    elif [ "${ORIGIN_PLATFORM}" = "braswell" ]; then
-        KVER="3.10.108"
-    elif [ "${ORIGIN_PLATFORM}" = "cedarview" ]; then
-        KVER="3.10.108"
-    else
-        if [ ${DSM_VERSION} -lt 64570 ]; then
-            KVER="4.4.180"
-        else
-            KVER="4.4.302"
-        fi
-    fi
     
     echo "KERNEL VERSION of getredpillko() is ${KVER}"
     echo "Downloading ${ORIGIN_PLATFORM} ${KVER}+ redpill.ko ..."
@@ -1626,6 +1604,28 @@ function initialize() {
         MODULE_ALIAS_FILE="modules.alias.4.json"
         ;;
     esac
+
+    DSM_VERSION=$(cat /mnt/tcrp-p1/GRUB_VER | grep DSM_VERSION | cut -d "=" -f2 | sed 's/"//g')
+
+    if [ "${ORIGIN_PLATFORM}" = "epyc7002" ]; then    
+        KVER="5.10.55"
+    elif [ "${ORIGIN_PLATFORM}" = "v1000nk" ]; then
+        KVER="5.10.55"
+    elif [ "${ORIGIN_PLATFORM}" = "bromolow" ]; then
+        KVER="3.10.108"    
+    elif [ "${ORIGIN_PLATFORM}" = "avoton" ]; then
+        KVER="3.10.108"
+    elif [ "${ORIGIN_PLATFORM}" = "braswell" ]; then
+        KVER="3.10.108"
+    elif [ "${ORIGIN_PLATFORM}" = "cedarview" ]; then
+        KVER="3.10.108"
+    else
+        if [ ${DSM_VERSION} -lt 64570 ]; then
+            KVER="4.4.180"
+        else
+            KVER="4.4.302"
+        fi
+    fi
 }
 
 case $1 in
