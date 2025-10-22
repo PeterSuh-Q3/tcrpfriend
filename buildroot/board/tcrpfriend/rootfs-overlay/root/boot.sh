@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 251001
+# Date : 251022
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.3n"
+BOOTVER="0.1.3o"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -139,6 +139,7 @@ function history() {
     0.1.3l QR Code is activated regardless of internet connection, Improvement of Internet Check Method
     0.1.3m Enable FRIEND Kernel on HP N36L/N40L/N54L (Supports Older AMD CPUs)
 	0.1.3n Improved method for retrieving vendor/device information for USB type NICs
+	0.1.3o Consolidate command line processing variables into one: usb_line
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -156,6 +157,7 @@ function showlastupdate() {
        Add menu for "Add New DSM User"
 0.1.3m Enable FRIEND Kernel on HP N36L/N40L/N54L (Supports Older AMD CPUs)
 0.1.3n Improved method for retrieving vendor/device information for USB type NICs
+0.1.3o Consolidate command line processing variables into one: usb_line
        
 EOF
 }
@@ -1415,16 +1417,14 @@ function boot() {
         exit 0
     fi
 
+    CMDLINE_LINE=$(jq -r -e '.general .usb_line' /mnt/tcrp/user_config.json)
     if [ "${BUS}" = "sata" ]; then
-        CMDLINE_LINE=$(jq -r -e '.general .sata_line' /mnt/tcrp/user_config.json)
         # Check dom size and set max size accordingly
         # 2024.03.17 Force the dom_szmax limit of the injected bootloader to be 16GB
         CMDLINE_LINE+="dom_szmax=$(fdisk -l /dev/${LOADER_DISK} | head -1 | awk -F: '{print $2}' | awk '{ print $1*1024}') "
     	if [ "${LDTYPE}" = "SHR" ]; then
             CMDLINE_LINE=$(echo "$CMDLINE_LINE" | sed -E 's/synoboot_satadom=[12]\s*//g')
-  	fi
-    else
-        CMDLINE_LINE=$(jq -r -e '.general .usb_line' /mnt/tcrp/user_config.json)
+  	    fi
     fi
 
     #[ "$1" = "gettycon" ] && CMDLINE_LINE+=" gettycon "
