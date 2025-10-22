@@ -88,7 +88,7 @@ function backtitle() {
 function usbMenu() {
       while true; do
         dialog --backtitle "`backtitle`" \
-          --inputbox "Edit USB Command Line " 0 0 "${USB_LINE}" \
+          --inputbox "Edit Command Line " 0 0 "${USB_LINE}" \
           2>${TMP_PATH}/resp
         [ $? -ne 0 ] && return
         USB_LINE=`cat ${TMP_PATH}/resp`
@@ -100,26 +100,6 @@ function usbMenu() {
       done
       
     json=$(jq --arg var "${USB_LINE}" '.general.usb_line = $var' $USER_CONFIG_FILE) && echo -E "${json}" | jq . >$USER_CONFIG_FILE
-
-}
-
-###############################################################################
-# Shows menu to generate randomly or to get realmac
-function sataMenu() {
-      while true; do
-        dialog --backtitle "`backtitle`" \
-          --inputbox "Edit Sata Command Line" 0 0 "${SATA_LINE}" \
-          2>${TMP_PATH}/resp
-        [ $? -ne 0 ] && return
-        SATA_LINE=`cat ${TMP_PATH}/resp`
-        if [ -z "${SATA_LINE}" ]; then
-          return
-        else
-          break
-        fi
-      done
-      
-    json=$(jq --arg var "${SATA_LINE}" '.general.sata_line = $var' $USER_CONFIG_FILE) && echo -E "${json}" | jq . >$USER_CONFIG_FILE      
 
 }
 
@@ -312,8 +292,7 @@ function mainmenu() {
 
     echo "d \"Change DSM New Password\""    > "${TMP_PATH}/menu"
     echo "n \"Add New DSM User\""      >> "${TMP_PATH}/menu"
-    echo "s \"Edit USB Line\""         >> "${TMP_PATH}/menu"
-    echo "a \"Edit SATA Line\""        >> "${TMP_PATH}/menu"
+    echo "s \"Edit CMD Line\""         >> "${TMP_PATH}/menu"
     echo "r \"continue boot\""         >> "${TMP_PATH}/menu"
 
     dialog --clear --default-item ${NEXT} --backtitle "`backtitle`" --colors \
@@ -324,7 +303,6 @@ function mainmenu() {
       d) changeDSMPassword; NEXT="r" ;;
       n) addNewDSMUser; NEXT="r" ;;
       s) usbMenu;      NEXT="r" ;;
-      a) sataMenu;     NEXT="r" ;;
       r) bootmenu ;;
       e) break ;;
     esac
