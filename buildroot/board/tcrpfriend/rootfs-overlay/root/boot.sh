@@ -1418,22 +1418,23 @@ function boot() {
     fi
 
     CMDLINE_LINE=$(jq -r -e '.general .usb_line' /mnt/tcrp/user_config.json)
-    if [ "${BUS}" = "sata" ]; then
-        # Check dom size and set max size accordingly
-        # 2024.03.17 Force the dom_szmax limit of the injected bootloader to be 16GB
-        CMDLINE_LINE+="dom_szmax=$(fdisk -l /dev/${LOADER_DISK} | head -1 | awk -F: '{print $2}' | awk '{ print $1*1024}') "
-    	if [ "${LDTYPE}" = "SHR" ]; then
-            CMDLINE_LINE=$(echo "$CMDLINE_LINE" | sed -E 's/synoboot_satadom=[12]\s*//g')
-		else
-			# If the kernel is 4.4 or lower, synoboot_satadom processing is required.
-	        SATA_LINE=$(jq -r -e '.general.sata_line' /mnt/tcrp/user_config.json)
-			SATA_DOM=$(echo "$SATA_LINE" | grep -oE 'synoboot_satadom=[^ ]+' | cut -d= -f2)
-		    if [ -n "$SATA_DOM" ]; then
-                CMDLINE_LINE+="synoboot_satadom=${SATA_DOM} "
-            fi
-  	    fi
+	if [ "$(echo "${KVER:-4}" | cut -d'.' -f1)" -lt 5 ]; then
+	    if [ ! "${BUS}" = "usb" ]; then
+	        # Check dom size and set max size accordingly
+	        # 2024.03.17 Force the dom_szmax limit of the injected bootloader to be 16GB
+	        CMDLINE_LINE+="dom_szmax=$(fdisk -l /dev/${LOADER_DISK} | head -1 | awk -F: '{print $2}' | awk '{ print $1*1024}') "
+	    	if [ "${LDTYPE}" = "SHR" ]; then
+	            CMDLINE_LINE=$(echo "$CMDLINE_LINE" | sed -E 's/synoboot_satadom=[12]\s*//g')
+			else
+				# If the kernel is 4.4 or lower, synoboot_satadom processing is required.
+		        SATA_LINE=$(jq -r -e '.general.sata_line' /mnt/tcrp/user_config.json)
+				SATA_DOM=$(echo "$SATA_LINE" | grep -oE 'synoboot_satadom=[^ ]+' | cut -d= -f2)
+			    if [ -n "$SATA_DOM" ]; then
+	                CMDLINE_LINE+="synoboot_satadom=${SATA_DOM} "
+	            fi
+	  	    fi
+	    fi
     fi
-
     #[ "$1" = "gettycon" ] && CMDLINE_LINE+=" gettycon "
 
     [ "$1" = "forcejunior" ] && CMDLINE_LINE+="force_junior "
