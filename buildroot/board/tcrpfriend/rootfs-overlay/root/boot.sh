@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 251101
+# Date : 251102
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.3p"
+BOOTVER="0.1.3q"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -18,6 +18,9 @@ userconfigfile=/mnt/tcrp/user_config.json
 export TEXTDOMAINDIR="/root/lang"
 alias TEXT='gettext "msg"'
 shopt -s expand_aliases
+
+kver3platforms="bromolow braswell avoton cedarview grantley"
+kver5platforms="epyc7002 v1000nk r1000nk geminilakenk"
 
 function history() {
     cat <<EOF
@@ -141,6 +144,7 @@ function history() {
 	0.1.3n Improved method for retrieving vendor/device information for USB type NICs
 	0.1.3o Consolidate command line processing variables into one: usb_line
 	0.1.3p Add configs of DSM 6.2.4, DSM 7.3.0, DSM 7.3.1
+	0.1.3q Add the kernel version for the missing platform to the KVER variable.
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -158,6 +162,7 @@ function showlastupdate() {
 0.1.3n Improved method for retrieving vendor/device information for USB type NICs
 0.1.3o Consolidate command line processing variables into one: usb_line
 0.1.3p Add configs of DSM 6.2.4, DSM 7.3.0, DSM 7.3.1
+0.1.3q Add the kernel version for the missing platform to the KVER variable.
        
 EOF
 }
@@ -1607,25 +1612,29 @@ function initialize() {
 
     DSM_VERSION=$(cat /mnt/tcrp-p1/GRUB_VER | grep DSM_VERSION | cut -d "=" -f2 | sed 's/"//g')
 
-    if [ "${ORIGIN_PLATFORM}" = "epyc7002" ]; then    
-        KVER="5.10.55"
-    elif [ "${ORIGIN_PLATFORM}" = "v1000nk" ]; then
-        KVER="5.10.55"
-    elif [ "${ORIGIN_PLATFORM}" = "bromolow" ]; then
-        KVER="3.10.108"    
-    elif [ "${ORIGIN_PLATFORM}" = "avoton" ]; then
-        KVER="3.10.108"
-    elif [ "${ORIGIN_PLATFORM}" = "braswell" ]; then
-        KVER="3.10.108"
-    elif [ "${ORIGIN_PLATFORM}" = "cedarview" ]; then
-        KVER="3.10.108"
-    else
-        if [ ${DSM_VERSION} -lt 64570 ]; then
-            KVER="4.4.180"
-        else
-            KVER="4.4.302"
-        fi
-    fi
+	if echo "${kver3platforms}" | grep -qw "${ORIGIN_PLATFORM}"; then
+		if [ "$DSM_VERSION" = "25556" ]; then
+			KVER="3.10.105"
+		else
+			KVER="3.10.108"
+		fi
+	elif echo "${kver5platforms}" | grep -qw "${ORIGIN_PLATFORM}"; then
+		KVER="5.10.55"
+	else
+		if [ "$DSM_VERSION" -lt 25556 ]; then
+			KVER="4.4.59"
+		elif [ "$DSM_VERSION" -lt 64570 ]; then
+			KVER="4.4.180"
+		else
+			KVER="4.4.302"
+		fi
+		if [ "$ORIGIN_PLATFORM" = "broadwell" ]; then
+			if [ "$DSM_VERSION" = "25556" ]; then
+				KVER="3.10.105"
+			fi
+		fi
+	fi
+
 }
 
 case $1 in
