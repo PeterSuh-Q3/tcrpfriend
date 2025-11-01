@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 251022
+# Date : 251101
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.3o"
+BOOTVER="0.1.3p"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -140,6 +140,7 @@ function history() {
     0.1.3m Enable FRIEND Kernel on HP N36L/N40L/N54L (Supports Older AMD CPUs)
 	0.1.3n Improved method for retrieving vendor/device information for USB type NICs
 	0.1.3o Consolidate command line processing variables into one: usb_line
+	0.1.3p Add configs of DSM 6.2.4, DSM 7.3.0, DSM 7.3.1
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -151,13 +152,12 @@ function showlastupdate() {
 0.1.0  friend kernel version up from 5.15.26 to 6.4.16
 0.1.1l Added manual update feature to specified version, added disable/enable automatic update feature
       ( usage : ./boot.sh update v0.1.1j | ./boot.sh autoupdate off | ./boot.sh autoupdate on )
-0.1.1y SynoDisk with bootloader injection uses UUID 8765-4321 instead of 6234-C863
-0.1.3a friend kernel version up from 6.4.16 to 6.6.22 (expecting mmc module improvements)
 0.1.3i Activate build root openssl bin for DSM password make and renewal Reset(Change) DSM Password function
        Add menu for "Add New DSM User"
 0.1.3m Enable FRIEND Kernel on HP N36L/N40L/N54L (Supports Older AMD CPUs)
 0.1.3n Improved method for retrieving vendor/device information for USB type NICs
 0.1.3o Consolidate command line processing variables into one: usb_line
+0.1.3p Add configs of DSM 6.2.4, DSM 7.3.0, DSM 7.3.1
        
 EOF
 }
