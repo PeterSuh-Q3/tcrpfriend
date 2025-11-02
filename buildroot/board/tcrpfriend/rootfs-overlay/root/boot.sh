@@ -1621,9 +1621,9 @@ function initialize() {
 	elif echo "${kver5platforms}" | grep -qw "${ORIGIN_PLATFORM}"; then
 		KVER="5.10.55"
 	else
-		if [ "$DSM_VERSION" -lt 25556 ]; then
+		if [ "$DSM_VERSION" -le 25556 ]; then
 			KVER="4.4.59"
-		elif [ "$DSM_VERSION" -lt 64570 ]; then
+		elif [ "$DSM_VERSION" -le 64570 ]; then
 			KVER="4.4.180"
 		else
 			KVER="4.4.302"
