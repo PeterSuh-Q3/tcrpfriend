@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 251102
+# Date : 251109
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.3q"
+BOOTVER="0.1.3r"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -145,6 +145,7 @@ function history() {
 	0.1.3o Consolidate command line processing variables into one: usb_line
 	0.1.3p Add configs of DSM 6.2.4, DSM 7.3.0, DSM 7.3.1
 	0.1.3q Add the kernel version for the missing platform to the KVER variable.
+	0.1.3r Added Chrony package for UTC synchronization with NTP server
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -162,7 +163,8 @@ function showlastupdate() {
 0.1.3n Improved method for retrieving vendor/device information for USB type NICs
 0.1.3o Consolidate command line processing variables into one: usb_line
 0.1.3p Add configs of DSM 6.2.4, DSM 7.3.0, DSM 7.3.1
-0.1.3q Add the kernel version for the missing platform to the KVER variable.
+0.1.3q Add the kernel version for the missing platform to the KVER variable
+0.1.3r Added Chrony package for UTC synchronization with NTP server
        
 EOF
 }
