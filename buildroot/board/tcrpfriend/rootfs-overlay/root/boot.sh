@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 251109
+# Date : 251205
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.3r"
+BOOTVER="0.1.3s"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -146,6 +146,7 @@ function history() {
 	0.1.3p Add configs of DSM 6.2.4, DSM 7.3.0, DSM 7.3.1
 	0.1.3q Add the kernel version for the missing platform to the KVER variable.
 	0.1.3r Added Chrony package for UTC synchronization with NTP server
+	0.1.3s Add configs of DSM 7.3.2
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -155,17 +156,13 @@ EOF
 function showlastupdate() {
     cat <<EOF
 0.1.0  friend kernel version up from 5.15.26 to 6.4.16
-0.1.1l Added manual update feature to specified version, added disable/enable automatic update feature
-      ( usage : ./boot.sh update v0.1.1j | ./boot.sh autoupdate off | ./boot.sh autoupdate on )
 0.1.3i Activate build root openssl bin for DSM password make and renewal Reset(Change) DSM Password function
        Add menu for "Add New DSM User"
 0.1.3m Enable FRIEND Kernel on HP N36L/N40L/N54L (Supports Older AMD CPUs)
-0.1.3n Improved method for retrieving vendor/device information for USB type NICs
 0.1.3o Consolidate command line processing variables into one: usb_line
-0.1.3p Add configs of DSM 6.2.4, DSM 7.3.0, DSM 7.3.1
-0.1.3q Add the kernel version for the missing platform to the KVER variable
 0.1.3r Added Chrony package for UTC synchronization with NTP server
-       
+0.1.3s Add configs of DSM 7.3.2
+( usage : ./boot.sh update v0.1.3s | ./boot.sh autoupdate off | ./boot.sh autoupdate on )       
 EOF
 }
 
