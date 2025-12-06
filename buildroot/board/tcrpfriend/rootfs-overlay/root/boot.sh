@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 251205
+# Date : 251206
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.3s"
+BOOTVER="0.1.3t"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -147,6 +147,7 @@ function history() {
 	0.1.3q Add the kernel version for the missing platform to the KVER variable.
 	0.1.3r Added Chrony package for UTC synchronization with NTP server
 	0.1.3s Add configs of DSM 7.3.2
+	0.1.3t Fix configs of DSM 7.2.2 ~ DSM 7.3.1 of r1000nk (DS725+)
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -162,7 +163,9 @@ function showlastupdate() {
 0.1.3o Consolidate command line processing variables into one: usb_line
 0.1.3r Added Chrony package for UTC synchronization with NTP server
 0.1.3s Add configs of DSM 7.3.2
+0.1.3t Fix configs of DSM 7.2.2 ~ DSM 7.3.1 of r1000nk (DS725+)
 ( usage : ./boot.sh update v0.1.3s | ./boot.sh autoupdate off | ./boot.sh autoupdate on )       
+
 EOF
 }
 
