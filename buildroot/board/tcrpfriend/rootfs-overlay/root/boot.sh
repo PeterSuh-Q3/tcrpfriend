@@ -785,8 +785,9 @@ function gethw() {
     checkmachine
 
     echo -ne "Model : $(msgnormal "$model"), Serial : $(msgnormal "$serial"), Mac : $(msgnormal "$mac1"), Build : $(msgnormal "$version"), Update : $(msgnormal "$smallfixnumber"), LKM : $(msgnormal "${redpillmake}")\n"
-	GPU_INFO=$(lspci -nn | grep 0300 | head -1 | sed 's/.*\[0300\]: //')
-    echo -ne "Loader BUS: $(msgnormal "${BUS}${SHR_EX_TEXT}"), GPU: $(msgnormal "${GPU_INFO}")\n"
+    echo -ne "Loader BUS: $(msgnormal "${BUS}${SHR_EX_TEXT}")\n"
+	GPU_INFO=$(lspci -nn | grep 0300 | head -1 | sed 's/.*\[0300\]: //')	
+	echo -ne "GPU: $(msgnormal "${GPU_INFO}")\n"
     THREADS="$(cat /proc/cpuinfo | grep "model name" | awk -F: '{print $2}' | wc -l)"
     CPU="$(cat /proc/cpuinfo | grep "model name" | awk -F: '{print $2}' | uniq)"
     MEM="$(free -h | grep Mem | awk '{print $2}')"
