@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 260112
+# Date : 260115
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.3u"
+BOOTVER="0.1.3v"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -149,6 +149,7 @@ function history() {
 	0.1.3s Add configs of DSM 7.3.2
 	0.1.3t Fix configs of DSM 7.2.2 ~ DSM 7.3.1 of r1000nk (DS725+)
 	0.1.3u Add First GPU Info
+	0.1.3v Deprecated sortnetif() function in kernel 5 (SA6400, etc.) to prevent MAC detection errors.
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -162,6 +163,7 @@ function showlastupdate() {
        Add menu for "Add New DSM User"
 0.1.3m Enable FRIEND Kernel on HP N36L/N40L/N54L (Supports Older AMD CPUs)
 0.1.3u Add First GPU Info
+0.1.3v Deprecated sortnetif() function in kernel 5 (SA6400, etc.) to prevent MAC detection errors.
 ( usage : ./boot.sh update v0.1.3m | ./boot.sh autoupdate off | ./boot.sh autoupdate on )       
 
 EOF
@@ -1365,7 +1367,9 @@ function boot() {
     if [ "$(jq -r -e .ipsettings.ipset /mnt/tcrp/user_config.json)" = "static" ]; then
         setnetwork
     else
-        sortnetif 2>&1 | awk '{ print strftime("%Y-%m-%d %H:%M:%S"), $0; }' >>$FRIENDLOG
+        if [ "$(echo "${KVER:-4}" | cut -d'.' -f1)" -lt 5 ]; then 
+			sortnetif 2>&1 | awk '{ print strftime("%Y-%m-%d %H:%M:%S"), $0; }' >>$FRIENDLOG
+		fi	
         # Set Mac Address according to user_config
         setmac
 
