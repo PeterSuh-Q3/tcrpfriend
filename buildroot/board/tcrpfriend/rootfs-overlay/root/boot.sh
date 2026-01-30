@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 260112
+# Date : 260130
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.3u"
+BOOTVER="0.1.3v"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -149,6 +149,7 @@ function history() {
 	0.1.3s Add configs of DSM 7.3.2
 	0.1.3t Fix configs of DSM 7.2.2 ~ DSM 7.3.1 of r1000nk (DS725+)
 	0.1.3u Add First GPU Info
+	0.1.3v Add configs of DSM 7.1.0
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -162,6 +163,7 @@ function showlastupdate() {
        Add menu for "Add New DSM User"
 0.1.3m Enable FRIEND Kernel on HP N36L/N40L/N54L (Supports Older AMD CPUs)
 0.1.3u Add First GPU Info
+0.1.3v Add configs of DSM 7.1.0
 ( usage : ./boot.sh update v0.1.3m | ./boot.sh autoupdate off | ./boot.sh autoupdate on )       
 
 EOF
