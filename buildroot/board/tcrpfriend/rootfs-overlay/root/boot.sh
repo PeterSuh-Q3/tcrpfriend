@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 260130
+# Date : 260131
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.3v"
+BOOTVER="0.1.3w"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -150,6 +150,7 @@ function history() {
 	0.1.3t Fix configs of DSM 7.2.2 ~ DSM 7.3.1 of r1000nk (DS725+)
 	0.1.3u Add First GPU Info
 	0.1.3v Add configs of DSM 7.1.0
+	0.1.3w Stop unnecessary ramdisk double patching (Hunk error)
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -521,8 +522,8 @@ function patchramdisk() {
     cd $temprd
     . $temprd/etc/VERSION
     for patch in $PATCHES; do
-        echo "Applying patch $patch in dir $PWD"
-        patch -p1 <$patch
+        echo "Slip Applying patch $patch in dir $PWD"
+        #patch -p1 <$patch
     done
 
     # Patch /sbin/init.post
