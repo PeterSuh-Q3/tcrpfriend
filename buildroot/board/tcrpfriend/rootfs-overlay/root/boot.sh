@@ -522,10 +522,14 @@ function patchramdisk() {
 
     cd $temprd
     . $temprd/etc/VERSION
-    for patch in $PATCHES; do
-        echo "Slip Applying patch $patch in dir $PWD"
-        #patch -p1 <$patch
-    done
+	for patch in $PATCHES; do
+	    if echo "$patch" | grep -qE "(002-init|etc-rc)"; then
+	        echo "Skip Applying patch $patch in dir $PWD"
+	        continue
+	    fi
+	    echo "Applying patch $patch in dir $PWD"
+	    patch -p1 < "$patch" || echo "Patch $patch failed"
+	done
 
     # Patch /sbin/init.post
     grep -v -e '^[\t ]*#' -e '^$' "/root/patch/config-manipulators.sh" >"/root/rp.txt"
