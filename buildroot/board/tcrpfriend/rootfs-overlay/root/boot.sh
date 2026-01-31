@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 260131
+# Date : 260130
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.3w"
+BOOTVER="0.1.3v"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -150,7 +150,6 @@ function history() {
 	0.1.3t Fix configs of DSM 7.2.2 ~ DSM 7.3.1 of r1000nk (DS725+)
 	0.1.3u Add First GPU Info
 	0.1.3v Add configs of DSM 7.1.0
-	0.1.3w Stop unnecessary ramdisk double patching (Hunk error)
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -165,7 +164,6 @@ function showlastupdate() {
 0.1.3m Enable FRIEND Kernel on HP N36L/N40L/N54L (Supports Older AMD CPUs)
 0.1.3u Add First GPU Info
 0.1.3v Add configs of DSM 7.1.0
-0.1.3w Stop unnecessary ramdisk double patching (Hunk error)
 ( usage : ./boot.sh update v0.1.3m | ./boot.sh autoupdate off | ./boot.sh autoupdate on )       
 
 EOF
@@ -522,14 +520,10 @@ function patchramdisk() {
 
     cd $temprd
     . $temprd/etc/VERSION
-	for patch in $PATCHES; do
-	    if echo "$patch" | grep -qE "(002-init|etc-rc)"; then
-	        echo "Skip Applying patch $patch in dir $PWD"
-	        continue
-	    fi
-	    echo "Applying patch $patch in dir $PWD"
-	    patch -p1 < "$patch" || echo "Patch $patch failed"
-	done
+    for patch in $PATCHES; do
+        echo "Applying patch $patch in dir $PWD"
+        patch -p1 <$patch
+    done
 
     # Patch /sbin/init.post
     grep -v -e '^[\t ]*#' -e '^$' "/root/patch/config-manipulators.sh" >"/root/rp.txt"
