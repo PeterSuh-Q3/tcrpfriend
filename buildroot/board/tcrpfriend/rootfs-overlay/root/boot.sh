@@ -165,6 +165,7 @@ function showlastupdate() {
 0.1.3m Enable FRIEND Kernel on HP N36L/N40L/N54L (Supports Older AMD CPUs)
 0.1.3u Add First GPU Info
 0.1.3v Add configs of DSM 7.1.0
+0.1.3w Stop unnecessary ramdisk double patching (Hunk error)
 ( usage : ./boot.sh update v0.1.3m | ./boot.sh autoupdate off | ./boot.sh autoupdate on )       
 
 EOF
