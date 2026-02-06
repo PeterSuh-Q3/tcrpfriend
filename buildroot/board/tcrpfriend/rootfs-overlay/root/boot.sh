@@ -1088,7 +1088,7 @@ function checkupgrade() {
         if [ -n "$IP" ]; then
             patchramdisk 2>&1 | awk '{ print strftime("%Y-%m-%d %H:%M:%S"), $0; }' >>$FRIENDLOG
             smallfixnumber="$(jq -r -e '.general .smallfixnumber' $userconfigfile)"
-            echo -ne "Smallfixnumber version changed after Ramdisk Patch, Build : $(msgnormal "$version"), Update : $(msgnormal "$smallfixnumber")\n"            
+            echo -ne "Smallfixnumber version changed after Ramdisk Patch, Build : $(msgnormal "${major}.${minor}.${micro}-${buildnumber}"), Update : $(msgnormal "$smallfixnumber")\n"            
         else
             msgalert "The patch cannot proceed because there is no IP yet !!!! \n"
             exit 99
