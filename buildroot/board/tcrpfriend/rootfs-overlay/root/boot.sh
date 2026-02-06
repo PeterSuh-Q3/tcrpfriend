@@ -618,13 +618,21 @@ function patchramdisk() {
     chmod +x $temprd/usr/sbin/modprobe
 
 	# Redownload Integrated Module Pack
-    echo "Redownload Integrated Module Pack"
-	rm -vrf $temprd/exts/all-modules/$ORIGIN_PLATFORM*.tgz
+	echo "Redownload Integrated Module Pack"
+	# KVER에 따른 대상 파일명 결정
 	if [ "$(echo "${KVER:-5}" | cut -d'.' -f1)" -ge 5 ]; then
-		curl -kL "https://github.com/PeterSuh-Q3/tcrp-modules/raw/refs/heads/main/all-modules/releases/${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}.tgz" -o $temprd/exts/all-modules/${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}.tgz
-    else
-		curl -kL "https://github.com/PeterSuh-Q3/tcrp-modules/raw/refs/heads/main/all-modules/releases/${ORIGIN_PLATFORM}-${KVER}.tgz" -o $temprd/exts/all-modules/${ORIGIN_PLATFORM}-${KVER}.tgz
-    fi    
+	    target_file="${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}.tgz"
+	else
+	    target_file="${ORIGIN_PLATFORM}-${KVER}.tgz"
+	fi
+	# 파일 존재 여부 체크 후 처리
+	if [ -f "$temprd/exts/all-modules/$target_file" ]; then
+	    echo "Module pack already exists: $target_file"
+	else
+	    echo "Downloading module pack: $target_file"
+	    rm -vrf "$temprd/exts/all-modules/${ORIGIN_PLATFORM}*.tgz"
+	    curl -kL "https://github.com/PeterSuh-Q3/tcrp-modules/raw/refs/heads/main/all-modules/releases/$target_file" -o "$temprd/exts/all-modules/$target_file"
+	fi
 	
     # Reassembly ramdisk
     echo "Reassempling ramdisk"
