@@ -380,6 +380,7 @@ function getredpillko() {
     echo "TAG is ${TAG}"        
     STATUS=`curl --connect-timeout 5 -skL -w "%{http_code}" "${PROXY}https://github.com/PeterSuh-Q3/redpill-lkm${v}/releases/download/${TAG}/rp-lkms.zip" -o "/tmp/rp-lkms${v}.zip"`
 
+	echo "PATCH redpill.ko VERSION : ${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}"
 	if [ "$(echo "${KVER:-5}" | cut -d'.' -f1)" -ge 5 ]; then
         unzip /tmp/rp-lkms${v}.zip rp-${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}-prod.ko.gz -d /tmp >/dev/null 2>&1
         gunzip -f /tmp/rp-${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}-prod.ko.gz >/dev/null 2>&1
