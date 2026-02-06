@@ -380,12 +380,13 @@ function getredpillko() {
     echo "TAG is ${TAG}"        
     STATUS=`curl --connect-timeout 5 -skL -w "%{http_code}" "${PROXY}https://github.com/PeterSuh-Q3/redpill-lkm${v}/releases/download/${TAG}/rp-lkms.zip" -o "/tmp/rp-lkms${v}.zip"`
 
-	echo "PATCH redpill.ko VERSION : ${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}"
 	if [ "$(echo "${KVER:-5}" | cut -d'.' -f1)" -ge 5 ]; then
+		echo "PATCH redpill.ko VERSION : ${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}"	
         unzip /tmp/rp-lkms${v}.zip rp-${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}-prod.ko.gz -d /tmp >/dev/null 2>&1
         gunzip -f /tmp/rp-${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}-prod.ko.gz >/dev/null 2>&1
         cp -vf /tmp/rp-${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}-prod.ko /root/redpill.ko
     else
+		echo "PATCH redpill.ko VERSION : ${ORIGIN_PLATFORM}-${KVER}"	
         unzip /tmp/rp-lkms${v}.zip rp-${ORIGIN_PLATFORM}-${KVER}-prod.ko.gz -d /tmp >/dev/null 2>&1
         gunzip -f /tmp/rp-${ORIGIN_PLATFORM}-${KVER}-prod.ko.gz >/dev/null 2>&1
         cp -vf /tmp/rp-${ORIGIN_PLATFORM}-${KVER}-prod.ko /root/redpill.ko
@@ -495,6 +496,29 @@ function extractramdisk() {
 
     version="${major}.${minor}.${micro}-${buildnumber}"
     smallfixnumber="${smallfixnumber}"
+
+	if echo "${kver3platforms}" | grep -qw "${ORIGIN_PLATFORM}"; then
+		if [ "$buildnumber" = "25556" ]; then
+			KVER="3.10.105"
+		else
+			KVER="3.10.108"
+		fi
+	elif echo "${kver5platforms}" | grep -qw "${ORIGIN_PLATFORM}"; then
+		KVER="5.10.55"
+	else
+		if [ "$buildnumber" -le 25556 ]; then
+			KVER="4.4.59"
+		elif [ "$buildnumber" -le 64570 ]; then
+			KVER="4.4.180"
+		else
+			KVER="4.4.302"
+		fi
+		if [ "$ORIGIN_PLATFORM" = "broadwell" ]; then
+			if [ "$buildnumber" = "25556" ]; then
+				KVER="3.10.105"
+			fi
+		fi
+	fi
 
 }
 
