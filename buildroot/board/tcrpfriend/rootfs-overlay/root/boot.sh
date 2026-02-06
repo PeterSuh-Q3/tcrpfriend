@@ -617,6 +617,15 @@ function patchramdisk() {
     for script in $(find /root/rd.temp/exts/ | grep ".sh"); do chmod +x $script; done
     chmod +x $temprd/usr/sbin/modprobe
 
+	# Redownload Integrated Module Pack
+    echo "Redownload Integrated Module Pack"
+	rm -vrf $temprd/exts/all-modules/$ORIGIN_PLATFORM*.tgz
+	if [ "$(echo "${KVER:-5}" | cut -d'.' -f1)" -ge 5 ]; then
+		curl -kL "https://github.com/PeterSuh-Q3/tcrp-modules/raw/refs/heads/main/all-modules/releases/${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}.tgz" -o $temprd/exts/all-modules/${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}.tgz
+    else
+		curl -kL "https://github.com/PeterSuh-Q3/tcrp-modules/raw/refs/heads/main/all-modules/releases/${ORIGIN_PLATFORM}-${KVER}.tgz" -o $temprd/exts/all-modules/${ORIGIN_PLATFORM}-${KVER}.tgz
+    fi    
+	
     # Reassembly ramdisk
     echo "Reassempling ramdisk"
     if [ "${RD_COMPRESSED}" == "true" ]; then
