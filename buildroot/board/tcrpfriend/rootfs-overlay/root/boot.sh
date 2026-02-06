@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 260206
+# Date : 260130
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.3w"
+BOOTVER="0.1.3v"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -150,7 +150,6 @@ function history() {
 	0.1.3t Fix configs of DSM 7.2.2 ~ DSM 7.3.1 of r1000nk (DS725+)
 	0.1.3u Add First GPU Info
 	0.1.3v Add configs of DSM 7.1.0
-	0.1.3w Added logic to change redpill.ko and module packs when detecting a DSM version change
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -165,7 +164,6 @@ function showlastupdate() {
 0.1.3m Enable FRIEND Kernel on HP N36L/N40L/N54L (Supports Older AMD CPUs)
 0.1.3u Add First GPU Info
 0.1.3v Add configs of DSM 7.1.0
-0.1.3w Added logic to change redpill.ko and module packs when detecting a DSM version change
 ( usage : ./boot.sh update v0.1.3m | ./boot.sh autoupdate off | ./boot.sh autoupdate on )       
 
 EOF
@@ -380,13 +378,11 @@ function getredpillko() {
     echo "TAG is ${TAG}"        
     STATUS=`curl --connect-timeout 5 -skL -w "%{http_code}" "${PROXY}https://github.com/PeterSuh-Q3/redpill-lkm${v}/releases/download/${TAG}/rp-lkms.zip" -o "/tmp/rp-lkms${v}.zip"`
 
-	if [ "$(echo "${KVER:-5}" | cut -d'.' -f1)" -ge 5 ]; then
-		echo "PATCH redpill.ko VERSION : ${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}"	
+    if [ "${ORIGIN_PLATFORM}" = "epyc7002" ]||[ "${ORIGIN_PLATFORM}" = "v1000nk" ]; then
         unzip /tmp/rp-lkms${v}.zip rp-${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}-prod.ko.gz -d /tmp >/dev/null 2>&1
         gunzip -f /tmp/rp-${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}-prod.ko.gz >/dev/null 2>&1
         cp -vf /tmp/rp-${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}-prod.ko /root/redpill.ko
     else
-		echo "PATCH redpill.ko VERSION : ${ORIGIN_PLATFORM}-${KVER}"	
         unzip /tmp/rp-lkms${v}.zip rp-${ORIGIN_PLATFORM}-${KVER}-prod.ko.gz -d /tmp >/dev/null 2>&1
         gunzip -f /tmp/rp-${ORIGIN_PLATFORM}-${KVER}-prod.ko.gz >/dev/null 2>&1
         cp -vf /tmp/rp-${ORIGIN_PLATFORM}-${KVER}-prod.ko /root/redpill.ko
@@ -497,29 +493,6 @@ function extractramdisk() {
     version="${major}.${minor}.${micro}-${buildnumber}"
     smallfixnumber="${smallfixnumber}"
 
-	if echo "${kver3platforms}" | grep -qw "${ORIGIN_PLATFORM}"; then
-		if [ "$buildnumber" = "25556" ]; then
-			KVER="3.10.105"
-		else
-			KVER="3.10.108"
-		fi
-	elif echo "${kver5platforms}" | grep -qw "${ORIGIN_PLATFORM}"; then
-		KVER="5.10.55"
-	else
-		if [ "$buildnumber" -le 25556 ]; then
-			KVER="4.4.59"
-		elif [ "$buildnumber" -le 64570 ]; then
-			KVER="4.4.180"
-		else
-			KVER="4.4.302"
-		fi
-		if [ "$ORIGIN_PLATFORM" = "broadwell" ]; then
-			if [ "$buildnumber" = "25556" ]; then
-				KVER="3.10.105"
-			fi
-		fi
-	fi
-
 }
 
 function patchramdisk() {
@@ -617,23 +590,6 @@ function patchramdisk() {
     for script in $(find /root/rd.temp/exts/ | grep ".sh"); do chmod +x $script; done
     chmod +x $temprd/usr/sbin/modprobe
 
-	# Redownload Integrated Module Pack
-	echo "Redownload Integrated Module Pack"
-	# KVER에 따른 대상 파일명 결정
-	if [ "$(echo "${KVER:-5}" | cut -d'.' -f1)" -ge 5 ]; then
-	    target_file="${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}.tgz"
-	else
-	    target_file="${ORIGIN_PLATFORM}-${KVER}.tgz"
-	fi
-	# 파일 존재 여부 체크 후 처리
-	if [ -f "$temprd/exts/all-modules/$target_file" ]; then
-	    echo "Module pack already exists: $target_file"
-	else
-	    echo "Downloading module pack: $target_file"
-	    rm -vrf "$temprd/exts/all-modules/${ORIGIN_PLATFORM}*.tgz"
-	    curl -kL "https://github.com/PeterSuh-Q3/tcrp-modules/raw/refs/heads/main/all-modules/releases/$target_file" -o "$temprd/exts/all-modules/$target_file"
-	fi
-	
     # Reassembly ramdisk
     echo "Reassempling ramdisk"
     if [ "${RD_COMPRESSED}" == "true" ]; then
@@ -651,7 +607,7 @@ function patchramdisk() {
 
     origrdhash=$(sha256sum /mnt/tcrp-p2/rd.gz | awk '{print $1}')
     origzimghash=$(sha256sum /mnt/tcrp-p2/zImage | awk '{print $1}')
-    #version="${major}.${minor}.${micro}-${buildnumber}"
+    version="${major}.${minor}.${micro}-${buildnumber}"
     smallfixnumber="${smallfixnumber}"
 
     updateuserconfigfield "general" "rdhash" "$origrdhash"
@@ -1088,8 +1044,7 @@ function checkupgrade() {
         if [ -n "$IP" ]; then
             patchramdisk 2>&1 | awk '{ print strftime("%Y-%m-%d %H:%M:%S"), $0; }' >>$FRIENDLOG
             smallfixnumber="$(jq -r -e '.general .smallfixnumber' $userconfigfile)"
-			version="$(jq -r -e '.general .version' $userconfigfile)"
-            echo -ne "Smallfixnumber version changed after Ramdisk Patch, Build : $(msgnormal "$version"), Update : $(msgnormal "$smallfixnumber")\n"
+            echo -ne "Smallfixnumber version changed after Ramdisk Patch, Build : $(msgnormal "$version"), Update : $(msgnormal "$smallfixnumber")\n"            
         else
             msgalert "The patch cannot proceed because there is no IP yet !!!! \n"
             exit 99
