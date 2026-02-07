@@ -630,7 +630,7 @@ function patchramdisk() {
 	    echo "Module pack already exists: $target_file"
 	else
 	    echo "Downloading module pack: $target_file"
-	    rm -vrf "$temprd/exts/all-modules/${ORIGIN_PLATFORM}*.tgz"
+		rm -vrf $temprd/exts/all-modules/$ORIGIN_PLATFORM*.tgz
 	    curl -kL "https://github.com/PeterSuh-Q3/tcrp-modules/raw/refs/heads/main/all-modules/releases/$target_file" -o "$temprd/exts/all-modules/$target_file"
 	fi
 	
