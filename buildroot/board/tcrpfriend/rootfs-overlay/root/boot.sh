@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 260207
+# Date : 260213
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.3w"
+BOOTVER="0.1.3x"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -151,6 +151,7 @@ function history() {
 	0.1.3u Add First GPU Info
 	0.1.3v Add configs of DSM 7.1.0
 	0.1.3w Added logic to change redpill.ko and module packs when detecting a DSM version change
+	0.1.3x Delete the Jot Grub Boot Entry Default value adjustment and reapply the Kernel 5 model config
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -164,8 +165,8 @@ function showlastupdate() {
        Add menu for "Add New DSM User"
 0.1.3m Enable FRIEND Kernel on HP N36L/N40L/N54L (Supports Older AMD CPUs)
 0.1.3u Add First GPU Info
-0.1.3v Add configs of DSM 7.1.0
 0.1.3w Added logic to change redpill.ko and module packs when detecting a DSM version change
+0.1.3x Delete the Jot Grub Boot Entry Default value adjustment and reapply the Kernel 5 model config
 ( usage : ./boot.sh update v0.1.3m | ./boot.sh autoupdate off | ./boot.sh autoupdate on )       
 
 EOF
@@ -1068,15 +1069,15 @@ function checkupgrade() {
     rdhash="$(jq -r -e '.general .rdhash' $userconfigfile)"
     zimghash="$(jq -r -e '.general .zimghash' $userconfigfile)"
 
-    if [ "$loadermode" == "JOT" ]; then    
-        if [ "${BUS}" = "usb" ]; then
-            msgnormal "Setting default boot entry to JOT USB\n"
-            setgrubdefault 2
-        else
-            msgnormal "Setting default boot entry to JOT SATA\n"
-            setgrubdefault 3
-        fi        
-    fi
+    #if [ "$loadermode" == "JOT" ]; then    
+    #    if [ "${BUS}" = "usb" ]; then
+    #        msgnormal "Setting default boot entry to JOT USB\n"
+    #        setgrubdefault 2
+    #    else
+    #        msgnormal "Setting default boot entry to JOT SATA\n"
+    #        setgrubdefault 3
+    #    fi        
+    #fi
 
     echo -n $(TEXT "Detecting upgrade : ")
 
@@ -1527,8 +1528,8 @@ function boot() {
         cp tools/grub-editenv /usr/bin
         chmod +x /usr/bin/grub-editenv
         /usr/bin/grub-editenv /mnt/tcrp-p1/boot/grub/grubenv create        
-        [ "${BUS}" = "sata" ] && setgrubdefault 1
-        [ "${BUS}" = "usb" ] && setgrubdefault 0
+        #[ "${BUS}" = "sata" ] && setgrubdefault 1
+        #[ "${BUS}" = "usb" ] && setgrubdefault 0
         reboot
     else
 
