@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 260213
+# Date : 260302
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.3x"
+BOOTVER="0.1.3y"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -152,6 +152,7 @@ function history() {
 	0.1.3v Add configs of DSM 7.1.0
 	0.1.3w Added logic to change redpill.ko and module packs when detecting a DSM version change
 	0.1.3x Delete the Jot Grub Boot Entry Default value adjustment and reapply the Kernel 5 model config
+	0.1.3y Adding custom kernel features to Kernel 5-based models
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -164,9 +165,8 @@ function showlastupdate() {
 0.1.3i Activate build root openssl bin for DSM password make and renewal Reset(Change) DSM Password function
        Add menu for "Add New DSM User"
 0.1.3m Enable FRIEND Kernel on HP N36L/N40L/N54L (Supports Older AMD CPUs)
-0.1.3u Add First GPU Info
 0.1.3w Added logic to change redpill.ko and module packs when detecting a DSM version change
-0.1.3x Delete the Jot Grub Boot Entry Default value adjustment and reapply the Kernel 5 model config
+0.1.3y Adding custom kernel features to Kernel 5-based models
 ( usage : ./boot.sh update v0.1.3m | ./boot.sh autoupdate off | ./boot.sh autoupdate on )       
 
 EOF
@@ -626,6 +626,11 @@ function patchramdisk() {
 	else
 	    target_file="${ORIGIN_PLATFORM}-${KVER}.tgz"
 	fi
+
+	if [ "$mtype" = "custom-modules" ]; then
+		target_file="modules-$target_file"
+	fi
+	
 	# 파일 존재 여부 체크 후 처리
 	if [ -f "$temprd/exts/all-modules/$target_file" ]; then
 	    echo "Module pack already exists: $target_file"
@@ -832,7 +837,7 @@ function gethw() {
     checkmachine
 
     echo -ne "Model : $(msgnormal "$model"), Serial : $(msgnormal "$serial"), Mac : $(msgnormal "$mac1"), Build : $(msgnormal "$version"), Update : $(msgnormal "$smallfixnumber"), LKM : $(msgnormal "${redpillmake}")\n"
-    echo -ne "Loader BUS: $(msgnormal "${BUS}${SHR_EX_TEXT}")\n"
+    echo -ne "Loader BUS: $(msgnormal "${BUS}${SHR_EX_TEXT}"), Module Type: $(msgnormal "$mtype")\n"
 	GPU_INFO=$(lspci -nn | grep 0300 | head -1 | sed 's/.*\[0300\]: //')	
 	echo -ne "GPU: $(msgnormal "${GPU_INFO}")\n"
     THREADS="$(cat /proc/cpuinfo | grep "model name" | awk -F: '{print $2}' | wc -l)"
@@ -1368,6 +1373,7 @@ function readconfig() {
         loadermode="$(jq -r -e '.general.loadermode' $userconfigfile)"
         ucode=$(jq -r -e '.general.ucode' "$userconfigfile")
         tz=$(echo $ucode | cut -c 4-)
+		mtype="$(jq -r -e '.general.modulename' $userconfigfile)"
 
         usrdisks=$(jq -r -e '.general.diskcount' "$userconfigfile")
     	chkdisk="false"
