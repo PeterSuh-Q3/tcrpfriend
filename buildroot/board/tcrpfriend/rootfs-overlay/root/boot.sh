@@ -550,8 +550,12 @@ function patchramdisk() {
     . $temprd/etc/VERSION
     for patch in $PATCHES; do
         echo "Applying patch $patch in dir $PWD"
-        patch -p1 <$patch
+        # -f, -F 3 옵션을 추가하고 || true 로 에러 반환을 무시합니다.
+        patch -p1 -f -F 3 <$patch || true		
     done
+    # 실패한 hunk로 인해 생성된 .rej 파일이 램디스크에 남는 것을 방지
+    find $temprd -name "*.rej" -type f -delete
+    find $temprd -name "*.orig" -type f -delete
 
     # Patch /sbin/init.post
     grep -v -e '^[\t ]*#' -e '^$' "/root/patch/config-manipulators.sh" >"/root/rp.txt"
