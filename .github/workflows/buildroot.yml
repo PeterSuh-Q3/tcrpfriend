@@ -28,7 +28,7 @@ jobs:
       - name: Install packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y libelf-dev locales busybox dialog curl xz-utils cpio sed
+          sudo apt-get install -y libelf-dev locales busybox dialog curl xz-utils cpio sed zstd
           
       - name: Bring over config files from redpill-load
         run: |
@@ -52,7 +52,7 @@ jobs:
           make -j$(nproc) ${{github.event.inputs.board}}_defconfig
           make -j$(nproc)
           cp -vf /opt/buildroot/output/images/bzImage /opt/firmware/bzImage-friend || exit 1
-          cp -vf /opt/buildroot/output/images/rootfs.cpio.xz /opt/firmware/initrd-friend || exit 1
+          cp -vf /opt/buildroot/output/images/rootfs.cpio.zstd /opt/firmware/initrd-friend || exit 1
       - name: Upload buildroot-${{github.event.inputs.branches-tags}}-${{github.event.inputs.board}}
         uses: actions/upload-artifact@v4
         with:
