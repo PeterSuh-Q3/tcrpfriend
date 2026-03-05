@@ -52,7 +52,7 @@ jobs:
           make -j$(nproc) ${{github.event.inputs.board}}_defconfig
           make -j$(nproc)
           cp -vf /opt/buildroot/output/images/bzImage /opt/firmware/bzImage-friend || exit 1
-          cp -vf /opt/buildroot/output/images/rootfs.cpio.zstd /opt/firmware/initrd-friend || exit 1
+          cp -vf /opt/buildroot/output/images/rootfs.cpio.zst /opt/firmware/initrd-friend || exit 1
       - name: Upload buildroot-${{github.event.inputs.branches-tags}}-${{github.event.inputs.board}}
         uses: actions/upload-artifact@v4
         with:
