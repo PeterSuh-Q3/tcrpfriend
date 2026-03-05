@@ -144,7 +144,7 @@ function history() {
 	0.1.3n Improved method for retrieving vendor/device information for USB type NICs
 	0.1.3o Consolidate command line processing variables into one: usb_line
 	0.1.3p Add configs of DSM 6.2.4, DSM 7.3.0, DSM 7.3.1
-	0.1.3q Add the kernel version for the missing platform to the KVER variable.
+	0.1.3q Add the kernel version for the missing platform to the  variable.
 	0.1.3r Added Chrony package for UTC synchronization with NTP server
 	0.1.3s Add configs of DSM 7.3.2
 	0.1.3t Fix configs of DSM 7.2.2 ~ DSM 7.3.1 of r1000nk (DS725+)
@@ -367,13 +367,13 @@ function getredpillko() {
     echo "Removing any old redpill.ko modules"
     [ -f /root/redpill.ko ] && rm -f /root/redpill.ko
     
-    echo "KERNEL VERSION of getredpillko() is ${KVER}"
-    echo "Downloading ${ORIGIN_PLATFORM} ${KVER}+ redpill.ko ..."
+    echo "KERNEL VERSION of getredpillko() is ${}"
+    echo "Downloading ${ORIGIN_PLATFORM} ${}+ redpill.ko ..."
 
     LATESTURL="`curl --connect-timeout 5 -skL -w %{url_effective} -o /dev/null "${PROXY}https://github.com/PeterSuh-Q3/redpill-lkm${v}/releases/latest"`"
 
     if [ $? -ne 0 ]; then
-        msgalert "Error downloading last version of ${ORIGIN_PLATFORM} ${KVER}+ rp-lkms.zip, Stop Booting...\n"
+        msgalert "Error downloading last version of ${ORIGIN_PLATFORM} ${}+ rp-lkms.zip, Stop Booting...\n"
         exit 99
     fi
 
@@ -381,9 +381,9 @@ function getredpillko() {
     echo "TAG is ${TAG}"        
     STATUS=`curl --connect-timeout 5 -skL -w "%{http_code}" "${PROXY}https://github.com/PeterSuh-Q3/redpill-lkm${v}/releases/download/${TAG}/rp-lkms.zip" -o "/tmp/rp-lkms${v}.zip"`
 
-	if [ "$(echo "${KVER:-5}" | cut -d'.' -f1)" -ge 5 ]; then
-		echo "PATCH redpill.ko VERSION : ${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}"	
-        unzip /tmp/rp-lkms${v}.zip rp-${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}-prod.ko.gz -d /tmp >/dev/null 2>&1
+	if [ "$(echo "${:-5}" | cut -d'.' -f1)" -ge 5 ]; then
+		echo "PATCH redpill.ko VERSION : ${ORIGIN_PLATFORM}-${major}.${minor}-${}"	
+        unzip /tmp/rp-lkms${v}.zip rp-${ORIGIN_PLATFORM}-${major}.${minor}-${}-prod.ko.gz -d /tmp >/dev/null 2>&1
         gunzip -f /tmp/rp-${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}-prod.ko.gz >/dev/null 2>&1
         cp -vf /tmp/rp-${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}-prod.ko /root/redpill.ko
     else
@@ -1561,14 +1561,22 @@ function boot() {
         
         [ "${hidesensitive}" = "true" ] && clear
 
-        if [ $(echo ${CMDLINE_LINE} | grep withefi | wc -l) -eq 1 ]; then
-            kexec -l "${MOD_ZIMAGE_FILE}" --initrd "${MOD_RDGZ_FILE}" --command-line="${CMDLINE_LINE}"
-        else
-            echo -e "$(msgwarning "$(TEXT "Booting with noefi, please notice that this might cause issues")")"
-            kexec --noefi -l "${MOD_ZIMAGE_FILE}" --initrd "${MOD_RDGZ_FILE}" --command-line="${CMDLINE_LINE}"
-        fi
+        #if [ $(echo ${CMDLINE_LINE} | grep withefi | wc -l) -eq 1 ]; then
+        #    kexec -l "${MOD_ZIMAGE_FILE}" --initrd "${MOD_RDGZ_FILE}" --command-line="${CMDLINE_LINE}"
+        #else
+        #    echo -e "$(msgwarning "$(TEXT "Booting with noefi, please notice that this might cause issues")")"
+        #    kexec --noefi -l "${MOD_ZIMAGE_FILE}" --initrd "${MOD_RDGZ_FILE}" --command-line="${CMDLINE_LINE}"
+        #fi
+        #kexec -f -e
 
-        kexec -f -e
+		# Executes DSM kernel via KEXEC
+		KEXECARGS="-a"
+		if [ "$(echo "${KVER:-4}" | cut -d'.' -f1)" -lt 4 ] && [ ${EFI} -eq 1 ]; then
+			printf "\033[1;33m%s\033[0m\n" "$(TEXT "Warning, running kexec with --noefi param, strange things will happen!!")"
+			KEXECARGS+=" --noefi"
+		fi
+		kexec ${KEXECARGS} -l "${MOD_ZIMAGE_FILE}" --initrd "${MOD_RDGZ_FILE}" --command-line="${CMDLINE_LINE} kexecboot" >>"${FRIENDLOG}" 2>&1 || dieLog
+		
     fi
 }
 
