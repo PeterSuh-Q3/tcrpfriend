@@ -1563,22 +1563,15 @@ function boot() {
         
         [ "${hidesensitive}" = "true" ] && clear
 
-        #if [ $(echo ${CMDLINE_LINE} | grep withefi | wc -l) -eq 1 ]; then
-        #    kexec -l "${MOD_ZIMAGE_FILE}" --initrd "${MOD_RDGZ_FILE}" --command-line="${CMDLINE_LINE}"
-        #else
-        #    echo -e "$(msgwarning "$(TEXT "Booting with noefi, please notice that this might cause issues")")"
-        #    kexec --noefi -l "${MOD_ZIMAGE_FILE}" --initrd "${MOD_RDGZ_FILE}" --command-line="${CMDLINE_LINE}"
-        #fi
-        #kexec -f -e
-
 		# Executes DSM kernel via KEXEC
 		KEXECARGS="-a"
 		if [ "$(echo "${KVER:-4}" | cut -d'.' -f1)" -lt 4 ] && [ ${EFI} -eq 1 ]; then
 			printf "\033[1;33m%s\033[0m\n" "$(TEXT "Warning, running kexec with --noefi param, strange things will happen!!")"
 			KEXECARGS+=" --noefi"
 		fi
-		kexec ${KEXECARGS} -l "${MOD_ZIMAGE_FILE}" --initrd "${MOD_RDGZ_FILE}" --command-line="${CMDLINE_LINE} kexecboot" >>"${FRIENDLOG}" 2>&1 || dieLog
-		
+		kexec ${KEXECARGS} -l "${MOD_ZIMAGE_FILE}" --initrd "${MOD_RDGZ_FILE}" --command-line="${CMDLINE_LINE}"
+
+		kexec -f -e
     fi
 }
 
