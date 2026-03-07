@@ -855,7 +855,13 @@ function gethw() {
     HBACNT=$(lspci -nn | egrep -e "\[0104\]" -e "\[0107\]" | wc -l)
     NICCNT=$(lspci -nn | egrep -e "\[0200\]" | wc -l)
     echo -ne "SAS/RAID HBAs Count : $(msgalert "$HBACNT"), NICs Count : $(msgalert "$NICCNT"), SAS/SATA Disks Count : $(msgalert "${DISKCNT}"), NVMe Disks Count : $(msgalert "${NVMECNT}")\n"
-    [ -d /sys/firmware/efi ] && msgnormal "System is running in UEFI boot mode\n" && EFIMODE="yes" || EFIMODE="no" && msgblue "System is running in Legacy boot mode\n"
+	if [ -d /sys/firmware/efi ]; then
+	    msgnormal "System is running in UEFI boot mode\n"
+	    EFIMODE="yes"
+	else
+	    msgblue "System is running in Legacy boot mode\n"
+	    EFIMODE="no"
+	fi
 }
 
 function checkmachine() {
