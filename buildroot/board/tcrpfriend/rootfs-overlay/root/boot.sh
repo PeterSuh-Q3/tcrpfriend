@@ -855,7 +855,7 @@ function gethw() {
     HBACNT=$(lspci -nn | egrep -e "\[0104\]" -e "\[0107\]" | wc -l)
     NICCNT=$(lspci -nn | egrep -e "\[0200\]" | wc -l)
     echo -ne "SAS/RAID HBAs Count : $(msgalert "$HBACNT"), NICs Count : $(msgalert "$NICCNT"), SAS/SATA Disks Count : $(msgalert "${DISKCNT}"), NVMe Disks Count : $(msgalert "${NVMECNT}")\n"
-    [ -d /sys/firmware/efi ] && msgnormal "System is running in UEFI boot mode\n" && EFIMODE="yes" || msgblue "System is running in Legacy boot mode\n"    
+    [ -d /sys/firmware/efi ] && msgnormal "System is running in UEFI boot mode\n" && EFIMODE="yes" || EFIMODE="no" && msgblue "System is running in Legacy boot mode\n"
 }
 
 function checkmachine() {
@@ -1565,7 +1565,7 @@ function boot() {
 
 		# Executes DSM kernel via KEXEC
 		KEXECARGS="-a"
-		if [ "$(echo "${KVER:-4}" | cut -d'.' -f1)" -lt 4 ] && [ ${EFI} -eq 1 ]; then
+		if [ "$(echo "${KVER:-4}" | cut -d'.' -f1)" -lt 4 ] && [ "$EFIMODE" = "no" ]; then
 			printf "\033[1;33m%s\033[0m\n" "$(TEXT "Warning, running kexec with --noefi param, strange things will happen!!")"
 			KEXECARGS+=" --noefi"
 		fi
