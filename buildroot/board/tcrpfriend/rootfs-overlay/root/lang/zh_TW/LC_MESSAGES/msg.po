@@ -1,0 +1,184 @@
+# Chinese translations for PACKAGE package.
+# Copyright (C) 2024 THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <dante9000@gmail.com>, 2024.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-04-06 09:00+0000\n"
+"PO-Revision-Date: 2024-04-07 15:54+0900\n"
+"Last-Translator: Peter Suh <dante9000@gmail.com>\n"
+"Language-Team: Chinese (Traditional) <https://hosted.weblate.org/projects/tcrp-"
+"mshell/lang/zh_Hant/>\n"
+"Language: zh_TW\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Poedit 3.4.2\n"
+
+#: boot.sh:139
+msgid "Detecting Internet -> "
+msgstr "偵測網際網路 -> "
+
+#: boot.sh:146
+msgid ""
+"No internet found, Skip updating friends and installing Python libraries for QR "
+"codes!"
+msgstr "未找到網際網路，跳過更新好友與安裝 QR 碼所需的 Python 函式庫！"
+
+#: boot.sh:162
+msgid "TCRP Friend auto update disabled"
+msgstr "已停用 TCRP 好友自動更新"
+
+#: boot.sh:168
+msgid "Checking for latest friend -> "
+msgstr "檢查最新好友 -> "
+
+#: boot.sh:191
+msgid "TCRP FRIEND HAS BEEN UPDATED, GOING FOR REBOOT"
+msgstr "TCRP 好友已更新，即將重新啟動"
+
+#: boot.sh:196
+msgid "No IP yet to check for latest friend"
+msgstr "尚未取得 IP 以檢查最新好友"
+
+#: boot.sh:614
+msgid "r key pressed! Entering Menu for Reset DSM Password!"
+msgstr "已按下 r 鍵！進入重置 DSM 密碼選單！"
+
+#: boot.sh:620
+msgid "e key pressed! Entering Menu for Edit USB/SATA Command Line!"
+msgstr "已按下 e 鍵！進入編輯 USB/SATA 命令列選單！"
+
+#: boot.sh:626
+msgid "j key pressed! Prepare Entering Force Junior (to re-install DSM)!"
+msgstr "已按下 j 鍵！準備進入 Force Junior 模式（重新安裝 DSM）！"
+
+#: boot.sh:698
+msgid "Unsupported loader disks other than USB, Sata DoM, mmc, NVMe, etc."
+msgstr "不支援除 USB、Sata DoM、mmc、NVMe 等之外的引導磁碟。"
+
+#: boot.sh:777
+msgid "ERROR ! /mnt/tcrp-p2/rd.gz file not found, stopping boot process"
+msgstr "錯誤！找不到 /mnt/tcrp-p2/rd.gz 檔案，停止啟動程序"
+
+#: boot.sh:781
+msgid "ERROR ! /mnt/tcrp-p2/zImage file not found, stopping boot process"
+msgstr "錯誤！找不到 /mnt/tcrp-p2/zImage 檔案，停止啟動程序"
+
+#: boot.sh:802
+msgid "Detecting upgrade : "
+msgstr "偵測升級 : "
+
+#: boot.sh:825
+msgid "A reboot is required. Press any key to reboot..."
+msgstr "需要重新啟動。請按任意鍵重新啟動..."
+
+#: boot.sh:910
+msgid "Not Supported Loader BUS Type, program Exit!!!"
+msgstr "不支援的引導器 BUS 類型，程式退出！！！"
+
+#: boot.sh:932
+msgid "Failed to find boot Partition on !!!"
+msgstr "找不到啟動分區！！！"
+
+#: boot.sh:976
+msgid ""
+"model is not resolved. Please check the /mnt/tcrp/user_config.json file. stopping "
+"boot process"
+msgstr "型號未解析。請檢查 /mnt/tcrp/user_config.json 檔案。停止啟動程序"
+
+#: boot.sh:981
+msgid ""
+"Build version is not resolved. Please check the /mnt/tcrp/user_config.json file. "
+"stopping boot process"
+msgstr "編譯版本未解析。請檢查 /mnt/tcrp/user_config.json 檔案。停止啟動程序"
+
+#: boot.sh:986
+msgid ""
+"Update(smallfixnumber) is not resolved. Please check the /mnt/tcrp/user_config."
+"json file."
+msgstr "Update(smallfixnumber) 未解析。請檢查 /mnt/tcrp/user_config.json 檔案。"
+
+#: boot.sh:994
+msgid ""
+"serial is not resolved. Please check the /mnt/tcrp/user_config.json file. "
+"stopping boot process"
+msgstr "序號未解析。請檢查 /mnt/tcrp/user_config.json 檔案。停止啟動程序"
+
+#: boot.sh:1001
+msgid ""
+"mac1 is not resolved. Please check the /mnt/tcrp/user_config.json file. stopping "
+"boot process"
+msgstr "mac1 未解析。請檢查 /mnt/tcrp/user_config.json 檔案。停止啟動程序"
+
+#: boot.sh:1116
+msgid "Press <r> to enter a menu for Reset DSM Password"
+msgstr "按 <r> 進入重置 DSM 密碼的選單"
+
+#: boot.sh:1117
+msgid "Press <e> to enter a menu for Edit USB/SATA Command Line"
+msgstr "按 <e> 進入編輯 USB/SATA 命令列選單"
+
+#: boot.sh:1118
+msgid "Press <j> to enter a Junior mode (to re-install DSM)"
+msgstr "按 <j> 進入初級模式（重新安裝 DSM）"
+
+#: boot.sh:1122
+msgid "Entering a Junior mode (to re-install DSM)..."
+msgstr "正在進入初級模式（重新安裝 DSM）..."
+
+#: boot.sh:1137
+msgid "EFI booted system with no EFI option, adding withefi to cmdline"
+msgstr "EFI 啟動的系統未包含 EFI 選項，正在將 withefi 加入至 cmdline"
+
+#: boot.sh:1147
+msgid "Static boot set, rebooting to static ..."
+msgstr "已設定靜態啟動，正在重新啟動至靜態模式..."
+
+#: boot.sh:1161
+msgid "Boot timeout exceeded, booting ... "
+msgstr "啟動逾時，正在啟動... "
+
+#: boot.sh:1163
+msgid ""
+"\"HTTP, Synology Web Assistant (BusyBox httpd)\" service may take 20 - 40 seconds."
+msgstr "「HTTP, Synology Web Assistant (BusyBox httpd)」服務可能需要 20 到 40 秒。"
+
+#: boot.sh:1164
+msgid "(Network access is not immediately available)"
+msgstr "(無法立即獲得網路連線)"
+
+#: boot.sh:1166
+msgid "Kernel loading has started, nothing will be displayed here anymore ..."
+msgstr "核心(Kernel)載入已開始，此處將不再顯示任何訊息..."
+
+#: boot.sh:1180
+msgid "Booting with noefi, please notice that this might cause issues"
+msgstr "正在以 noefi 模式啟動，請注意這可能會導致問題"
+
+#: boot.sh:1210
+msgid "No NIC found! - Loader does not work without Network connection."
+msgstr "未找到網卡 (NIC)！ - 若沒有網路連線，引導程式(Loader)將無法運作。"
+
+#: boot.sh:1108
+msgid "To check the problem, access the following TTYD URL through a web browser. :"
+msgstr "為檢查此問題，請透過網頁瀏覽器存取以下 TTYD URL："
+
+#: boot.sh:1109
+msgid ""
+"If you have any problems with the DSM installation steps, check the '/var/log/"
+"linuxrc.syno.log' file in this access."
+msgstr ""
+"如果您在 DSM 安裝步驟中遇到任何問題，請透過此連線檢查 '/var/log/linuxrc.syno.log' 檔案。"
+
+#: boot.sh:1110
+msgid "Default TTYD root password is 'blank' "
+msgstr "預設 TTYD root 密碼為「空白」 "
+
+#: boot.sh:1111
+msgid "User config is on '/mnt/tcrp/user_config.json'"
+msgstr "使用者設定檔位於 '/mnt/tcrp/user_config.json'"
