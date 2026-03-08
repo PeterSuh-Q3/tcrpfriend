@@ -153,7 +153,7 @@ function history() {
 	0.1.3w Added logic to change redpill.ko and module packs when detecting a DSM version change
 	0.1.3x Delete the Jot Grub Boot Entry Default value adjustment and reapply the Kernel 5 model config
 	0.1.3y Adding custom kernel features to Kernel 5-based models
-	0.1.3z Improved kexec processing method
+	0.1.3z Improved kexec processing method, Traditional Chinese support
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -168,7 +168,7 @@ function showlastupdate() {
 0.1.3m Enable FRIEND Kernel on HP N36L/N40L/N54L (Supports Older AMD CPUs)
 0.1.3w Added logic to change redpill.ko and module packs when detecting a DSM version change
 0.1.3y Adding custom kernel features to Kernel 5-based models
-0.1.3z Improved kexec processing method
+0.1.3z Improved kexec processing method, Traditional Chinese support
 ( usage : ./boot.sh update v0.1.3m | ./boot.sh autoupdate off | ./boot.sh autoupdate on )       
 
 EOF
