@@ -54,7 +54,7 @@ jobs:
       - name: Recreate Ramdisk
         run: |
           mkdir /opt/output
-          echo "Recreating ramdisk " && cd /opt/updaterootfs/temprd && sudo find . 2>/dev/null | sudo cpio -o -H newc -R root:root | xz -9 --format=lzma >/opt/output/initrd-friend
+          echo "Recreating ramdisk using xz(lzma2) " && cd /opt/updaterootfs/temprd && sudo find . 2>/dev/null | sudo cpio -o -H newc -R root:root | xz -9 -T0 --check=crc32 >/opt/output/initrd-friend
           cp /opt/updaterootfs/bzImage-friend /opt/output
           ls -ltr /opt/output
           touch /opt/output/chksum
