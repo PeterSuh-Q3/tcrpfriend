@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.4a"
+BOOTVER="0.1.4b"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -144,7 +144,7 @@ function history() {
 	0.1.3n Improved method for retrieving vendor/device information for USB type NICs
 	0.1.3o Consolidate command line processing variables into one: usb_line
 	0.1.3p Add configs of DSM 6.2.4, DSM 7.3.0, DSM 7.3.1
-	0.1.3q Add the kernel version for the missing platform to the  variable.
+	0.1.3q Add the kernel version for the missing platform to the KVER variable.
 	0.1.3r Added Chrony package for UTC synchronization with NTP server
 	0.1.3s Add configs of DSM 7.3.2
 	0.1.3t Fix configs of DSM 7.2.2 ~ DSM 7.3.1 of r1000nk (DS725+)
@@ -155,6 +155,7 @@ function history() {
 	0.1.3y Adding custom kernel features to Kernel 5-based models
 	0.1.3z Improved kexec processing method, Traditional Chinese support
 	0.1.4a Include zstd package in buildroot to compress initrd-dsm of custom-modules in xTCRP with zstd
+	0.1.4b Emergency recovery of missing KVER variables
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -170,6 +171,7 @@ function showlastupdate() {
 0.1.3w Added logic to change redpill.ko and module packs when detecting a DSM version change
 0.1.3y Adding custom kernel features to Kernel 5-based models
 0.1.4a Include zstd package in buildroot to compress initrd-dsm of custom-modules in xTCRP with zstd
+0.1.4b Emergency recovery of missing KVER variables
 ( usage : ./boot.sh update v0.1.3m | ./boot.sh autoupdate off | ./boot.sh autoupdate on )       
 
 EOF
@@ -370,13 +372,13 @@ function getredpillko() {
     echo "Removing any old redpill.ko modules"
     [ -f /root/redpill.ko ] && rm -f /root/redpill.ko
     
-    echo "KERNEL VERSION of getredpillko() is ${}"
-    echo "Downloading ${ORIGIN_PLATFORM} ${}+ redpill.ko ..."
+    echo "KERNEL VERSION of getredpillko() is ${KVER}"
+    echo "Downloading ${ORIGIN_PLATFORM} ${KVER}+ redpill.ko ..."
 
     LATESTURL="`curl --connect-timeout 5 -skL -w %{url_effective} -o /dev/null "${PROXY}https://github.com/PeterSuh-Q3/redpill-lkm${v}/releases/latest"`"
 
     if [ $? -ne 0 ]; then
-        msgalert "Error downloading last version of ${ORIGIN_PLATFORM} ${}+ rp-lkms.zip, Stop Booting...\n"
+        msgalert "Error downloading last version of ${ORIGIN_PLATFORM} ${KVER}+ rp-lkms.zip, Stop Booting...\n"
         exit 99
     fi
 
@@ -384,9 +386,9 @@ function getredpillko() {
     echo "TAG is ${TAG}"        
     STATUS=`curl --connect-timeout 5 -skL -w "%{http_code}" "${PROXY}https://github.com/PeterSuh-Q3/redpill-lkm${v}/releases/download/${TAG}/rp-lkms.zip" -o "/tmp/rp-lkms${v}.zip"`
 
-	if [ "$(echo "${:-5}" | cut -d'.' -f1)" -ge 5 ]; then
-		echo "PATCH redpill.ko VERSION : ${ORIGIN_PLATFORM}-${major}.${minor}-${}"	
-        unzip /tmp/rp-lkms${v}.zip rp-${ORIGIN_PLATFORM}-${major}.${minor}-${}-prod.ko.gz -d /tmp >/dev/null 2>&1
+	if [ "$(echo "${KVER:-5}" | cut -d'.' -f1)" -ge 5 ]; then
+		echo "PATCH redpill.ko VERSION : ${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}"	
+        unzip /tmp/rp-lkms${v}.zip rp-${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}-prod.ko.gz -d /tmp >/dev/null 2>&1
         gunzip -f /tmp/rp-${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}-prod.ko.gz >/dev/null 2>&1
         cp -vf /tmp/rp-${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}-prod.ko /root/redpill.ko
     else
