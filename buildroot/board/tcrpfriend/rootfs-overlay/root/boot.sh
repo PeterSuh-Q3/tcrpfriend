@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.4b"
+BOOTVER="0.1.4c"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -156,6 +156,7 @@ function history() {
 	0.1.3z Improved kexec processing method, Traditional Chinese support
 	0.1.4a Include zstd package in buildroot to compress initrd-dsm of custom-modules in xTCRP with zstd
 	0.1.4b Emergency recovery of missing KVER variables
+	0.1.4c Added static mounting function when reconfiguring the RAM disk of a custom module.
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -169,9 +170,8 @@ function showlastupdate() {
        Add menu for "Add New DSM User"
 0.1.3m Enable FRIEND Kernel on HP N36L/N40L/N54L (Supports Older AMD CPUs)
 0.1.3w Added logic to change redpill.ko and module packs when detecting a DSM version change
-0.1.3y Adding custom kernel features to Kernel 5-based models
-0.1.4a Include zstd package in buildroot to compress initrd-dsm of custom-modules in xTCRP with zstd
 0.1.4b Emergency recovery of missing KVER variables
+0.1.4c Added static mounting function when reconfiguring the RAM disk of a custom module.
 ( usage : ./boot.sh update v0.1.3m | ./boot.sh autoupdate off | ./boot.sh autoupdate on )       
 
 EOF
@@ -647,6 +647,11 @@ function patchramdisk() {
 	    echo "Downloading module pack: $target_file"
 		rm -vrf $temprd/exts/all-modules/$ORIGIN_PLATFORM*.tgz
 	    curl -kL "https://github.com/PeterSuh-Q3/tcrp-modules/raw/refs/heads/main/all-modules/releases/$target_file" -o "$temprd/exts/all-modules/$target_file"
+	fi
+
+	if [ "$mtype" = "custom-modules" ]; then
+        echo "Use static firmware and module loading methods when using custom modules"	
+        tar xvfz $temprd/exts/all-modules/$target_file -C $temprd/usr/lib/modules/  >/dev/null 2>&1
 	fi
 	
     # Reassembly ramdisk
