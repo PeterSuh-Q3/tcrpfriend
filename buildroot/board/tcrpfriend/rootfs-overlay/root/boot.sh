@@ -663,11 +663,11 @@ function patchramdisk() {
     if [ "${RD_COMPRESSED}" == "true" ]; then
         (cd "${temprd}" && find . | cpio -o -H newc -R root:root | xz -9 --format=lzma >"/root/initrd-dsm") >/dev/null 2>&1 >/dev/null
     else
-		if [ "$mtype" = "custom-modules" ]; then
-        	(cd "${temprd}" && find . | bsdcpio -o -H newc -R root:root | zstd -c -T0 -19 >"/root/initrd-dsm") >/dev/null 2>&1
-		else
+		#if [ "$mtype" = "custom-modules" ]; then
+        #	(cd "${temprd}" && find . | bsdcpio -o -H newc -R root:root | zstd -c -T0 -19 >"/root/initrd-dsm") >/dev/null 2>&1
+		#else
         	(cd "${temprd}" && find . | cpio -o -H newc -R root:root >"/root/initrd-dsm") >/dev/null 2>&1
-		fi	
+		#fi	
     fi
     [ -f /root/initrd-dsm ] && echo "Patched ramdisk created $(ls -l /root/initrd-dsm)"
 
