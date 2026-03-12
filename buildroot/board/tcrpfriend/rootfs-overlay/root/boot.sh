@@ -1117,10 +1117,11 @@ function checkupgrade() {
     if [ "$rdhash" = "$origrdhash" ]; then
         msgnormal "Ramdisk OK ! "
     else
-        msgwarning "Ramdisk upgrade has been detected. : "
+        msgwarning "Ramdisk upgrade has been detected : "
         [ -z "$IP" ] && getip
         if [ -n "$IP" ]; then
             patchramdisk 2>&1 | awk '{ print strftime("%Y-%m-%d %H:%M:%S"), $0; }' >>$FRIENDLOG
+			msgwarning "$(stat -c '%s %n' /mnt/tcrp/initrd-dsm) \n"			
             smallfixnumber="$(jq -r -e '.general .smallfixnumber' $userconfigfile)"
 			version="$(jq -r -e '.general .version' $userconfigfile)"
             echo -ne "Smallfixnumber version changed after Ramdisk Patch, Build : $(msgnormal "$version"), Update : $(msgnormal "$smallfixnumber")\n"
@@ -1128,7 +1129,6 @@ function checkupgrade() {
             msgalert "The patch cannot proceed because there is no IP yet !!!! \n"
             exit 99
         fi
-		msgwarning "$(stat -c '%s %n' /mnt/tcrp/initrd-dsm) \n"
     fi
 
     if [ "$zimghash" = "$origzimghash" ]; then
