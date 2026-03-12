@@ -663,13 +663,17 @@ function patchramdisk() {
     if [ "${RD_COMPRESSED}" == "true" ]; then
         (cd "${temprd}" && find . | cpio -o -H newc -R root:root | xz -9 --format=lzma >"/root/initrd-dsm") >/dev/null 2>&1 >/dev/null
     else
-        (cd "${temprd}" && find . | cpio -o -H newc -R root:root >"/root/initrd-dsm") >/dev/null 2>&1
+		if [ "$mtype" = "custom-modules" ]; then
+        	(cd "${temprd}" && find . | cpio -o -H newc -R root:root | zstd -c -T0 -19 >"/root/initrd-dsm") >/dev/null 2>&1
+		else
+        	(cd "${temprd}" && find . | cpio -o -H newc -R root:root >"/root/initrd-dsm") >/dev/null 2>&1
+		fi	
     fi
     [ -f /root/initrd-dsm ] && echo "Patched ramdisk created $(ls -l /root/initrd-dsm)"
 
-    echo "Copying file to ${LOADER_DISK}"
+    echo "Moving file to ${LOADER_DISK}"
 
-    cp -f /root/initrd-dsm /mnt/tcrp
+    mv -vf /root/initrd-dsm /mnt/tcrp
 
     cd /root && rm -rf $temprd
 
