@@ -1117,7 +1117,7 @@ function checkupgrade() {
     if [ "$rdhash" = "$origrdhash" ]; then
         msgnormal "Ramdisk OK ! "
     else
-        msgwarning "Ramdisk upgrade has been detected. \n"
+        msgwarning "Ramdisk upgrade has been detected. : "
         [ -z "$IP" ] && getip
         if [ -n "$IP" ]; then
             patchramdisk 2>&1 | awk '{ print strftime("%Y-%m-%d %H:%M:%S"), $0; }' >>$FRIENDLOG
@@ -1128,6 +1128,7 @@ function checkupgrade() {
             msgalert "The patch cannot proceed because there is no IP yet !!!! \n"
             exit 99
         fi
+		msgwarning "$(stat -c '%s %n' /mnt/tcrp/initrd-dsm) \n"
     fi
 
     if [ "$zimghash" = "$origzimghash" ]; then
