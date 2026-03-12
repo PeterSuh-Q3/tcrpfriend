@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 260310
+# Date : 260312
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.4c"
+BOOTVER="0.1.4d"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -157,6 +157,7 @@ function history() {
 	0.1.4a Include zstd package in buildroot to compress initrd-dsm of custom-modules in xTCRP with zstd
 	0.1.4b Emergency recovery of missing KVER variables
 	0.1.4c Added static mounting function when reconfiguring the RAM disk of a custom module.
+	0.1.4d Fix error reconfiguring custom module RAM disk
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -172,6 +173,7 @@ function showlastupdate() {
 0.1.3w Added logic to change redpill.ko and module packs when detecting a DSM version change
 0.1.4b Emergency recovery of missing KVER variables
 0.1.4c Added static mounting function when reconfiguring the RAM disk of a custom module.
+0.1.4d Fix error reconfiguring custom module RAM disk
 ( usage : ./boot.sh update v0.1.3m | ./boot.sh autoupdate off | ./boot.sh autoupdate on )       
 
 EOF
@@ -650,8 +652,10 @@ function patchramdisk() {
 	fi
 
 	if [ "$mtype" = "custom-modules" ]; then
-        echo "Use static firmware and module loading methods when using custom modules"	
-        tar xvfz $temprd/exts/all-modules/$target_file -C $temprd/usr/lib/modules/  >/dev/null 2>&1
+        echo "Use static firmware and module loading methods when using custom modules and firmware"	
+        tar xvfz $temprd/exts/all-modules/$target_file -C $temprd/usr/lib/modules/  #>/dev/null 2>&1
+		mkdir -p $temprd/usr/lib/firmware
+		tar xvfz $temprd/exts/all-modules/firmware-custom.tgz -C $temprd/usr/lib/firmware/  #>/dev/null 2>&1
 	fi
 	
     # Reassembly ramdisk
