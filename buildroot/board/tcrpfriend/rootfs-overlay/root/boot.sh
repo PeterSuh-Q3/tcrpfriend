@@ -157,7 +157,7 @@ function history() {
 	0.1.4a Include zstd package in buildroot to compress initrd-dsm of custom-modules in xTCRP with zstd
 	0.1.4b Emergency recovery of missing KVER variables
 	0.1.4c Added static mounting function when reconfiguring the RAM disk of a custom module.
-	0.1.4d Fix error reconfiguring custom module RAM disk
+	0.1.4d Fix an error repacking custom module ramdisk file (/mnt/tcrp/initrd-dsm)
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -173,7 +173,7 @@ function showlastupdate() {
 0.1.3w Added logic to change redpill.ko and module packs when detecting a DSM version change
 0.1.4b Emergency recovery of missing KVER variables
 0.1.4c Added static mounting function when reconfiguring the RAM disk of a custom module.
-0.1.4d Fix error reconfiguring custom module RAM disk
+0.1.4d Fix an error repacking custom module ramdisk file (/mnt/tcrp/initrd-dsm)
 ( usage : ./boot.sh update v0.1.3m | ./boot.sh autoupdate off | ./boot.sh autoupdate on )       
 
 EOF
