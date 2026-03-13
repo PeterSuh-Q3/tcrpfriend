@@ -680,7 +680,7 @@ function patchramdisk() {
 }
 
 function finishramdiskpatch() {
-{
+
     origrdhash=$(sha256sum /mnt/tcrp-p2/rd.gz | awk '{print $1}')
     origzimghash=$(sha256sum /mnt/tcrp-p2/zImage | awk '{print $1}')
     #version="${major}.${minor}.${micro}-${buildnumber}"
