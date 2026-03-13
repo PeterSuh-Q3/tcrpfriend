@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.4d"
+BOOTVER="0.1.4e"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -158,6 +158,7 @@ function history() {
 	0.1.4b Emergency recovery of missing KVER variables
 	0.1.4c Added static mounting function when reconfiguring the RAM disk of a custom module.
 	0.1.4d Fix an error repacking custom module ramdisk file (/mnt/tcrp/initrd-dsm)
+	0.1.4e SA6400 custom-module, use a statically generated copy instead of repacking the initrd-dsm (ramdisk) file
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -174,7 +175,7 @@ function showlastupdate() {
 0.1.4b Emergency recovery of missing KVER variables
 0.1.4c Added static mounting function when reconfiguring the RAM disk of a custom module.
 0.1.4d Fix an error repacking custom module ramdisk file (/mnt/tcrp/initrd-dsm)
-( usage : ./boot.sh update v0.1.3m | ./boot.sh autoupdate off | ./boot.sh autoupdate on )       
+0.1.4e SA6400 custom-module, use a statically generated copy instead of repacking the initrd-dsm (ramdisk) file
 
 EOF
 }
@@ -539,6 +540,14 @@ function patchramdisk() {
 
     extractramdisk
 
+    if [[ "${mtype}" == "custom-modules" && "${ORIGIN_PLATFORM}" == "epyc7002" && "${major}.${minor}.${micro}" == "7.3.2" ]]; then
+	    finishramdiskpatch
+        echo "Use static ramdisk file, Not Reassembly packing"		
+        cp -vf /mnt/tcrp/initrd-dsm.${smallfixnumber} /mnt/tcrp/initrd-dsm
+		cd /root && rm -rf $temprd
+		exit 0
+	fi
+
     temprd="/root/rd.temp"
     CONFIG_PATH="/root/config/$ORIGIN_PLATFORM/$version/config.json"
     
@@ -651,32 +660,27 @@ function patchramdisk() {
 	    curl -kL "https://github.com/PeterSuh-Q3/tcrp-modules/raw/refs/heads/main/all-modules/releases/$target_file" -o "$temprd/exts/all-modules/$target_file"
 	fi
 
-	if [ "$mtype" = "custom-modules" ]; then
-        echo "Use static firmware and module loading methods when using custom modules and firmware"	
-        tar xvfz $temprd/exts/all-modules/$target_file -C $temprd/usr/lib/modules/  #>/dev/null 2>&1
-		mkdir -p $temprd/usr/lib/firmware
-		tar xvfz $temprd/exts/all-modules/firmware-custom.tgz -C $temprd/usr/lib/firmware/  #>/dev/null 2>&1
-	fi
-	
-    # Reassembly ramdisk
-    echo "Reassempling ramdisk"
-    if [ "${RD_COMPRESSED}" == "true" ]; then
-        (cd "${temprd}" && find . | cpio -o -H newc -R root:root | xz -9 --format=lzma >"/root/initrd-dsm") >/dev/null 2>&1 >/dev/null
-    else
+	# Reassembly ramdisk
+	echo "Reassempling ramdisk"
+	if [ "${RD_COMPRESSED}" == "true" ]; then
+		(cd "${temprd}" && find . | cpio -o -H newc -R root:root | xz -9 --format=lzma >"/root/initrd-dsm") >/dev/null 2>&1 >/dev/null
+	else
 		#if [ "$mtype" = "custom-modules" ]; then
-        #	(cd "${temprd}" && find . | bsdcpio -o -H newc -R root:root | zstd -c -T0 -19 >"/root/initrd-dsm") >/dev/null 2>&1
+		#	(cd "${temprd}" && find . | bsdcpio -o -H newc -R root:root | zstd -c -T0 -19 >"/root/initrd-dsm") >/dev/null 2>&1
 		#else
-        	(cd "${temprd}" && find . | cpio -o -H newc -R root:root >"/root/initrd-dsm") >/dev/null 2>&1
+			(cd "${temprd}" && find . | cpio -o -H newc -R root:root >"/root/initrd-dsm") >/dev/null 2>&1
 		#fi	
-    fi
-    [ -f /root/initrd-dsm ] && echo "Patched ramdisk created $(ls -l /root/initrd-dsm)"
+	fi
+	[ -f /root/initrd-dsm ] && echo "Patched ramdisk created $(ls -l /root/initrd-dsm)"
+	echo "Moving file to ${LOADER_DISK}"
+	mv -vf /root/initrd-dsm /mnt/tcrp
+	cd /root && rm -rf $temprd
 
-    echo "Moving file to ${LOADER_DISK}"
+	finishramdiskpatch
+}
 
-    mv -vf /root/initrd-dsm /mnt/tcrp
-
-    cd /root && rm -rf $temprd
-
+function finishramdiskpatch() {
+{
     origrdhash=$(sha256sum /mnt/tcrp-p2/rd.gz | awk '{print $1}')
     origzimghash=$(sha256sum /mnt/tcrp-p2/zImage | awk '{print $1}')
     #version="${major}.${minor}.${micro}-${buildnumber}"
@@ -687,7 +691,6 @@ function patchramdisk() {
     updateuserconfigfield "general" "version" "${major}.${minor}.${micro}-${buildnumber}"
     updateuserconfigfield "general" "smallfixnumber" "${smallfixnumber}"
     updategrubconf
-
 }
 
 function rebuildloader() {
@@ -1604,7 +1607,7 @@ function welcome() {
     echo -en "\033[7;32m--------------------------------------={ TinyCore RedPill Friend }=--------------------------------------\033[0m\n"
 
     # Echo Version
-    echo "TCRP Friend Version : $BOOTVER"
+    echo "TCRP Friend Version : $BOOTVER ( usage : ./boot.sh update v0.1.3z | ./boot.sh autoupdate [on|off] )"
     showlastupdate
 }
 
