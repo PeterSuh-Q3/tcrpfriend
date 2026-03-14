@@ -618,13 +618,10 @@ function patchramdisk() {
     getredpillko
     #getstaticmodule
 
-    # 기존의 완벽한 initrd-dsm 을 임시 폴더에 덮어쓰기 (Uncompressed cpio)
-    echo "Merging existing initrd-dsm into updated ramdisk..."
-    cd $temprd
-    cat /mnt/tcrp/initrd-dsm | cpio -idmu >/dev/null 2>&1
-	
-    for script in $(find /root/rd.temp/exts/ | grep ".sh"); do chmod +x $script; done
-    chmod +x $temprd/usr/sbin/modprobe
+    # 기존의 완벽한 initrd-dsm을 또 다른 임시 폴더에 압축 해제
+    OLD_RD="/root/old_rd.temp"
+    mkdir -p $OLD_RD
+    (cd $OLD_RD && cat /mnt/tcrp/initrd-dsm | cpio -idm >/dev/null 2>&1)
 
 	# Redownload Integrated Module Pack
 	echo "Redownload Integrated Module Pack"
@@ -665,6 +662,12 @@ function patchramdisk() {
     #    rm -f /lib/modules/$KVER
 	#fi	
 
+    # Rsync를 이용해 기존 파일과 섞기 (우리가 만든 파일 보존!)
+    echo "Smart Merging (with rsync -av --ignore-existing) existing initrd-dsm..."
+    # --ignore-existing 옵션을 쓰면, 기존(old_rd.temp)에 있는 파일(커스텀 패치)은 
+    # $temprd(새 파일)의 것으로 덮어씌워지지 않고 보존됩니다.
+    rsync -av --ignore-existing $OLD_RD/ $temprd/
+	
 	# Reassembly ramdisk
 	echo "Reassempling ramdisk"
 	if [ "${RD_COMPRESSED}" == "true" ]; then
@@ -679,7 +682,7 @@ function patchramdisk() {
 	[ -f /root/initrd-dsm ] && echo "Patched ramdisk created $(ls -l /root/initrd-dsm)"
 	echo "Moving file to ${LOADER_DISK}"
 	mv -vf /root/initrd-dsm /mnt/tcrp
-	cd /root && rm -rf $temprd
+	cd /root && rm -rf $temprd $OLD_RD
 
 	finishramdiskpatch
 }
