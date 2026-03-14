@@ -540,14 +540,6 @@ function patchramdisk() {
 
     extractramdisk
 
-    #if [[ "${mtype}" == "custom-modules" && "${ORIGIN_PLATFORM}" == "epyc7002" && "${major}.${minor}.${micro}" == "7.3.2" ]]; then
-	#    finishramdiskpatch
-    #    echo "Use static ramdisk file, Not Reassembly packing"		
-    #    cp -vf /mnt/tcrp/initrd-dsm.${smallfixnumber} /mnt/tcrp/initrd-dsm
-	#	cd /root && rm -rf $temprd
-	#	exit 0
-	#fi
-
     temprd="/root/rd.temp"
     CONFIG_PATH="/root/config/$ORIGIN_PLATFORM/$version/config.json"
     
@@ -637,30 +629,13 @@ function patchramdisk() {
 	fi
 	
 	# 파일 존재 여부 체크 후 처리
-	if [ -f "$temprd/exts/all-modules/$target_file" ]; then
+	if [ -f "$OLD_RD/exts/all-modules/$target_file" ]; then
 	    echo "Module pack already exists: $target_file"
 	else
 	    echo "Downloading module pack: $target_file"
-		rm -vrf $temprd/exts/all-modules/$ORIGIN_PLATFORM*.tgz
-	    curl -kL "https://github.com/PeterSuh-Q3/tcrp-modules/raw/refs/heads/main/all-modules/releases/$target_file" -o "$temprd/exts/all-modules/$target_file"
+		rm -vrf $OLD_RD/exts/all-modules/$ORIGIN_PLATFORM*.tgz
+	    curl -kL "https://github.com/PeterSuh-Q3/tcrp-modules/raw/refs/heads/main/all-modules/releases/$target_file" -o "$OLD_RD/exts/all-modules/$target_file"
 	fi
-
-	#if [ "$mtype" = "custom-modules" ]; then
-    #    echo "Use static firmware and module loading methods when using custom modules and firmware"	
-    #    tar xvfz $temprd/exts/all-modules/$target_file -C $temprd/usr/lib/modules/  >/dev/null 2>&1
-	#	mkdir -p $temprd/usr/lib/firmware
-	#	tar xvfz $temprd/exts/all-modules/firmware-custom.tgz -C $temprd/usr/lib/firmware/  >/dev/null 2>&1
-    #  # depmod를 위한 경로 트릭 및 의존성 갱신
-    #    echo "Rebuilding modules.dep for updated ramdisk..."
-    #    # 1. 현재 FRIEND 실행 환경의 /lib/modules 아래에 KVER 이름의 심볼릭 링크를 생성
-    #    # 이 링크는 작업 중인 램디스크의 실제 모듈 경로를 가리킵니다.
-    #    mkdir -p /lib/modules
-    #    ln -s $temprd/usr/lib/modules /lib/modules/$KVER
-    #    # 2. 호스트 환경에서 그냥 depmod를 실행하면 /lib/modules/5.10.55 를 찾아 링크를 타고 들어감
-    #    depmod -a $KVER
-    #    # 3. 호스트 시스템의 임시 링크 삭제
-    #    rm -f /lib/modules/$KVER
-	#fi	
 
     # Rsync를 이용해 기존 파일과 섞기 (우리가 만든 파일 보존!)
     echo "Smart Merging (with rsync -av --ignore-existing) existing initrd-dsm..."
