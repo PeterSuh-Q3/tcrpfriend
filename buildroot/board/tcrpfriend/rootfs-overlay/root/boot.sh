@@ -158,7 +158,7 @@ function history() {
 	0.1.4b Emergency recovery of missing KVER variables
 	0.1.4c Added static mounting function when reconfiguring the RAM disk of a custom module.
 	0.1.4d Fix an error repacking custom module ramdisk file (/mnt/tcrp/initrd-dsm)
-	0.1.4e SA6400 custom-module, use a statically generated copy instead of repacking the initrd-dsm (ramdisk) file
+    0.1.4e For custom-modules, Update the module dependency tree to match the current initrd-dsm structure.
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -175,7 +175,7 @@ function showlastupdate() {
 0.1.4b Emergency recovery of missing KVER variables
 0.1.4c Added static mounting function when reconfiguring the RAM disk of a custom module.
 0.1.4d Fix an error repacking custom module ramdisk file (/mnt/tcrp/initrd-dsm)
-0.1.4e SA6400 custom-module, use a statically generated copy instead of repacking the initrd-dsm (ramdisk) file
+0.1.4e For custom-modules, Update the module dependency tree to match the current initrd-dsm structure.
 
 EOF
 }
@@ -540,13 +540,13 @@ function patchramdisk() {
 
     extractramdisk
 
-    if [[ "${mtype}" == "custom-modules" && "${ORIGIN_PLATFORM}" == "epyc7002" && "${major}.${minor}.${micro}" == "7.3.2" ]]; then
-	    finishramdiskpatch
-        echo "Use static ramdisk file, Not Reassembly packing"		
-        cp -vf /mnt/tcrp/initrd-dsm.${smallfixnumber} /mnt/tcrp/initrd-dsm
-		cd /root && rm -rf $temprd
-		exit 0
-	fi
+    #if [[ "${mtype}" == "custom-modules" && "${ORIGIN_PLATFORM}" == "epyc7002" && "${major}.${minor}.${micro}" == "7.3.2" ]]; then
+	#    finishramdiskpatch
+    #    echo "Use static ramdisk file, Not Reassembly packing"		
+    #    cp -vf /mnt/tcrp/initrd-dsm.${smallfixnumber} /mnt/tcrp/initrd-dsm
+	#	cd /root && rm -rf $temprd
+	#	exit 0
+	#fi
 
     temprd="/root/rd.temp"
     CONFIG_PATH="/root/config/$ORIGIN_PLATFORM/$version/config.json"
@@ -659,6 +659,18 @@ function patchramdisk() {
 		rm -vrf $temprd/exts/all-modules/$ORIGIN_PLATFORM*.tgz
 	    curl -kL "https://github.com/PeterSuh-Q3/tcrp-modules/raw/refs/heads/main/all-modules/releases/$target_file" -o "$temprd/exts/all-modules/$target_file"
 	fi
+
+	if [ "$mtype" = "custom-modules" ]; then
+        echo "Use static firmware and module loading methods when using custom modules and firmware"	
+        tar xvfz $temprd/exts/all-modules/$target_file -C $temprd/usr/lib/modules/  >/dev/null 2>&1
+		mkdir -p $temprd/usr/lib/firmware
+		tar xvfz $temprd/exts/all-modules/firmware-custom.tgz -C $temprd/usr/lib/firmware/  >/dev/null 2>&1
+
+		# 모듈 의존성 트리를 현재 램디스크 파일구조에 맞춰 새로 갱신
+        echo "Rebuilding modules.dep for updated ramdisk..."
+        # Synology 구조(/usr/lib/modules)를 depmod가 인식할 수 있도록 임시 처리 후 갱신
+        depmod -b $temprd -a $KVER		
+	fi	
 
 	# Reassembly ramdisk
 	echo "Reassempling ramdisk"
