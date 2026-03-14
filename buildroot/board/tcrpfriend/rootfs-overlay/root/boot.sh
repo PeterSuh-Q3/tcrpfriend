@@ -666,10 +666,16 @@ function patchramdisk() {
 		mkdir -p $temprd/usr/lib/firmware
 		tar xvfz $temprd/exts/all-modules/firmware-custom.tgz -C $temprd/usr/lib/firmware/  >/dev/null 2>&1
 
-		# 모듈 의존성 트리를 현재 램디스크 파일구조에 맞춰 새로 갱신
+        # depmod를 위한 경로 트릭 및 의존성 갱신
         echo "Rebuilding modules.dep for updated ramdisk..."
-        # Synology 구조(/usr/lib/modules)를 depmod가 인식할 수 있도록 임시 처리 후 갱신
-        depmod -b $temprd -a $KVER		
+        # 1. depmod가 요구하는 기본 디렉터리 생성
+        mkdir -p $temprd/lib/modules
+        # 2. 표준 경로(/lib/modules/5.10.55)를 시놀로지 실제 경로(/usr/lib/modules)로 연결하는 상대경로 심볼릭 링크 생성
+        ln -s ../../usr/lib/modules $temprd/lib/modules/$KVER
+        # 3. 의존성 트리 갱신 (생성된 modules.dep는 심볼릭 링크를 타고 /usr/lib/modules/ 안에 저장됨)
+        depmod -b $temprd -a $KVER
+        # 4. 램디스크가 지저분해지지 않도록 임시 링크 삭제
+        rm -f $temprd/lib/modules/$KVER
 	fi	
 
 	# Reassembly ramdisk
