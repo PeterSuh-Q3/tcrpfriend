@@ -618,23 +618,11 @@ function patchramdisk() {
     getredpillko
     #getstaticmodule
 
-    echo "Adding custom.gz or initrd-dsm to image"
+    # 기존의 완벽한 initrd-dsm 을 임시 폴더에 덮어쓰기 (Uncompressed cpio)
+    echo "Merging existing initrd-dsm into updated ramdisk..."
     cd $temprd
-    # 0.1.0m Recycle initrd-dsm instead of custom.gz (extract /exts), The priority starts from custom.gz
-    if [ -f /mnt/tcrp/custom.gz ]; then
-        echo "Found custom.gz, so extract from custom.gz " 
-        if [ -f /mnt/tcrp/custom.gz ]; then
-            cat /mnt/tcrp/custom.gz | cpio -idm >/dev/null 2>&1
-        else
-            cat /mnt/tcrp-p1/custom.gz | cpio -idm >/dev/null 2>&1
-        fi
-    else
-        echo "Not found custom.gz, so extract from initrd-dsm " 
-        cat /mnt/tcrp/initrd-dsm | cpio -idm "*exts*" >/dev/null 2>&1
-        cat /mnt/tcrp/initrd-dsm | cpio -idm "*modprobe*"  >/dev/null 2>&1
-        cat /mnt/tcrp/initrd-dsm | cpio -idm "*rp.ko*"  >/dev/null 2>&1
-    fi
-
+    cat /mnt/tcrp/initrd-dsm | cpio -idmu >/dev/null 2>&1
+	
     for script in $(find /root/rd.temp/exts/ | grep ".sh"); do chmod +x $script; done
     chmod +x $temprd/usr/sbin/modprobe
 
@@ -660,23 +648,22 @@ function patchramdisk() {
 	    curl -kL "https://github.com/PeterSuh-Q3/tcrp-modules/raw/refs/heads/main/all-modules/releases/$target_file" -o "$temprd/exts/all-modules/$target_file"
 	fi
 
-	if [ "$mtype" = "custom-modules" ]; then
-        echo "Use static firmware and module loading methods when using custom modules and firmware"	
-        tar xvfz $temprd/exts/all-modules/$target_file -C $temprd/usr/lib/modules/  >/dev/null 2>&1
-		mkdir -p $temprd/usr/lib/firmware
-		tar xvfz $temprd/exts/all-modules/firmware-custom.tgz -C $temprd/usr/lib/firmware/  >/dev/null 2>&1
-
-        # depmod를 위한 경로 트릭 및 의존성 갱신
-        echo "Rebuilding modules.dep for updated ramdisk..."
-        # 1. 현재 FRIEND 실행 환경의 /lib/modules 아래에 KVER 이름의 심볼릭 링크를 생성
-        # 이 링크는 작업 중인 램디스크의 실제 모듈 경로를 가리킵니다.
-        mkdir -p /lib/modules
-        ln -s $temprd/usr/lib/modules /lib/modules/$KVER
-        # 2. 호스트 환경에서 그냥 depmod를 실행하면 /lib/modules/5.10.55 를 찾아 링크를 타고 들어감
-        depmod -a $KVER
-        # 3. 호스트 시스템의 임시 링크 삭제
-        rm -f /lib/modules/$KVER
-	fi	
+	#if [ "$mtype" = "custom-modules" ]; then
+    #    echo "Use static firmware and module loading methods when using custom modules and firmware"	
+    #    tar xvfz $temprd/exts/all-modules/$target_file -C $temprd/usr/lib/modules/  >/dev/null 2>&1
+	#	mkdir -p $temprd/usr/lib/firmware
+	#	tar xvfz $temprd/exts/all-modules/firmware-custom.tgz -C $temprd/usr/lib/firmware/  >/dev/null 2>&1
+    #  # depmod를 위한 경로 트릭 및 의존성 갱신
+    #    echo "Rebuilding modules.dep for updated ramdisk..."
+    #    # 1. 현재 FRIEND 실행 환경의 /lib/modules 아래에 KVER 이름의 심볼릭 링크를 생성
+    #    # 이 링크는 작업 중인 램디스크의 실제 모듈 경로를 가리킵니다.
+    #    mkdir -p /lib/modules
+    #    ln -s $temprd/usr/lib/modules /lib/modules/$KVER
+    #    # 2. 호스트 환경에서 그냥 depmod를 실행하면 /lib/modules/5.10.55 를 찾아 링크를 타고 들어감
+    #    depmod -a $KVER
+    #    # 3. 호스트 시스템의 임시 링크 삭제
+    #    rm -f /lib/modules/$KVER
+	#fi	
 
 	# Reassembly ramdisk
 	echo "Reassempling ramdisk"
