@@ -156,9 +156,9 @@ function history() {
 	0.1.3z Improved kexec processing method, Traditional Chinese support
 	0.1.4a Include zstd package in buildroot to compress initrd-dsm of custom-modules in xTCRP with zstd
 	0.1.4b Emergency recovery of missing KVER variables
-	0.1.4c Added static mounting function when reconfiguring the RAM disk of a custom module.
+	0.1.4c Added static mounting function when reconfiguring initrd-dsm of a custom module
 	0.1.4d Fix an error repacking custom module ramdisk file (/mnt/tcrp/initrd-dsm)
-    0.1.4e For custom-modules, Update the module dependency tree to match the current initrd-dsm structure.
+    0.1.4e Abandoning the use of custom.gz and improving processing entirely using initrd-dsm
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -173,9 +173,9 @@ function showlastupdate() {
 0.1.3m Enable FRIEND Kernel on HP N36L/N40L/N54L (Supports Older AMD CPUs)
 0.1.3w Added logic to change redpill.ko and module packs when detecting a DSM version change
 0.1.4b Emergency recovery of missing KVER variables
-0.1.4c Added static mounting function when reconfiguring the RAM disk of a custom module.
+0.1.4c Added static mounting function when reconfiguring initrd-dsm of a custom module
 0.1.4d Fix an error repacking custom module ramdisk file (/mnt/tcrp/initrd-dsm)
-0.1.4e For custom-modules, Update the module dependency tree to match the current initrd-dsm structure.
+0.1.4e Abandoning the use of custom.gz and improving processing entirely using initrd-dsm
 
 EOF
 }
