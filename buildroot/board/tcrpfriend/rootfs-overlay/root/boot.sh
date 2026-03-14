@@ -621,7 +621,7 @@ function patchramdisk() {
     # 기존의 완벽한 initrd-dsm을 또 다른 임시 폴더에 압축 해제
     OLD_RD="/root/old_rd.temp"
     mkdir -p $OLD_RD
-    (cd $OLD_RD && cat /mnt/tcrp/initrd-dsm | cpio -idm >/dev/null 2>&1)
+    (cd $OLD_RD && cat /mnt/tcrp/initrd-dsm | cpio -idmu >/dev/null 2>&1)
 
 	# Redownload Integrated Module Pack
 	echo "Redownload Integrated Module Pack"
