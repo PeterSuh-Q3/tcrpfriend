@@ -668,14 +668,14 @@ function patchramdisk() {
 
         # depmod를 위한 경로 트릭 및 의존성 갱신
         echo "Rebuilding modules.dep for updated ramdisk..."
-        # 1. depmod가 요구하는 기본 디렉터리 생성
-        mkdir -p $temprd/lib/modules
-        # 2. 표준 경로(/lib/modules/5.10.55)를 시놀로지 실제 경로(/usr/lib/modules)로 연결하는 상대경로 심볼릭 링크 생성
-        ln -s ../../usr/lib/modules $temprd/lib/modules/$KVER
-        # 3. 의존성 트리 갱신 (생성된 modules.dep는 심볼릭 링크를 타고 /usr/lib/modules/ 안에 저장됨)
-        depmod -b $temprd -a $KVER
-        # 4. 램디스크가 지저분해지지 않도록 임시 링크 삭제
-        rm -f $temprd/lib/modules/$KVER
+        # 1. 현재 FRIEND 실행 환경의 /lib/modules 아래에 KVER 이름의 심볼릭 링크를 생성
+        # 이 링크는 작업 중인 램디스크의 실제 모듈 경로를 가리킵니다.
+        mkdir -p /lib/modules
+        ln -s $temprd/usr/lib/modules /lib/modules/$KVER
+        # 2. 호스트 환경에서 그냥 depmod를 실행하면 /lib/modules/5.10.55 를 찾아 링크를 타고 들어감
+        depmod -a $KVER
+        # 3. 호스트 시스템의 임시 링크 삭제
+        rm -f /lib/modules/$KVER
 	fi	
 
 	# Reassembly ramdisk
