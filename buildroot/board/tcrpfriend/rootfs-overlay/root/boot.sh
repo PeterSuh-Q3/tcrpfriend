@@ -469,14 +469,15 @@ function _set_conf_kv() {
 
 function patchkernel() {
 
-    echo "Patching Kernel"
-
-    /root/tools/bzImage-to-vmlinux.sh /mnt/tcrp-p2/zImage /root/vmlinux >log 2>&1 >/dev/null
-    /root/tools/kpatch /root/vmlinux /root/vmlinux-mod >log 2>&1 >/dev/null
-    /root/tools/vmlinux-to-bzImage.sh /root/vmlinux-mod /mnt/tcrp/zImage-dsm >/dev/null
-
+	if [ "$mtype" = "custom-modules" ]; then
+	    echo "custom-modules Skip Patching Kernel"
+	else	
+	    echo "Patching Kernel"
+	    /root/tools/bzImage-to-vmlinux.sh /mnt/tcrp-p2/zImage /root/vmlinux >log 2>&1 >/dev/null
+	    /root/tools/kpatch /root/vmlinux /root/vmlinux-mod >log 2>&1 >/dev/null
+	    /root/tools/vmlinux-to-bzImage.sh /root/vmlinux-mod /mnt/tcrp/zImage-dsm >/dev/null
+    fi
     [ -f /mnt/tcrp/zImage-dsm ] && echo "Kernel Patched, sha256sum : $(sha256sum /mnt/tcrp/zImage-dsm | awk '{print $1}')"
-
 }
 
 function extractramdisk() {
@@ -665,7 +666,11 @@ function patchramdisk() {
 function finishramdiskpatch() {
 
     origrdhash=$(sha256sum /mnt/tcrp-p2/rd.gz | awk '{print $1}')
-    origzimghash=$(sha256sum /mnt/tcrp-p2/zImage | awk '{print $1}')
+	if [ "$mtype" = "custom-modules" ]; then
+		origzimghash=$zimghash
+	else
+    	origzimghash=$(sha256sum /mnt/tcrp-p2/zImage | awk '{print $1}')
+	fi	
     #version="${major}.${minor}.${micro}-${buildnumber}"
     smallfixnumber="${smallfixnumber}"
 
