@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.4d"
+BOOTVER="0.1.4e"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -156,8 +156,10 @@ function history() {
 	0.1.3z Improved kexec processing method, Traditional Chinese support
 	0.1.4a Include zstd package in buildroot to compress initrd-dsm of custom-modules in xTCRP with zstd
 	0.1.4b Emergency recovery of missing KVER variables
-	0.1.4c Added static mounting function when reconfiguring the RAM disk of a custom module.
+	0.1.4c Added static mounting function when reconfiguring initrd-dsm of a custom module
 	0.1.4d Fix an error repacking custom module ramdisk file (/mnt/tcrp/initrd-dsm)
+    0.1.4e Abandoning the use of custom.gz and improving processing entirely using initrd-dsm
+	       GPL custom-modules skip zImage patch
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -172,9 +174,9 @@ function showlastupdate() {
 0.1.3m Enable FRIEND Kernel on HP N36L/N40L/N54L (Supports Older AMD CPUs)
 0.1.3w Added logic to change redpill.ko and module packs when detecting a DSM version change
 0.1.4b Emergency recovery of missing KVER variables
-0.1.4c Added static mounting function when reconfiguring the RAM disk of a custom module.
-0.1.4d Fix an error repacking custom module ramdisk file (/mnt/tcrp/initrd-dsm)
-( usage : ./boot.sh update v0.1.3m | ./boot.sh autoupdate off | ./boot.sh autoupdate on )       
+0.1.4c Added static mounting function when reconfiguring initrd-dsm of a custom module
+0.1.4e Abandoning the use of custom.gz and improving processing entirely using initrd-dsm
+       GPL custom-modules skip zImage patch
 
 EOF
 }
@@ -468,14 +470,11 @@ function _set_conf_kv() {
 
 function patchkernel() {
 
-    echo "Patching Kernel"
-
-    /root/tools/bzImage-to-vmlinux.sh /mnt/tcrp-p2/zImage /root/vmlinux >log 2>&1 >/dev/null
-    /root/tools/kpatch /root/vmlinux /root/vmlinux-mod >log 2>&1 >/dev/null
-    /root/tools/vmlinux-to-bzImage.sh /root/vmlinux-mod /mnt/tcrp/zImage-dsm >/dev/null
-
+	echo "Patching Kernel"
+	/root/tools/bzImage-to-vmlinux.sh /mnt/tcrp-p2/zImage /root/vmlinux >log 2>&1 >/dev/null
+	/root/tools/kpatch /root/vmlinux /root/vmlinux-mod >log 2>&1 >/dev/null
+	/root/tools/vmlinux-to-bzImage.sh /root/vmlinux-mod /mnt/tcrp/zImage-dsm >/dev/null
     [ -f /mnt/tcrp/zImage-dsm ] && echo "Kernel Patched, sha256sum : $(sha256sum /mnt/tcrp/zImage-dsm | awk '{print $1}')"
-
 }
 
 function extractramdisk() {
@@ -609,25 +608,10 @@ function patchramdisk() {
     getredpillko
     #getstaticmodule
 
-    echo "Adding custom.gz or initrd-dsm to image"
-    cd $temprd
-    # 0.1.0m Recycle initrd-dsm instead of custom.gz (extract /exts), The priority starts from custom.gz
-    if [ -f /mnt/tcrp/custom.gz ]; then
-        echo "Found custom.gz, so extract from custom.gz " 
-        if [ -f /mnt/tcrp/custom.gz ]; then
-            cat /mnt/tcrp/custom.gz | cpio -idm >/dev/null 2>&1
-        else
-            cat /mnt/tcrp-p1/custom.gz | cpio -idm >/dev/null 2>&1
-        fi
-    else
-        echo "Not found custom.gz, so extract from initrd-dsm " 
-        cat /mnt/tcrp/initrd-dsm | cpio -idm "*exts*" >/dev/null 2>&1
-        cat /mnt/tcrp/initrd-dsm | cpio -idm "*modprobe*"  >/dev/null 2>&1
-        cat /mnt/tcrp/initrd-dsm | cpio -idm "*rp.ko*"  >/dev/null 2>&1
-    fi
-
-    for script in $(find /root/rd.temp/exts/ | grep ".sh"); do chmod +x $script; done
-    chmod +x $temprd/usr/sbin/modprobe
+    # 기존의 완벽한 initrd-dsm을 또 다른 임시 폴더에 압축 해제
+    OLD_RD="/root/old_rd.temp"
+    mkdir -p $OLD_RD
+    (cd $OLD_RD && cat /mnt/tcrp/initrd-dsm | cpio -idmu >/dev/null 2>&1)
 
 	# Redownload Integrated Module Pack
 	echo "Redownload Integrated Module Pack"
@@ -643,51 +627,51 @@ function patchramdisk() {
 	fi
 	
 	# 파일 존재 여부 체크 후 처리
-	if [ -f "$temprd/exts/all-modules/$target_file" ]; then
+	if [ -f "$OLD_RD/exts/all-modules/$target_file" ]; then
 	    echo "Module pack already exists: $target_file"
 	else
 	    echo "Downloading module pack: $target_file"
-		rm -vrf $temprd/exts/all-modules/$ORIGIN_PLATFORM*.tgz
-	    curl -kL "https://github.com/PeterSuh-Q3/tcrp-modules/raw/refs/heads/main/all-modules/releases/$target_file" -o "$temprd/exts/all-modules/$target_file"
+		rm -vrf $OLD_RD/exts/all-modules/$ORIGIN_PLATFORM*.tgz
+	    curl -kL "https://github.com/PeterSuh-Q3/tcrp-modules/raw/refs/heads/main/all-modules/releases/$target_file" -o "$OLD_RD/exts/all-modules/$target_file"
 	fi
 
-	if [ "$mtype" = "custom-modules" ]; then
-        echo "Use static firmware and module loading methods when using custom modules and firmware"	
-        tar xvfz $temprd/exts/all-modules/$target_file -C $temprd/usr/lib/modules/  #>/dev/null 2>&1
-		mkdir -p $temprd/usr/lib/firmware
-		tar xvfz $temprd/exts/all-modules/firmware-custom.tgz -C $temprd/usr/lib/firmware/  #>/dev/null 2>&1
-	fi
+    # Rsync를 이용해 기존 파일과 섞기 (우리가 만든 파일 보존!)
+    echo "Smart Merging (with rsync -av --ignore-existing) existing initrd-dsm..."
+    # --ignore-existing 옵션을 쓰면, 기존(old_rd.temp)에 있는 파일(커스텀 패치)은 
+    # $temprd(새 파일)의 것으로 덮어씌워지지 않고 보존됩니다.
+    rsync -av --ignore-existing $OLD_RD/ $temprd/
 	
-    # Reassembly ramdisk
-    echo "Reassempling ramdisk"
-    if [ "${RD_COMPRESSED}" == "true" ]; then
-        (cd "${temprd}" && find . | cpio -o -H newc -R root:root | xz -9 --format=lzma >"/root/initrd-dsm") >/dev/null 2>&1 >/dev/null
-    else
+	# Reassembly ramdisk
+	echo "Reassempling ramdisk"
+	if [ "${RD_COMPRESSED}" == "true" ]; then
+		(cd "${temprd}" && find . | cpio -o -H newc -R root:root | xz -9 --format=lzma >"/root/initrd-dsm") >/dev/null 2>&1 >/dev/null
+	else
 		#if [ "$mtype" = "custom-modules" ]; then
-        #	(cd "${temprd}" && find . | bsdcpio -o -H newc -R root:root | zstd -c -T0 -19 >"/root/initrd-dsm") >/dev/null 2>&1
+		#	(cd "${temprd}" && find . | bsdcpio -o -H newc -R root:root | zstd -c -T0 -19 >"/root/initrd-dsm") >/dev/null 2>&1
 		#else
-        	(cd "${temprd}" && find . | cpio -o -H newc -R root:root >"/root/initrd-dsm") >/dev/null 2>&1
+			(cd "${temprd}" && find . | cpio -o -H newc -R root:root >"/root/initrd-dsm") >/dev/null 2>&1
 		#fi	
-    fi
-    [ -f /root/initrd-dsm ] && echo "Patched ramdisk created $(ls -l /root/initrd-dsm)"
+	fi
+	[ -f /root/initrd-dsm ] && echo "Patched ramdisk created $(ls -l /root/initrd-dsm)"
+	echo "Moving file to ${LOADER_DISK}"
+	mv -vf /root/initrd-dsm /mnt/tcrp
+	cd /root && rm -rf $temprd $OLD_RD
 
-    echo "Moving file to ${LOADER_DISK}"
+	finishramdiskpatch
+}
 
-    mv -vf /root/initrd-dsm /mnt/tcrp
-
-    cd /root && rm -rf $temprd
-
+function finishramdiskpatch() {
     origrdhash=$(sha256sum /mnt/tcrp-p2/rd.gz | awk '{print $1}')
-    origzimghash=$(sha256sum /mnt/tcrp-p2/zImage | awk '{print $1}')
-    #version="${major}.${minor}.${micro}-${buildnumber}"
-    smallfixnumber="${smallfixnumber}"
-
-    updateuserconfigfield "general" "rdhash" "$origrdhash"
-    updateuserconfigfield "general" "zimghash" "$origzimghash"
+    updateuserconfigfield "general" "rdhash" "$origrdhash"	
+	if [ "$mtype" != "custom-modules" ]; then
+    	origzimghash=$(sha256sum /mnt/tcrp-p2/zImage | awk '{print $1}')
+    	updateuserconfigfield "general" "zimghash" "$origzimghash"
+	fi
     updateuserconfigfield "general" "version" "${major}.${minor}.${micro}-${buildnumber}"
+	
+    smallfixnumber="${smallfixnumber}"	
     updateuserconfigfield "general" "smallfixnumber" "${smallfixnumber}"
     updategrubconf
-
 }
 
 function rebuildloader() {
@@ -1097,10 +1081,15 @@ function checkupgrade() {
         exit 99
     fi
 
-    origrdhash=$(sha256sum /mnt/tcrp-p2/rd.gz | awk '{print $1}')
-    origzimghash=$(sha256sum /mnt/tcrp-p2/zImage | awk '{print $1}')
     rdhash="$(jq -r -e '.general .rdhash' $userconfigfile)"
+    origrdhash=$(sha256sum /mnt/tcrp-p2/rd.gz | awk '{print $1}')
     zimghash="$(jq -r -e '.general .zimghash' $userconfigfile)"
+	if [ "$mtype" = "custom-modules" ]; then
+	    echo "custom-modules Skip Patching Kernel"
+		origzimghash=$zimghash
+	else	
+    	origzimghash=$(sha256sum /mnt/tcrp-p2/zImage | awk '{print $1}')
+	fi
 
     #if [ "$loadermode" == "JOT" ]; then    
     #    if [ "${BUS}" = "usb" ]; then
@@ -1604,7 +1593,7 @@ function welcome() {
     echo -en "\033[7;32m--------------------------------------={ TinyCore RedPill Friend }=--------------------------------------\033[0m\n"
 
     # Echo Version
-    echo "TCRP Friend Version : $BOOTVER"
+    echo "TCRP Friend Version : $BOOTVER ( usage : ./boot.sh update v0.1.3z | ./boot.sh autoupdate [on|off] )"
     showlastupdate
 }
 
