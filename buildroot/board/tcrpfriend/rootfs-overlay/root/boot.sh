@@ -159,6 +159,7 @@ function history() {
 	0.1.4c Added static mounting function when reconfiguring initrd-dsm of a custom module
 	0.1.4d Fix an error repacking custom module ramdisk file (/mnt/tcrp/initrd-dsm)
     0.1.4e Abandoning the use of custom.gz and improving processing entirely using initrd-dsm
+	       GPL custom-modules skip zImage patch
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -174,8 +175,8 @@ function showlastupdate() {
 0.1.3w Added logic to change redpill.ko and module packs when detecting a DSM version change
 0.1.4b Emergency recovery of missing KVER variables
 0.1.4c Added static mounting function when reconfiguring initrd-dsm of a custom module
-0.1.4d Fix an error repacking custom module ramdisk file (/mnt/tcrp/initrd-dsm)
 0.1.4e Abandoning the use of custom.gz and improving processing entirely using initrd-dsm
+       GPL custom-modules skip zImage patch
 
 EOF
 }
@@ -469,14 +470,10 @@ function _set_conf_kv() {
 
 function patchkernel() {
 
-	if [ "$mtype" = "custom-modules" ]; then
-	    echo "custom-modules Skip Patching Kernel"
-	else	
-	    echo "Patching Kernel"
-	    /root/tools/bzImage-to-vmlinux.sh /mnt/tcrp-p2/zImage /root/vmlinux >log 2>&1 >/dev/null
-	    /root/tools/kpatch /root/vmlinux /root/vmlinux-mod >log 2>&1 >/dev/null
-	    /root/tools/vmlinux-to-bzImage.sh /root/vmlinux-mod /mnt/tcrp/zImage-dsm >/dev/null
-    fi
+	echo "Patching Kernel"
+	/root/tools/bzImage-to-vmlinux.sh /mnt/tcrp-p2/zImage /root/vmlinux >log 2>&1 >/dev/null
+	/root/tools/kpatch /root/vmlinux /root/vmlinux-mod >log 2>&1 >/dev/null
+	/root/tools/vmlinux-to-bzImage.sh /root/vmlinux-mod /mnt/tcrp/zImage-dsm >/dev/null
     [ -f /mnt/tcrp/zImage-dsm ] && echo "Kernel Patched, sha256sum : $(sha256sum /mnt/tcrp/zImage-dsm | awk '{print $1}')"
 }
 
@@ -664,19 +661,15 @@ function patchramdisk() {
 }
 
 function finishramdiskpatch() {
-
     origrdhash=$(sha256sum /mnt/tcrp-p2/rd.gz | awk '{print $1}')
-	if [ "$mtype" = "custom-modules" ]; then
-		origzimghash=$zimghash
-	else
+    updateuserconfigfield "general" "rdhash" "$origrdhash"	
+	if [ "$mtype" != "custom-modules" ]; then
     	origzimghash=$(sha256sum /mnt/tcrp-p2/zImage | awk '{print $1}')
-	fi	
-    #version="${major}.${minor}.${micro}-${buildnumber}"
-    smallfixnumber="${smallfixnumber}"
-
-    updateuserconfigfield "general" "rdhash" "$origrdhash"
-    updateuserconfigfield "general" "zimghash" "$origzimghash"
+    	updateuserconfigfield "general" "zimghash" "$origzimghash"
+	fi
     updateuserconfigfield "general" "version" "${major}.${minor}.${micro}-${buildnumber}"
+	
+    smallfixnumber="${smallfixnumber}"	
     updateuserconfigfield "general" "smallfixnumber" "${smallfixnumber}"
     updategrubconf
 }
@@ -1088,10 +1081,15 @@ function checkupgrade() {
         exit 99
     fi
 
-    origrdhash=$(sha256sum /mnt/tcrp-p2/rd.gz | awk '{print $1}')
-    origzimghash=$(sha256sum /mnt/tcrp-p2/zImage | awk '{print $1}')
     rdhash="$(jq -r -e '.general .rdhash' $userconfigfile)"
+    origrdhash=$(sha256sum /mnt/tcrp-p2/rd.gz | awk '{print $1}')
     zimghash="$(jq -r -e '.general .zimghash' $userconfigfile)"
+	if [ "$mtype" = "custom-modules" ]; then
+	    echo "custom-modules Skip Patching Kernel"
+		origzimghash=$zimghash
+	else	
+    	origzimghash=$(sha256sum /mnt/tcrp-p2/zImage | awk '{print $1}')
+	fi
 
     #if [ "$loadermode" == "JOT" ]; then    
     #    if [ "${BUS}" = "usb" ]; then
