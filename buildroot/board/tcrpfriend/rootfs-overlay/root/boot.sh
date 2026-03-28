@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 260312
+# Date : 260328
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.4e"
+BOOTVER="0.1.4f"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -160,6 +160,7 @@ function history() {
 	0.1.4d Fix an error repacking custom module ramdisk file (/mnt/tcrp/initrd-dsm)
     0.1.4e Abandoning the use of custom.gz and improving processing entirely using initrd-dsm
 	       GPL custom-modules skip zImage patch
+	0.1.4f Linking the DSM reinstallation (Junior) entry in the Grub boot entry	   
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -177,6 +178,7 @@ function showlastupdate() {
 0.1.4c Added static mounting function when reconfiguring initrd-dsm of a custom module
 0.1.4e Abandoning the use of custom.gz and improving processing entirely using initrd-dsm
        GPL custom-modules skip zImage patch
+0.1.4f Linking the DSM reinstallation (Junior) entry in the Grub boot entry	   
 
 EOF
 }
@@ -1708,6 +1710,10 @@ function initialize() {
 				KVER="3.10.105"
 			fi
 		fi
+	fi
+
+	if grep -q "force_junior" /proc/cmdline; then
+		boot forcejunior
 	fi
 
 }
