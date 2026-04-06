@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 260328
+# Date : 260406
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.4f"
+BOOTVER="0.1.4g"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -161,6 +161,8 @@ function history() {
     0.1.4e Abandoning the use of custom.gz and improving processing entirely using initrd-dsm
 	       GPL custom-modules skip zImage patch
 	0.1.4f Linking the DSM reinstallation (Junior) entry in the Grub boot entry	   
+	0.1.4g Ignore duplicate UUID bootloaders; only the first enumerated device is valid.
+	       Added check_python_deps() for Python3 library pre-check with auto-install.
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -179,8 +181,57 @@ function showlastupdate() {
 0.1.4e Abandoning the use of custom.gz and improving processing entirely using initrd-dsm
        GPL custom-modules skip zImage patch
 0.1.4f Linking the DSM reinstallation (Junior) entry in the Grub boot entry	   
+0.1.4g Duplicate UUID bootloader de-duplication + Python3 library pre-check added
 
 EOF
+}
+
+
+###############################################################################
+# check_python_deps() - 0.1.4g
+# Python3 라이브러리 의존성 사전 점검 함수
+# 사용법: check_python_deps <lib1> [lib2 ...]
+#   - import 성공 시: 0 반환 (OK)
+#   - import 실패 + 인터넷 있음: pip install 시도 후 재검증
+#   - import 실패 + 인터넷 없음: 경고 출력 후 1 반환 (스킵)
+# GNU 커맨드로 단독 점검하려면 아래 명령을 사용하십시오:
+#   python3 -c "import qrcode, Pillow" 2>&1 && echo OK || echo MISSING
+#   python3 -m pip list 2>/dev/null | grep -iE "qrcode|pillow|passlib"
+###############################################################################
+function check_python_deps() {
+    local missing=()
+    for lib in "$@"; do
+        if ! python3 -c "import ${lib}" >/dev/null 2>&1; then
+            missing+=("${lib}")
+        fi
+    done
+
+    if [ ${#missing[@]} -eq 0 ]; then
+        return 0
+    fi
+
+    msgwarning "Python3 library check: missing -> ${missing[*]}\n"
+
+    if [ "${INTERNET}" = "ON" ]; then
+        for lib in "${missing[@]}"; do
+            echo "Installing missing Python3 library: ${lib}"
+            pip install "${lib}" >/dev/null 2>&1 || \
+                pip3 install "${lib}" >/dev/null 2>&1 || \
+                msgalert "pip install ${lib} failed, some features may not work.\n"
+        done
+        # 재검증
+        for lib in "${missing[@]}"; do
+            if ! python3 -c "import ${lib}" >/dev/null 2>&1; then
+                msgalert "Python3 library '${lib}' still missing after install attempt.\n"
+                return 1
+            fi
+        done
+        msgnormal "Python3 libraries installed successfully.\n"
+        return 0
+    else
+        msgwarning "No internet - skipping Python3 library install: ${missing[*]}\n"
+        return 1
+    fi
 }
 
 function version() {
@@ -803,13 +854,13 @@ function countdown() {
                 ;;
             'r') # r key
                 TEXT "r key pressed! Entering Menu for Reset DSM Password!"
-                pip install passlib >/dev/null 2>/dev/null
+                check_python_deps passlib
                 sleep 3
                 mainmenu
                 ;;
             'e') # e key
                 TEXT "e key pressed! Entering Menu for Edit USB/SATA Command Line!"
-                pip install passlib >/dev/null 2>/dev/null                
+                check_python_deps passlib
                 sleep 3
                 mainmenu
                 ;;
@@ -1213,50 +1264,65 @@ function wait_mmc() {
 }
 
 function getloadertype() {
-    
-    # Get the list of loader partition's UUIDs
-    uuids=$(lsblk -nro UUID | awk 'length($0)==9')
-    
-    # Group UUIDs by disk
-    declare -A disk_uuids
-    while IFS= read -r uuid; do
-        # Process only if UUID is not empty and matches the valid format
-        if [[ -n "$uuid" ]]; then
-            disk=$(lsblk -nro PKNAME,UUID | grep "$uuid" | awk '{print $1}')
-            if [[ -n "$disk" ]]; then
-                disk_uuids["$disk"]+="$uuid "
-            fi
-        fi
-    done <<< "$uuids"
-    
-    # Print the results
-    for disk in "${!disk_uuids[@]}"; do
-        echo "Disk: $disk, UUIDs: ${disk_uuids[$disk]}"
-    done
-    
-    # Search for UUIDs and set LDTYPE
+
+    # [0.1.4g] Build a disk->uuid map using kernel enumeration order (lsblk output
+    # order reflects kernel detection order; the first device enumerated for a given
+    # UUID is the one the user physically set as the boot device in BIOS/UEFI).
+    #
+    # De-duplication strategy (Method 4 - logic-level fix):
+    #   - Walk lsblk output in its natural order (sda < sdb < sdc ...)
+    #   - For each UUID, record only the FIRST disk that owns it
+    #   - Any subsequent disk reporting the same UUID is logged and skipped
+    # This ensures that two identical USB sticks (cloned, same UUID) result in
+    # exactly one valid LOADER_DISK - the one the bootloader enumerated first.
+
     uuid1="1234-5678"
     uuid2="8765-4321"
     uuid3="6234-C863"
     LDTYPE=""
     LOADER_DISK=""
-    
-    # Search for uuid3 first
+
+    # --- build ordered disk list (kernel enumeration order) ---
+    declare -A disk_uuids   # disk -> "uuid1 uuid2 ..." accumulated
+    declare -A uuid_owner   # uuid -> first disk that claimed it (de-dup registry)
+
+    while IFS=' ' read -r pkname uuid; do
+        [[ -z "$pkname" || -z "$uuid" ]] && continue
+        # UUID must be exactly 9 chars (FAT short format: XXXX-XXXX)
+        [[ ${#uuid} -ne 9 ]] && continue
+
+        if [[ -n "${uuid_owner[$uuid]}" ]]; then
+            # [0.1.4g] Duplicate UUID detected - skip this disk's partition
+            if [[ "${uuid_owner[$uuid]}" != "$pkname" ]]; then
+                echo "[0.1.4g] Duplicate UUID '$uuid' on disk '$pkname' ignored (primary: ${uuid_owner[$uuid]})"
+            fi
+            continue
+        fi
+
+        # First occurrence - register ownership
+        uuid_owner["$uuid"]="$pkname"
+        disk_uuids["$pkname"]+="$uuid "
+    done < <(lsblk -nro PKNAME,UUID | sort -k1,1)
+
+    # Print the results (diagnostic)
     for disk in "${!disk_uuids[@]}"; do
+        echo "Disk: $disk, UUIDs: ${disk_uuids[$disk]}"
+    done
+
+    # --- Search for uuid3 first (NORMAL/mmc loader) ---
+    for disk in $(echo "${!disk_uuids[@]}" | tr ' ' '\n' | sort); do
         if [[ "${disk_uuids[$disk]}" == *"$uuid3"* ]]; then
             LDTYPE="NORMAL"
             LOADER_DISK=${disk#/dev/}
-            #echo "LDTYPE=$LDTYPE"
-            #echo "LOADER_DISK=$LOADER_DISK"
             return
         fi
     done
-    
-    # If uuid3 is not found, search for uuid1 and uuid2
+
+    # --- If uuid3 not found, search for uuid1 + uuid2 (SHR injected loader) ---
     found_uuid1=false
     found_uuid2=false
-    
-    for disk in "${!disk_uuids[@]}"; do
+
+    for disk in $(echo "${!disk_uuids[@]}" | tr ' ' '\n' | sort); do
         if [[ "${disk_uuids[$disk]}" == *"$uuid1"* ]]; then
             found_uuid1=true
         fi
@@ -1265,17 +1331,15 @@ function getloadertype() {
             LOADER_DISK=${disk#/dev/}
         fi
     done
-    
+
     if $found_uuid1 && $found_uuid2; then
         LDTYPE="SHR"
-        #echo "LDTYPE=$LDTYPE"
-        #echo "LOADER_DISK=$LOADER_DISK"
-	    return
-    else 
+        return
+    else
         echo "No Redpill loader partitions found. Exiting!!!"
-	    echo "Wait for additional time until mmc device is recognized..."
-	    wait_mmc
- 	    getloadertype
+        echo "Wait for additional time until mmc device is recognized..."
+        wait_mmc
+        getloadertype
         [ "${EMMCBOOT}" = "true" ] && return || exit 99
     fi
 }
@@ -1572,6 +1636,8 @@ function boot() {
         echo " http://${IP}:5000"        
 
 		[ -n "${IP}" ] && URL="http://${IP}:5000" || URL="https://finds.synology.com/"
+		# [0.1.4g] QR code library pre-check before python3 invocation
+		check_python_deps qrcode PIL
 		python3 /root/functions.py makeqr -d "${URL}" -l "7" -o "/tmp/qrcode.png"
 		[ -f "/tmp/qrcode.png" ] && echo | fbv -acufi "/tmp/qrcode.png" >/dev/null 2>&1 || true
         
