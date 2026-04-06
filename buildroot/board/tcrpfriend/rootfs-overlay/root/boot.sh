@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.4g"
+BOOTVER="0.1.4h"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -161,8 +161,10 @@ function history() {
     0.1.4e Abandoning the use of custom.gz and improving processing entirely using initrd-dsm
 	       GPL custom-modules skip zImage patch
 	0.1.4f Linking the DSM reinstallation (Junior) entry in the Grub boot entry	   
-	0.1.4g Ignore duplicate UUID bootloaders; only the first enumerated device is valid.
+	0.1.4g Detect duplicate UUID bootloaders at startup and abort with error message.
 	       Added check_python_deps() for Python3 library pre-check with auto-install.
+	0.1.4h Abort boot immediately when duplicate UUID bootloaders are present.
+	       DSM treats each synoboot as a separate device; duplicates cause failures.
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -175,13 +177,11 @@ function showlastupdate() {
 0.1.3i Activate build root openssl bin for DSM password make and renewal Reset(Change) DSM Password function
        Add menu for "Add New DSM User"
 0.1.3m Enable FRIEND Kernel on HP N36L/N40L/N54L (Supports Older AMD CPUs)
-0.1.3w Added logic to change redpill.ko and module packs when detecting a DSM version change
-0.1.4b Emergency recovery of missing KVER variables
-0.1.4c Added static mounting function when reconfiguring initrd-dsm of a custom module
 0.1.4e Abandoning the use of custom.gz and improving processing entirely using initrd-dsm
        GPL custom-modules skip zImage patch
 0.1.4f Linking the DSM reinstallation (Junior) entry in the Grub boot entry	   
-0.1.4g Duplicate UUID bootloader de-duplication + Python3 library pre-check added
+0.1.4g Abort boot when duplicate UUID bootloaders detected + Python3 pre-check added
+0.1.4h Immediate boot abort with clear error message on duplicate synoboot detection
 
 EOF
 }
@@ -1265,16 +1265,16 @@ function wait_mmc() {
 
 function getloadertype() {
 
-    # [0.1.4g] Build a disk->uuid map using kernel enumeration order (lsblk output
-    # order reflects kernel detection order; the first device enumerated for a given
-    # UUID is the one the user physically set as the boot device in BIOS/UEFI).
+    # [0.1.4h] Duplicate bootloader guard
+    # Scan ALL disks BEFORE selecting a loader. If the same loader UUID is found
+    # on more than one physical disk, DSM will see multiple synoboot devices and
+    # fail. We therefore ABORT immediately with a clear error so the user can
+    # physically remove the extra bootloader before retrying.
     #
-    # De-duplication strategy (Method 4 - logic-level fix):
-    #   - Walk lsblk output in its natural order (sda < sdb < sdc ...)
-    #   - For each UUID, record only the FIRST disk that owns it
-    #   - Any subsequent disk reporting the same UUID is logged and skipped
-    # This ensures that two identical USB sticks (cloned, same UUID) result in
-    # exactly one valid LOADER_DISK - the one the bootloader enumerated first.
+    # Detection logic:
+    #   - Collect every 9-char FAT UUID visible on block devices (lsblk sorted)
+    #   - For each target UUID (uuid1/uuid2/uuid3) count how many distinct disks
+    #     carry that UUID; if count > 1 -> duplicate -> halt
 
     uuid1="1234-5678"
     uuid2="8765-4321"
@@ -1282,34 +1282,55 @@ function getloadertype() {
     LDTYPE=""
     LOADER_DISK=""
 
-    # --- build ordered disk list (kernel enumeration order) ---
-    declare -A disk_uuids   # disk -> "uuid1 uuid2 ..." accumulated
-    declare -A uuid_owner   # uuid -> first disk that claimed it (de-dup registry)
+    # --- build ordered disk->uuid map (kernel enumeration order: sda < sdb ...) ---
+    declare -A disk_uuids   # disk  -> "uuid_a uuid_b ..." space-separated
+    declare -A uuid_disks   # uuid  -> "disk1 disk2 ..."  (all disks owning it)
 
     while IFS=' ' read -r pkname uuid; do
         [[ -z "$pkname" || -z "$uuid" ]] && continue
-        # UUID must be exactly 9 chars (FAT short format: XXXX-XXXX)
-        [[ ${#uuid} -ne 9 ]] && continue
-
-        if [[ -n "${uuid_owner[$uuid]}" ]]; then
-            # [0.1.4g] Duplicate UUID detected - skip this disk's partition
-            if [[ "${uuid_owner[$uuid]}" != "$pkname" ]]; then
-                echo "[0.1.4g] Duplicate UUID '$uuid' on disk '$pkname' ignored (primary: ${uuid_owner[$uuid]})"
-            fi
-            continue
-        fi
-
-        # First occurrence - register ownership
-        uuid_owner["$uuid"]="$pkname"
+        [[ ${#uuid} -ne 9 ]] && continue          # FAT short UUID only (XXXX-XXXX)
         disk_uuids["$pkname"]+="$uuid "
+        # append disk to uuid_disks only if not already listed
+        if [[ "${uuid_disks[$uuid]}" != *"$pkname"* ]]; then
+            uuid_disks["$uuid"]+="$pkname "
+        fi
     done < <(lsblk -nro PKNAME,UUID | sort -k1,1)
 
-    # Print the results (diagnostic)
-    for disk in "${!disk_uuids[@]}"; do
+    # --- Print diagnostic ---
+    for disk in $(echo "${!disk_uuids[@]}" | tr ' ' '\n' | sort); do
         echo "Disk: $disk, UUIDs: ${disk_uuids[$disk]}"
     done
 
-    # --- Search for uuid3 first (NORMAL/mmc loader) ---
+    # --- [0.1.4h] Duplicate UUID check: abort if any loader UUID appears on 2+ disks ---
+    _check_dup_uuid() {
+        local target_uuid="$1"
+        local owners="${uuid_disks[$target_uuid]:-}"
+        local count
+        count=$(echo "$owners" | wc -w)
+        if [[ $count -gt 1 ]]; then
+            echo ""
+            msgalert "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+            msgalert "!!  DUPLICATE BOOTLOADER DETECTED - BOOT ABORTED              !!\n"
+            msgalert "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+            echo ""
+            msgwarning "UUID '$target_uuid' found on multiple disks: $owners\n"
+            msgwarning "Two or more bootloader USB sticks with identical UUID are\n"
+            msgwarning "inserted simultaneously. Synology DSM will detect multiple\n"
+            msgwarning "synoboot devices and malfunction.\n"
+            echo ""
+            msgalert "ACTION REQUIRED:\n"
+            msgalert "  Remove all duplicate bootloader USB sticks and leave ONLY\n"
+            msgalert "  the single intended boot device, then reboot.\n"
+            echo ""
+            exit 99
+        fi
+    }
+
+    _check_dup_uuid "$uuid1"
+    _check_dup_uuid "$uuid2"
+    _check_dup_uuid "$uuid3"
+
+    # --- Search for uuid3 first (NORMAL / mmc loader) ---
     for disk in $(echo "${!disk_uuids[@]}" | tr ' ' '\n' | sort); do
         if [[ "${disk_uuids[$disk]}" == *"$uuid3"* ]]; then
             LDTYPE="NORMAL"
@@ -1343,6 +1364,7 @@ function getloadertype() {
         [ "${EMMCBOOT}" = "true" ] && return || exit 99
     fi
 }
+
 
 function mountall() {
 
