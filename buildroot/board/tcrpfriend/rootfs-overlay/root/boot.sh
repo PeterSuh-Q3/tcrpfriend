@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 260406
+# Date : 260412
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.4h"
+BOOTVER="0.1.4i"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -165,6 +165,7 @@ function history() {
 	       Added check_python_deps() for Python3 library pre-check with auto-install.
 	0.1.4h Abort boot immediately when duplicate UUID bootloaders are present.
 	       DSM treats each synoboot as a separate device; duplicates cause failures.
+	0.1.4i For RD patching, use the separated lkm(redpill.ko) according to the platform and DSM version
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -182,6 +183,7 @@ function showlastupdate() {
 0.1.4f Linking the DSM reinstallation (Junior) entry in the Grub boot entry	   
 0.1.4g Abort boot when duplicate UUID bootloaders detected + Python3 pre-check added
 0.1.4h Immediate boot abort with clear error message on duplicate synoboot detection
+0.1.4i For RD patching, use the separated lkm(redpill.ko) according to the platform and DSM version
 
 EOF
 }
@@ -443,17 +445,29 @@ function getredpillko() {
     echo "TAG is ${TAG}"        
     STATUS=`curl --connect-timeout 5 -skL -w "%{http_code}" "${PROXY}https://github.com/PeterSuh-Q3/redpill-lkm${v}/releases/download/${TAG}/rp-lkms.zip" -o "/tmp/rp-lkms${v}.zip"`
 
-	if [ "$(echo "${KVER:-5}" | cut -d'.' -f1)" -ge 5 ]; then
-		echo "PATCH redpill.ko VERSION : ${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}"	
-        unzip /tmp/rp-lkms${v}.zip rp-${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}-prod.ko.gz -d /tmp >/dev/null 2>&1
-        gunzip -f /tmp/rp-${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}-prod.ko.gz >/dev/null 2>&1
-        cp -vf /tmp/rp-${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}-prod.ko /root/redpill.ko
-    else
-		echo "PATCH redpill.ko VERSION : ${ORIGIN_PLATFORM}-${KVER}"	
-        unzip /tmp/rp-lkms${v}.zip rp-${ORIGIN_PLATFORM}-${KVER}-prod.ko.gz -d /tmp >/dev/null 2>&1
-        gunzip -f /tmp/rp-${ORIGIN_PLATFORM}-${KVER}-prod.ko.gz >/dev/null 2>&1
-        cp -vf /tmp/rp-${ORIGIN_PLATFORM}-${KVER}-prod.ko /root/redpill.ko
-    fi    
+	# 1. 탐지할 대상 파일명 정의
+	FILE_V1="rp-${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}-prod.ko.gz"
+	FILE_V2="rp-${ORIGIN_PLATFORM}-${KVER}-prod.ko.gz"
+	
+	# 2. 파일 존재 여부 탐지 및 대상 변수(TARGET_GZ) 할당
+	# (unzip -l 은 실제 압축을 풀지 않고 zip 파일 내부의 파일 존재 여부만 확인합니다)
+	if unzip -l /tmp/rp-lkms${v}.zip "$FILE_V1" >/dev/null 2>&1; then
+	    TARGET_GZ="$FILE_V1"
+	    echo "PATCH redpill.ko VERSION : ${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}"
+	elif unzip -l /tmp/rp-lkms${v}.zip "$FILE_V2" >/dev/null 2>&1; then
+	    TARGET_GZ="$FILE_V2"
+	    echo "PATCH redpill.ko VERSION : ${ORIGIN_PLATFORM}-${KVER}"
+	else
+	    echo "ERROR: No matching redpill.ko.gz found in rp-lkms${v}.zip" >&2
+	    exit 1
+	fi
+	
+	# 3. 변수에 담긴 파일명으로 압축 해제 및 복사 처리 (단 1회 수행)
+	TARGET_KO="${TARGET_GZ%.gz}" # 파일명에서 .gz 확장자 제거
+	
+	unzip /tmp/rp-lkms${v}.zip "$TARGET_GZ" -d /tmp >/dev/null 2>&1
+	gunzip -f /tmp/"$TARGET_GZ" >/dev/null 2>&1
+	cp -vf /tmp/"$TARGET_KO" /root/redpill.ko
 
     if [ -f /root/redpill.ko ] && [ -n $(strings /root/redpill.ko | grep -i $model | head -1) ]; then
         echo "Copying redpill.ko module to ramdisk"
