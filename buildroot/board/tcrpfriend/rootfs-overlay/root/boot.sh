@@ -1600,10 +1600,9 @@ function boot() {
 
     #CMDLINE_LINE+="skip_vender_mac_interfaces=0,1,2,3,4,5,6,7 "
 
-    #If EFI then add withefi to CMDLINE_LINE
-    if [ "$EFIMODE" = "yes" ] && [ $(echo ${CMDLINE_LINE} | grep withefi | wc -l) -le 0 ]; then
-        CMDLINE_LINE+="withefi " && echo -en "\r$(msgwarning "$(TEXT "EFI booted system with no EFI option, adding withefi to cmdline")")\n"
-    fi
+    #if [ "$EFIMODE" = "yes" ] && [ $(echo ${CMDLINE_LINE} | grep withefi | wc -l) -le 0 ]; then
+    #    CMDLINE_LINE+="withefi " && echo -en "\r$(msgwarning "$(TEXT "EFI booted system with no EFI option, adding withefi to cmdline")")\n"
+    #fi
 
     if [ "$(dmidecode -s system-manufacturer | grep -c VMware)" -eq 1 ]; then
         CMDLINE_LINE+="mev=vmware "
