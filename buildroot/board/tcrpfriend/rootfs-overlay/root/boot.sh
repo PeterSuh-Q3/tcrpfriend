@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 260412
+# Date : 260504
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.4i"
+BOOTVER="0.1.4j"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -166,6 +166,7 @@ function history() {
 	0.1.4h Abort boot immediately when duplicate UUID bootloaders are present.
 	       DSM treats each synoboot as a separate device; duplicates cause failures.
 	0.1.4i For RD patching, use the separated lkm(redpill.ko) according to the platform and DSM version
+	0.1.4j Reapplied adjusted platform-specific configurations, adjusted console display items
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -178,12 +179,9 @@ function showlastupdate() {
 0.1.3i Activate build root openssl bin for DSM password make and renewal Reset(Change) DSM Password function
        Add menu for "Add New DSM User"
 0.1.3m Enable FRIEND Kernel on HP N36L/N40L/N54L (Supports Older AMD CPUs)
-0.1.4e Abandoning the use of custom.gz and improving processing entirely using initrd-dsm
-       GPL custom-modules skip zImage patch
 0.1.4f Linking the DSM reinstallation (Junior) entry in the Grub boot entry	   
-0.1.4g Abort boot when duplicate UUID bootloaders detected + Python3 pre-check added
-0.1.4h Immediate boot abort with clear error message on duplicate synoboot detection
 0.1.4i For RD patching, use the separated lkm(redpill.ko) according to the platform and DSM version
+0.1.4j Reapplied adjusted platform-specific configurations, adjusted console display items
 
 EOF
 }
@@ -910,7 +908,7 @@ function gethw() {
     checkmachine
 
     echo -ne "Model : $(msgnormal "$model"), Serial : $(msgnormal "$serial"), Mac : $(msgnormal "$mac1"), Build : $(msgnormal "$version"), Update : $(msgnormal "$smallfixnumber"), LKM : $(msgnormal "${redpillmake}")\n"
-    echo -ne "Loader BUS: $(msgnormal "${BUS}${SHR_EX_TEXT}"), Module Type: $(msgnormal "$mtype")\n"
+    echo -ne "Platform : $(msgnormal "$ORIGIN_PLATFORM"), Loader BUS: $(msgnormal "${BUS}${SHR_EX_TEXT}"), Module Type: $(msgnormal "$mtype ($mlmethod)")\n"
 	GPU_INFO=$(lspci -nn | grep 0300 | head -1 | sed 's/.*\[0300\]: //')	
 	echo -ne "GPU: $(msgnormal "${GPU_INFO}")\n"
     THREADS="$(cat /proc/cpuinfo | grep "model name" | awk -F: '{print $2}' | wc -l)"
@@ -1499,6 +1497,8 @@ function readconfig() {
     	chkdisk="false"
     	chkdisk=$(jq -r -e '.general.check_diskcnt' "$userconfigfile")
 
+		mlmethod=$(jq -r -e '.general.mlmethod' "$userconfigfile")
+
         export LANG=${ucode}.UTF-8
         export LC_ALL=${ucode}.UTF-8
   
@@ -1619,11 +1619,6 @@ function boot() {
     echo "zImage : ${MOD_ZIMAGE_FILE} initrd : ${MOD_RDGZ_FILE}, Module Processing Method : $(msgnormal "${dmpm}")"
     echo "cmdline : $(msgblue "${CMDLINE_LINE}")"
     echo
-    echo -en "$(msgpurple "$(TEXT "To check the problem, access the following TTYD URL through a web browser. :")")"
-    echo " http://${IP}:7681"
-    echo -e "$(msgalert "$(TEXT "Default TTYD root password is 'blank' ")")"    
-    echo -e "$(msgwarning "$(TEXT "If you have any problems with the DSM installation steps, check the '/var/log/linuxrc.syno.log' file in this access.")")"
-    echo            
     #if [ "$1" != "gettycon" ] && [ "$1" != "forcejunior" ]; then    
     if [ "$1" != "forcejunior" ]; then    
  #       msgalert "Press <g> to enter a Getty Console to solve trouble\n"
@@ -1665,6 +1660,11 @@ function boot() {
         fi
         echo -en "\r$(TEXT "Boot timeout exceeded, booting ... ")\n"
         echo
+	    echo -en "$(msgpurple "$(TEXT "To check the problem, access the following TTYD URL through a web browser. :")")"
+	    echo " http://${IP}:7681"
+	    echo -e "$(msgalert "$(TEXT "Default TTYD root password is 'blank' ")")"    
+	    echo -e "$(msgwarning "$(TEXT "If you have any problems with the DSM installation steps, check the '/var/log/linuxrc.syno.log' file in this access.")")"
+	    echo            
         echo -en "\r$(TEXT "\"HTTP, Synology Web Assistant (BusyBox httpd)\" service may take 20 - 40 seconds.")\n"
         echo -en "\r$(TEXT "(Network access is not immediately available)")\n"
         echo -en "\r$(TEXT "Kernel loading has started, nothing will be displayed here anymore ...")\n"
