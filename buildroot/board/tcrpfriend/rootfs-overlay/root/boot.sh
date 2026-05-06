@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 260504
+# Date : 260507
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.4j"
+BOOTVER="0.1.4k"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -167,6 +167,7 @@ function history() {
 	       DSM treats each synoboot as a separate device; duplicates cause failures.
 	0.1.4i For RD patching, use the separated lkm(redpill.ko) according to the platform and DSM version
 	0.1.4j Reapplied adjusted platform-specific configurations, adjusted console display items
+	0.1.4k Remove use of dom_szmax and synoboot_satadom for NVMe bootloaders
     
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -182,6 +183,7 @@ function showlastupdate() {
 0.1.4f Linking the DSM reinstallation (Junior) entry in the Grub boot entry	   
 0.1.4i For RD patching, use the separated lkm(redpill.ko) according to the platform and DSM version
 0.1.4j Reapplied adjusted platform-specific configurations, adjusted console display items
+0.1.4k Remove use of dom_szmax and synoboot_satadom for NVMe bootloaders
 
 EOF
 }
@@ -1578,7 +1580,7 @@ function boot() {
 
     CMDLINE_LINE=$(jq -r -e '.general .usb_line' /mnt/tcrp/user_config.json)
 	if [ "$(echo "${KVER:-4}" | cut -d'.' -f1)" -lt 5 ]; then
-	    if [ ! "${BUS}" = "usb" ]; then
+	    if [ ! "${BUS}" = "usb" ] && [ ! "${BUS}" = "nvme" ]; then
 	        # Check dom size and set max size accordingly
 	        # 2024.03.17 Force the dom_szmax limit of the injected bootloader to be 16GB
 	        CMDLINE_LINE+="dom_szmax=$(fdisk -l /dev/${LOADER_DISK} | head -1 | awk -F: '{print $2}' | awk '{ print $1*1024}') "
