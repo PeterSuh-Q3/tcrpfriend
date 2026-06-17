@@ -168,9 +168,8 @@ function history() {
 	0.1.4i For RD patching, use the separated lkm(redpill.ko) according to the platform and DSM version
 	0.1.4j Reapplied adjusted platform-specific configurations, adjusted console display items
 	0.1.4k Remove use of dom_szmax and synoboot_satadom for NVMe bootloaders
-	0.1.4l If zImage-dsm is signed by PeterSuh-Q3 (GPL custom kernel),
-	       treat as custom-modules to skip zImage patching automatically.
-
+	0.1.4l Add configs of DSM 7.4.0
+    
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
 EOF
@@ -186,7 +185,7 @@ function showlastupdate() {
 0.1.4i For RD patching, use the separated lkm(redpill.ko) according to the platform and DSM version
 0.1.4j Reapplied adjusted platform-specific configurations, adjusted console display items
 0.1.4k Remove use of dom_szmax and synoboot_satadom for NVMe bootloaders
-0.1.4l If zImage-dsm is signed by PeterSuh-Q3 (GPL custom kernel), treat as custom-modules to skip zImage patching.
+0.1.4l Add configs of DSM 7.4.0
 
 EOF
 }
@@ -1497,16 +1496,6 @@ function readconfig() {
         ucode=$(jq -r -e '.general.ucode' "$userconfigfile")
         tz=$(echo $ucode | cut -c 4-)
 		mtype="$(jq -r -e '.general.modulename' $userconfigfile)"
-
-        # [0.1.4l] GPL custom kernel signature check
-        # zImage-dsm에 PeterSuh-Q3 서명이 존재하면 custom-modules과 동일하게 동작:
-        # zImage 패치를 건너뛴다 (checkupgrade / finishramdiskpatch 모두 해당).
-        if [ "$mtype" != "custom-modules" ] && \
-           [ -f /mnt/tcrp/zImage-dsm ] && \
-           strings /mnt/tcrp/zImage-dsm 2>/dev/null | grep -q "PeterSuh-Q3"; then
-            echo "[0.1.4l] PeterSuh-Q3 signature detected in zImage-dsm -> override mtype to custom-modules (skip zImage patch)"
-            mtype="custom-modules"
-        fi
 
         usrdisks=$(jq -r -e '.general.diskcount' "$userconfigfile")
     	chkdisk="false"
