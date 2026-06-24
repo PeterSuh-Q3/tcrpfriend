@@ -169,7 +169,7 @@ function history() {
 	0.1.4j Reapplied adjusted platform-specific configurations, adjusted console display items
 	0.1.4k Remove use of dom_szmax and synoboot_satadom for NVMe bootloaders
 	0.1.4l Add configs of DSM 7.4.0
-	0.1.4m Display all GPUs on console (two per line) instead of only the first
+	0.1.4m Display all GPUs on console (one per line) instead of only the first
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -187,7 +187,7 @@ function showlastupdate() {
 0.1.4j Reapplied adjusted platform-specific configurations, adjusted console display items
 0.1.4k Remove use of dom_szmax and synoboot_satadom for NVMe bootloaders
 0.1.4l Add configs of DSM 7.4.0
-0.1.4m Display all GPUs on console (two per line) instead of only the first
+0.1.4m Display all GPUs on console (one per line) instead of only the first
 
 EOF
 }
@@ -915,22 +915,15 @@ function gethw() {
 
     echo -ne "Model : $(msgnormal "$model"), Serial : $(msgnormal "$serial"), Mac : $(msgnormal "$mac1"), Build : $(msgnormal "$version"), Update : $(msgnormal "$smallfixnumber"), LKM : $(msgnormal "${redpillmake}")\n"
     echo -ne "Platform : $(msgnormal "$ORIGIN_PLATFORM"), Loader BUS: $(msgnormal "${BUS}${SHR_EX_TEXT}"), Module Type: $(msgnormal "$mtype ($mlmethod)")\n"
-	# Display every VGA (class 0300) controller, two GPUs per line.
+	# Display every VGA (class 0300) controller, one GPU per line.
 	GPU_NUM=0
-	GPU_LINE=""
 	while IFS= read -r GPU_ITEM; do
 	    [ -z "${GPU_ITEM}" ] && continue
 	    GPU_NUM=$((GPU_NUM + 1))
-	    if [ -z "${GPU_LINE}" ]; then
-	        GPU_LINE="GPU ${GPU_NUM}: $(msgnormal "${GPU_ITEM}")"
-	    else
-	        echo -ne "${GPU_LINE}    GPU ${GPU_NUM}: $(msgnormal "${GPU_ITEM}")\n"
-	        GPU_LINE=""
-	    fi
+	    echo -ne "GPU ${GPU_NUM}: $(msgnormal "${GPU_ITEM}")\n"
 	done <<GPUEOF
 $(lspci -nn | grep 0300 | sed 's/.*\[0300\]: //')
 GPUEOF
-	[ -n "${GPU_LINE}" ] && echo -ne "${GPU_LINE}\n"
 	[ "${GPU_NUM}" -eq 0 ] && echo -ne "GPU: $(msgnormal "N/A")\n"
     THREADS="$(cat /proc/cpuinfo | grep "model name" | awk -F: '{print $2}' | wc -l)"
     CPU="$(cat /proc/cpuinfo | grep "model name" | awk -F: '{print $2}' | uniq)"
