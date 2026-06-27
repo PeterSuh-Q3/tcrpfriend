@@ -170,7 +170,7 @@ function history() {
 	0.1.4k Remove use of dom_szmax and synoboot_satadom for NVMe bootloaders
 	0.1.4l Add configs of DSM 7.4.0
 	0.1.4m Display all GPUs on console (one per line) instead of only the first
-	0.1.4n dom_szmax uses blockdev byte-accurate size plus 10MiB buffer
+	0.1.4n dom_szmax uses blockdev byte-accurate size plus 10MiB buffer; fix module pack redownload (repo path -> github release asset, add missing major.minor in kernel<5 filename, drop custom-modules branch)
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -189,7 +189,7 @@ function showlastupdate() {
 0.1.4k Remove use of dom_szmax and synoboot_satadom for NVMe bootloaders
 0.1.4l Add configs of DSM 7.4.0
 0.1.4m Display all GPUs on console (one per line) instead of only the first
-0.1.4n dom_szmax uses blockdev byte-accurate size plus 10MiB buffer
+0.1.4n dom_szmax uses blockdev byte-accurate size plus 10MiB buffer; fix module pack redownload (repo path -> github release asset, add missing major.minor in kernel<5 filename, drop custom-modules branch)
 
 EOF
 }
