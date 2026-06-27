@@ -170,7 +170,7 @@ function history() {
 	0.1.4k Remove use of dom_szmax and synoboot_satadom for NVMe bootloaders
 	0.1.4l Add configs of DSM 7.4.0
 	0.1.4m Display all GPUs on console (one per line) instead of only the first
-	0.1.4n dom_szmax uses blockdev byte-accurate size plus 10MiB buffer (RR method)
+	0.1.4n dom_szmax uses blockdev byte-accurate size plus 10MiB buffer
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -189,7 +189,7 @@ function showlastupdate() {
 0.1.4k Remove use of dom_szmax and synoboot_satadom for NVMe bootloaders
 0.1.4l Add configs of DSM 7.4.0
 0.1.4m Display all GPUs on console (one per line) instead of only the first
-0.1.4n dom_szmax uses blockdev byte-accurate size plus 10MiB buffer (RR method)
+0.1.4n dom_szmax uses blockdev byte-accurate size plus 10MiB buffer
 
 EOF
 }
@@ -688,12 +688,9 @@ function patchramdisk() {
 
 	# Redownload Integrated Module Pack
 	echo "Redownload Integrated Module Pack"
-	# KVER에 따른 대상 파일명 결정
-	if [ "$(echo "${KVER:-5}" | cut -d'.' -f1)" -ge 5 ]; then
-	    target_file="${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}.tgz"
-	else
-	    target_file="${ORIGIN_PLATFORM}-${KVER}.tgz"
-	fi
+	# 대상 파일명: 릴리즈 에셋은 커널 버전과 무관하게 <platform>-<major.minor>-<KVER>.tgz 형식
+	# (major/minor 는 위 '. $temprd/etc/VERSION' 소싱으로 설정됨)
+	target_file="${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}.tgz"
 
 	if [ "$mtype" = "custom-modules" ]; then
 		target_file="modules-$target_file"
@@ -705,7 +702,10 @@ function patchramdisk() {
 	else
 	    echo "Downloading module pack: $target_file"
 		rm -vrf $OLD_RD/exts/all-modules/$ORIGIN_PLATFORM*.tgz
-	    curl -kL "https://github.com/PeterSuh-Q3/tcrp-modules/raw/refs/heads/main/all-modules/releases/$target_file" -o "$OLD_RD/exts/all-modules/$target_file"
+	    # 모듈팩은 repo 경로가 아니라 GitHub 릴리즈 에셋으로 이동됨 -> releases/latest/download 사용
+	    # -f: HTTP 4xx/5xx(404 등) 시 에러 본문을 .tgz 로 저장하지 않음(손상본 방지)
+	    curl -fkL "https://github.com/PeterSuh-Q3/tcrp-modules/releases/latest/download/$target_file" -o "$OLD_RD/exts/all-modules/$target_file" \
+	        || echo "ERROR: module pack download failed: $target_file"
 	fi
 
     # Rsync를 이용해 기존 파일과 섞기 (우리가 만든 파일 보존!)
