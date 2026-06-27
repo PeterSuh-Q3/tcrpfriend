@@ -692,10 +692,6 @@ function patchramdisk() {
 	# (major/minor 는 위 '. $temprd/etc/VERSION' 소싱으로 설정됨)
 	target_file="${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}.tgz"
 
-	if [ "$mtype" = "custom-modules" ]; then
-		target_file="modules-$target_file"
-	fi
-	
 	# 파일 존재 여부 체크 후 처리
 	if [ -f "$OLD_RD/exts/all-modules/$target_file" ]; then
 	    echo "Module pack already exists: $target_file"
