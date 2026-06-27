@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.4m"
+BOOTVER="0.1.4n"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -170,6 +170,7 @@ function history() {
 	0.1.4k Remove use of dom_szmax and synoboot_satadom for NVMe bootloaders
 	0.1.4l Add configs of DSM 7.4.0
 	0.1.4m Display all GPUs on console (one per line) instead of only the first
+	0.1.4n dom_szmax uses blockdev byte-accurate size plus 10MiB buffer (RR method)
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -188,6 +189,7 @@ function showlastupdate() {
 0.1.4k Remove use of dom_szmax and synoboot_satadom for NVMe bootloaders
 0.1.4l Add configs of DSM 7.4.0
 0.1.4m Display all GPUs on console (one per line) instead of only the first
+0.1.4n dom_szmax uses blockdev byte-accurate size plus 10MiB buffer (RR method)
 
 EOF
 }
@@ -1595,7 +1597,10 @@ function boot() {
 	    if [ ! "${BUS}" = "usb" ] && [ ! "${BUS}" = "nvme" ]; then
 	        # Check dom size and set max size accordingly
 	        # 2024.03.17 Force the dom_szmax limit of the injected bootloader to be 16GB
-	        CMDLINE_LINE+="dom_szmax=$(fdisk -l /dev/${LOADER_DISK} | head -1 | awk -F: '{print $2}' | awk '{ print $1*1024}') "
+	        # 2026.06.27 dom_szmax: blockdev 바이트 정확 계산 + 10MiB 버퍼 (RR 방식, fdisk 단위파싱 버그 회피)
+	        _DOM_SZ=$(blockdev --getsz "/dev/${LOADER_DISK}" 2>/dev/null)
+	        _DOM_SS=$(blockdev --getss "/dev/${LOADER_DISK}" 2>/dev/null)
+	        CMDLINE_LINE+="dom_szmax=$(( ${_DOM_SZ:-0} * ${_DOM_SS:-0} / 1024 / 1024 + 10 )) "
 	    	if [ "${LDTYPE}" = "SHR" ]; then
 	            CMDLINE_LINE=$(echo "$CMDLINE_LINE" | sed -E 's/synoboot_satadom=[12]\s*//g')
 			else
