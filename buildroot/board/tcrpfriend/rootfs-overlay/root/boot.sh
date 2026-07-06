@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 260624
+# Date : 260706
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.4n"
+BOOTVER="0.1.4o"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -171,8 +171,10 @@ function history() {
 	0.1.4l Add configs of DSM 7.4.0
 	0.1.4m Display all GPUs on console (one per line) instead of only the first
 	0.1.4n dom_szmax uses blockdev byte-accurate size plus 10MiB buffer
-	       fix module pack redownload (repo path -> github release asset, 
+	       fix module pack redownload (repo path -> github release asset,
            add missing major.minor in kver 4 filename)
+	0.1.4o Apply dom_szmax/synoboot_satadom on kernel-5 / Device-Tree platforms too
+	       (removed the kernel<5 gate; LKM SMP fake-SATA-boot KP fixed)
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -192,8 +194,10 @@ function showlastupdate() {
 0.1.4l Add configs of DSM 7.4.0
 0.1.4m Display all GPUs on console (one per line) instead of only the first
 0.1.4n dom_szmax uses blockdev byte-accurate size plus 10MiB buffer
-       fix module pack redownload (repo path -> github release asset, 
+       fix module pack redownload (repo path -> github release asset,
        add missing major.minor in kver 4 filename)
+0.1.4o Apply dom_szmax/synoboot_satadom on kernel-5 / Device-Tree platforms too
+       (removed the kernel<5 gate; LKM SMP fake-SATA-boot KP fixed)
 
 EOF
 }
@@ -1593,7 +1597,10 @@ function boot() {
     fi
 
     CMDLINE_LINE=$(jq -r -e '.general .usb_line' /mnt/tcrp/user_config.json)
-	if [ "$(echo "${KVER:-4}" | cut -d'.' -f1)" -lt 5 ]; then
+	# NOTE: kernel-version gate removed. kernel-5 / Device-Tree platforms also lack
+	# CONFIG_SYNO_BOOT_SATA_DOM and rely on the fake SATA boot shim; the LKM SMP KP that
+	# used to force these platforms off satadom was fixed, so dom_szmax / synoboot_satadom
+	# are applied on every kernel version (still skipped for usb/nvme media and SHR).
 	    if [ ! "${BUS}" = "usb" ] && [ ! "${BUS}" = "nvme" ]; then
 	        # Check dom size and set max size accordingly
 	        # 2024.03.17 Force the dom_szmax limit of the injected bootloader to be 16GB
@@ -1604,7 +1611,6 @@ function boot() {
 	    	if [ "${LDTYPE}" = "SHR" ]; then
 	            CMDLINE_LINE=$(echo "$CMDLINE_LINE" | sed -E 's/synoboot_satadom=[12]\s*//g')
 			else
-				# If the kernel is 4.4 or lower, synoboot_satadom processing is required.
 		        SATA_LINE=$(jq -r -e '.general.sata_line' /mnt/tcrp/user_config.json)
 				SATA_DOM=$(echo "$SATA_LINE" | grep -oE 'synoboot_satadom=[^ ]+' | cut -d= -f2)
 			    if [ -n "$SATA_DOM" ]; then
@@ -1612,7 +1618,6 @@ function boot() {
 	            fi
 	  	    fi
 	    fi
-    fi
     #[ "$1" = "gettycon" ] && CMDLINE_LINE+=" gettycon "
 
     [ "$1" = "forcejunior" ] && CMDLINE_LINE+="force_junior "
