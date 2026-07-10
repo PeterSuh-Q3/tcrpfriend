@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.4n"
+BOOTVER="0.1.4o"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -173,6 +173,8 @@ function history() {
 	0.1.4n dom_szmax uses blockdev byte-accurate size plus 10MiB buffer
 	       fix module pack redownload (repo path -> github release asset, 
            add missing major.minor in kver 4 filename)
+	0.1.4o Suppress DHCP lease renewal during boot (stop dhcpcd after the IP is obtained;
+	       dhcpcd.conf persistent keeps IP/route/DNS), preventing mid-boot IP changes on short-lease networks.
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -194,6 +196,8 @@ function showlastupdate() {
 0.1.4n dom_szmax uses blockdev byte-accurate size plus 10MiB buffer
        fix module pack redownload (repo path -> github release asset, 
        add missing major.minor in kver 4 filename)
+0.1.4o Suppress DHCP lease renewal during boot (stop dhcpcd after the IP is obtained;
+       dhcpcd.conf persistent keeps IP/route/DNS), preventing mid-boot IP changes on short-lease networks.
 
 EOF
 }
@@ -1561,6 +1565,12 @@ function boot() {
 
         # Get IP Address after setting new mac address to display IP
         getip
+
+        # DHCP 임대갱신 억제: 이후의 대용량 모듈팩 다운로드/kexec 구간에서
+        # dhcpcd 가 주기적 renew 를 보내다 다른 IP 를 받아 부팅이 깨지는 것을 방지.
+        # dhcpcd.conf 에 persistent 가 설정되어 있어 데몬을 내려도 현재 IP/route/
+        # DNS 는 그대로 유지되고 갱신만 멈춘다. (실측 검증: dhcpcd 10.0.5)
+        /etc/init.d/S41dhcpcd stop >/dev/null 2>&1
     fi
 
     # Check whether the major version has been updated from under 7.2 to 7.2
