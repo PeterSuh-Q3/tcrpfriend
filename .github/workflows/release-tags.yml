@@ -71,10 +71,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ inputs.version }}
+          tag_name: ${{ github.event.release.tag_name }}
           files: |
             /opt/output/bzImage-friend
             /opt/output/initrd-friend
             /opt/output/chksum
-          body: |
-            ${{ inputs.version }}
