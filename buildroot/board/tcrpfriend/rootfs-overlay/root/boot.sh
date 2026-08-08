@@ -672,7 +672,7 @@ function redownload_module_packs() {
     regular_url=$(jq -r --arg name "$regular_name" \
         '.assets[] | select(.name == $name) | .browser_download_url' <<<"$release_json" | head -n 1)
     regular_sha=$(jq -r --arg name "$regular_name" \
-        '.assets[] | select(.name == $name) | (.digest // "") | sub("^sha256:"; "")' <<<"$release_json" | head -n 1)
+        '.assets[] | select(.name == $name) | (.digest // "") | if startswith("sha256:") then .[7:] else . end' <<<"$release_json" | head -n 1)
     [ -n "$regular_url" ] || {
         echo "ERROR: regular module pack not found: $regular_name"
         return 1
@@ -683,7 +683,7 @@ function redownload_module_packs() {
         drm_url=$(jq -r --arg name "$drm_name" \
             '.assets[] | select(.name == $name) | .browser_download_url' <<<"$release_json" | head -n 1)
         drm_sha=$(jq -r --arg name "$drm_name" \
-            '.assets[] | select(.name == $name) | (.digest // "") | sub("^sha256:"; "")' <<<"$release_json" | head -n 1)
+            '.assets[] | select(.name == $name) | (.digest // "") | if startswith("sha256:") then .[7:] else . end' <<<"$release_json" | head -n 1)
         if [ -n "$drm_url" ]; then
             download_module_pack "$drm_url" "$module_dir/$drm_name" "$drm_sha" || return 1
         else
