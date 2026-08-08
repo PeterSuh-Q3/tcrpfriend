@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.4o"
+BOOTVER="0.1.4p"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -158,7 +158,7 @@ function history() {
 	0.1.4b Emergency recovery of missing KVER variables
 	0.1.4c Added static mounting function when reconfiguring initrd-dsm of a custom module
 	0.1.4d Fix an error repacking custom module ramdisk file (/mnt/tcrp/initrd-dsm)
-    0.1.4e Abandoning the use of custom.gz and improving processing entirely using initrd-dsm
+	0.1.4e Abandoning the use of custom.gz and improving processing entirely using initrd-dsm
 	       GPL custom-modules skip zImage patch
 	0.1.4f Linking the DSM reinstallation (Junior) entry in the Grub boot entry	   
 	0.1.4g Detect duplicate UUID bootloaders at startup and abort with error message.
@@ -175,6 +175,7 @@ function history() {
            add missing major.minor in kver 4 filename)
 	0.1.4o Suppress DHCP lease renewal during boot (stop dhcpcd after the IP is obtained;
 	       dhcpcd.conf persistent keeps IP/route/DNS), preventing mid-boot IP changes on short-lease networks.
+	0.1.4p Use recorded module-pack provenance with latest-release fallback during ramdisk patching.
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -189,15 +190,10 @@ function showlastupdate() {
 0.1.3m Enable FRIEND Kernel on HP N36L/N40L/N54L (Supports Older AMD CPUs)
 0.1.4f Linking the DSM reinstallation (Junior) entry in the Grub boot entry	   
 0.1.4i For RD patching, use the separated lkm(redpill.ko) according to the platform and DSM version
-0.1.4j Reapplied adjusted platform-specific configurations, adjusted console display items
-0.1.4k Remove use of dom_szmax and synoboot_satadom for NVMe bootloaders
-0.1.4l Add configs of DSM 7.4.0
 0.1.4m Display all GPUs on console (one per line) instead of only the first
-0.1.4n dom_szmax uses blockdev byte-accurate size plus 10MiB buffer
-       fix module pack redownload (repo path -> github release asset, 
-       add missing major.minor in kver 4 filename)
 0.1.4o Suppress DHCP lease renewal during boot (stop dhcpcd after the IP is obtained;
        dhcpcd.conf persistent keeps IP/route/DNS), preventing mid-boot IP changes on short-lease networks.
+0.1.4p Use recorded module-pack provenance with latest-release fallback during ramdisk patching.
 
 EOF
 }
@@ -582,6 +578,7 @@ function extractramdisk() {
         exit 99
     fi
 
+    DSM_MAJOR_MINOR="${major}.${minor}"
     version="${major}.${minor}.${micro}-${buildnumber}"
     smallfixnumber="${smallfixnumber}"
 
@@ -608,6 +605,91 @@ function extractramdisk() {
 		fi
 	fi
 
+}
+
+function download_module_pack() {
+    local url="$1"
+    local target="$2"
+    local expected_sha="$3"
+    local tmp="${target}.download.$$"
+
+    echo "Downloading module pack: $(basename "$target")"
+    rm -f "$tmp"
+    curl -fkL "$url" -o "$tmp" || {
+        rm -f "$tmp"
+        echo "ERROR: module pack download failed: $url"
+        return 1
+    }
+    if [ -n "$expected_sha" ]; then
+        actual_sha=$(sha256sum "$tmp" | awk '{print $1}')
+        if [ "$actual_sha" != "$expected_sha" ]; then
+            rm -f "$tmp"
+            echo "ERROR: module pack checksum mismatch: $(basename "$target")"
+            return 1
+        fi
+    fi
+    mv -f "$tmp" "$target"
+}
+
+function redownload_module_packs() {
+    local module_dir="${OLD_RD}/exts/${mtype}"
+    local regular_name="${ORIGIN_PLATFORM}-${DSM_MAJOR_MINOR}-${KVER}.tgz"
+    local drm_name="${ORIGIN_PLATFORM}-${DSM_MAJOR_MINOR}-${KVER}-drm.tgz"
+    local modules_json
+    local modules_match
+    local pack_count
+    local pack_role pack_name pack_url pack_sha pack_target
+    local release_json regular_url regular_sha drm_url drm_sha
+
+    mkdir -p "$module_dir"
+
+    modules_json=$(jq -c '.modules // empty' /mnt/tcrp/user_config.json 2>/dev/null || true)
+    pack_count=$(jq -r '.packs | length' <<<"$modules_json" 2>/dev/null || echo 0)
+    modules_match=$(jq -r --arg type "$mtype" --arg platform "$ORIGIN_PLATFORM" \
+        --arg dsm "$DSM_MAJOR_MINOR" \
+        '(.type == $type and .platform == $platform and .dsm_version == $dsm)' \
+        <<<"$modules_json" 2>/dev/null || echo false)
+
+    if [ -n "$modules_json" ] && [ "$modules_json" != "null" ] && \
+       [ "$modules_match" = "true" ] && [ "$pack_count" -gt 0 ]; then
+        echo "Using module pack provenance from user_config.json"
+        while IFS=$'\t' read -r pack_role pack_name pack_url pack_sha; do
+            [ -z "$pack_name" ] && continue
+            pack_target="$module_dir/$pack_name"
+            download_module_pack "$pack_url" "$pack_target" "$pack_sha" || return 1
+        done < <(jq -r '.packs[] | [.role, .name, .url, .sha256] | @tsv' <<<"$modules_json")
+        return 0
+    fi
+
+    echo "No module pack provenance found; using latest release fallback"
+    rm -f "$module_dir/${ORIGIN_PLATFORM}-"*.tgz
+    release_json=$(curl --connect-timeout 15 -fkLs \
+        "https://api.github.com/repos/PeterSuh-Q3/tcrp-modules/releases/latest") || {
+        echo "ERROR: failed to query tcrp-modules latest release"
+        return 1
+    }
+
+    regular_url=$(jq -r --arg name "$regular_name" \
+        '.assets[] | select(.name == $name) | .browser_download_url' <<<"$release_json" | head -n 1)
+    regular_sha=$(jq -r --arg name "$regular_name" \
+        '.assets[] | select(.name == $name) | (.digest // "") | sub("^sha256:"; "")' <<<"$release_json" | head -n 1)
+    [ -n "$regular_url" ] || {
+        echo "ERROR: regular module pack not found: $regular_name"
+        return 1
+    }
+    download_module_pack "$regular_url" "$module_dir/$regular_name" "$regular_sha" || return 1
+
+    if [ "$mtype" = "all-modules" ]; then
+        drm_url=$(jq -r --arg name "$drm_name" \
+            '.assets[] | select(.name == $name) | .browser_download_url' <<<"$release_json" | head -n 1)
+        drm_sha=$(jq -r --arg name "$drm_name" \
+            '.assets[] | select(.name == $name) | (.digest // "") | sub("^sha256:"; "")' <<<"$release_json" | head -n 1)
+        if [ -n "$drm_url" ]; then
+            download_module_pack "$drm_url" "$module_dir/$drm_name" "$drm_sha" || return 1
+        else
+            echo "Optional DRM module pack not found: $drm_name"
+        fi
+    fi
 }
 
 function patchramdisk() {
@@ -694,23 +776,9 @@ function patchramdisk() {
     mkdir -p $OLD_RD
     (cd $OLD_RD && cat /mnt/tcrp/initrd-dsm | cpio -idmu >/dev/null 2>&1)
 
-	# Redownload Integrated Module Pack
-	echo "Redownload Integrated Module Pack"
-	# 대상 파일명: 릴리즈 에셋은 커널 버전과 무관하게 <platform>-<major.minor>-<KVER>.tgz 형식
-	# (major/minor 는 위 '. $temprd/etc/VERSION' 소싱으로 설정됨)
-	target_file="${ORIGIN_PLATFORM}-${major}.${minor}-${KVER}.tgz"
-
-	# 파일 존재 여부 체크 후 처리
-	if [ -f "$OLD_RD/exts/all-modules/$target_file" ]; then
-	    echo "Module pack already exists: $target_file"
-	else
-	    echo "Downloading module pack: $target_file"
-		rm -vrf $OLD_RD/exts/all-modules/$ORIGIN_PLATFORM*.tgz
-	    # 모듈팩은 repo 경로가 아니라 GitHub 릴리즈 에셋으로 이동됨 -> releases/latest/download 사용
-	    # -f: HTTP 4xx/5xx(404 등) 시 에러 본문을 .tgz 로 저장하지 않음(손상본 방지)
-	    curl -fkL "https://github.com/PeterSuh-Q3/tcrp-modules/releases/latest/download/$target_file" -o "$OLD_RD/exts/all-modules/$target_file" \
-	        || echo "ERROR: module pack download failed: $target_file"
-	fi
+	# Redownload module packs using recorded provenance, or latest release fallback.
+	echo "Redownload Module Packs"
+	redownload_module_packs || exit 99
 
     # Rsync를 이용해 기존 파일과 섞기 (우리가 만든 파일 보존!)
     echo "Smart Merging (with rsync -av --ignore-existing) existing initrd-dsm..."
