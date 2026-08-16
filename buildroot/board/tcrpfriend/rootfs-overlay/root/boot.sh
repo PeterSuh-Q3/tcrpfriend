@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.4p"
+BOOTVER="0.1.4q"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -176,6 +176,11 @@ function history() {
 	0.1.4o Suppress DHCP lease renewal during boot (stop dhcpcd after the IP is obtained;
 	       dhcpcd.conf persistent keeps IP/route/DNS), preventing mid-boot IP changes on short-lease networks.
 	0.1.4p Use recorded module-pack provenance with latest-release fallback during ramdisk patching.
+	0.1.4q Add MSHELL Manager auto-rebuild hook: if a marker file is present at the
+	       IWANTTOCONFIGURE entry point, run build+backup non-interactively and
+	       kexec straight into the result via boot.sh normal (no su - tc, no
+	       second physical reboot). Also guarded the trailing dispatch so this
+	       file can be sourced for testing without executing it.
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -194,6 +199,7 @@ function showlastupdate() {
 0.1.4o Suppress DHCP lease renewal during boot (stop dhcpcd after the IP is obtained;
        dhcpcd.conf persistent keeps IP/route/DNS), preventing mid-boot IP changes on short-lease networks.
 0.1.4p Use recorded module-pack provenance with latest-release fallback during ramdisk patching.
+0.1.4q Add MSHELL Manager auto-rebuild hook (non-interactive build+backup+kexec).
 
 EOF
 }
@@ -1820,6 +1826,82 @@ function chk_nvmecnt() {
   done < <(lsblk -ndo NAME | grep '^nvme' | sed 's/^/\/dev\//')
 }
 
+# [0.1.4q] MSHELL Manager auto-rebuild driver.
+#
+# Triggered from initialize()'s IWANTTOCONFIGURE branch when
+# /mnt/tcrp/.mshell-auto-rebuild exists (written by MSHELL Manager,
+# the DSM package, right before it reboots the box into this same
+# grub entry). Runs build -> backup -> kexec with zero interaction,
+# instead of dropping to `su - tc`.
+#
+# Deliberately does NOT call checkUserConfig() - that function exit
+# 99s on failure (not return 1), so calling it here would kill the
+# boot outright with no fallback. MSHELL Manager validates the
+# equivalent fields (sn/mac1/netif_num) itself before ever writing
+# the marker or rebooting, so by the time we get here the config is
+# already known-good.
+function mshell_auto_rebuild() {
+    getloaderdisk   # my()/writeConfigKey/backuploader need their own
+                     # lowercase loaderdisk populated; every path WE
+                     # build ourselves below uses LOADER_DISK instead
+                     # (already verified by mountall()/mountxtcrp()
+                     # moments ago - no need for the two to agree).
+
+    usbidentify; getip; dhcp_freeze; setSuggest "${MODEL}"
+    writeConfigKey "general" "devmod" "${DMPM}"
+
+    # Timeout/retry values are provisional pending a real timed build
+    # (my() patches pre-built kernel/initrd templates rather than
+    # compiling from source, so this should be well under 10 minutes
+    # in the common case; network-dependent steps make some headroom
+    # worth keeping). `timeout` execs a new process and can't see my()
+    # as a shell function in this session, so functions.sh is
+    # re-sourced inside the subshell instead of exporting the
+    # function (which would also require exporting everything it
+    # transitively calls).
+    build_rc=1
+    for attempt in 1 2 3; do
+        echo "=== mshell auto-rebuild attempt ${attempt}/3 ==="
+        timeout 600 bash -c '
+            . /home/tc/functions.sh
+            TCB=true
+            VERBOSE_MODE=ON
+            my "$1-$2" noconfig fri "$3"
+        ' _ "${MODEL}" "${BUILD}" "${PREVENT_INIT}" \
+            2>&1 | tee -a /home/tc/zlastbuild.log
+        build_rc=${PIPESTATUS[0]}
+        [ ${build_rc} -eq 0 ] && break
+        echo "attempt ${attempt} failed (exit ${build_rc}, 124=timeout)"
+        [ ${attempt} -lt 3 ] && sleep 30
+    done
+
+    if [ ${build_rc} -ne 0 ]; then
+        echo "mshell auto-rebuild failed after 3 attempts (exit ${build_rc}) - see /home/tc/zlastbuild.log"
+        return ${build_rc}
+    fi
+
+    # chk_filetime_n_backup() lives in menu_m.sh, not functions.sh, so
+    # it isn't available here - its body is just "RAM copy differs
+    # from disk copy -> sync + backuploader", reproduced directly.
+    if [ "$(md5sum "${userconfigfile}" | awk '{print $1}')" \
+       != "$(md5sum "/mnt/${LOADER_DISK}3/user_config.json" | awk '{print $1}')" ]; then
+        cp "${userconfigfile}" "/mnt/${LOADER_DISK}3/user_config.json"
+        backuploader
+    fi
+    writebackcache
+
+    # Next physical reboot should land on normal DSM (entry 0), not
+    # come back here - both paths built from LOADER_DISK, matching
+    # what mountall() already mounted successfully.
+    rm -f /mnt/tcrp/.mshell-auto-rebuild
+    sed -i 's/set default="[0-9]"/set default="0"/' /mnt/${LOADER_DISK}1/boot/grub/grub.cfg
+
+    # No physical reboot for the success path - kexec straight into
+    # the just-built DSM kernel, the same call menu_m.sh's own
+    # FRKRNL=YES branch makes (`y) sudo /root/boot.sh normal`).
+    exec /root/boot.sh normal
+}
+
 function initialize() {
     # Checkif running in TC
     [ "$(hostname)" != "tcrpfriend" ] && echo "ERROR running on alien system" && exit 99
@@ -1855,6 +1937,13 @@ function initialize() {
             IP="$(ip route show dev eth0 2>/dev/null | grep default | grep metric | awk '{print $7}')"
             IP=$(echo -n "${IP}" | tr '\n' '\b')
             echo -e "To use the xTCRP web console, access \e[33m${IP}:7681\e[0m with a web browser."
+
+            # [0.1.4q] MSHELL Manager auto-rebuild trigger.
+            if [ -f /mnt/tcrp/.mshell-auto-rebuild ]; then
+                mshell_auto_rebuild && exit 0
+                echo "mshell auto-rebuild did not complete - dropping to shell, see /home/tc/zlastbuild.log"
+            fi
+
             su - tc
             exit 0
         fi
@@ -1916,6 +2005,12 @@ function initialize() {
 	fi
 
 }
+
+# [0.1.4q] Only run the dispatch below when this file is actually
+# executed, not when it's `source`d - lets a test session load the
+# functions above (mshell_auto_rebuild included) without triggering a
+# real boot as a side effect of sourcing.
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 
 case $1 in
 
@@ -1995,3 +2090,5 @@ normal)
     ;;
 
 esac
+
+fi
