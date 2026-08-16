@@ -1508,8 +1508,18 @@ function mountall() {
     fi
 
     [ "$(mount | grep ${LOADER_DISK}${p1} | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p1} /mnt/tcrp-p1
-    [ "$(mount | grep ${LOADER_DISK}${p2} | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p2} /mnt/tcrp-p2 
-    [ "$(mount | grep ${LOADER_DISK}${p3} | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p3} /mnt/tcrp
+    [ "$(mount | grep ${LOADER_DISK}${p2} | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p2} /mnt/tcrp-p2
+    # vfat has no native unix permission bits - mounted with no options
+    # (as p1/p2 above still are), every file on it shows up root-owned
+    # with mode 644, so tc can read but never write without sudo. This
+    # partition specifically holds user_config.json, and resolving tc's
+    # uid/gid at mount time (rather than hardcoding, since it can differ
+    # across images) lets tc write here directly - the prerequisite for
+    # /home/tc/user_config.json to become a real symlink onto this copy
+    # instead of a second, separately-synced file.
+    TCUID="$(id -u tc 2>/dev/null)"; TCGID="$(id -g tc 2>/dev/null)"
+    [ "$(mount | grep ${LOADER_DISK}${p3} | wc -l)" = "0" ] && \
+        mount -o "uid=${TCUID:-1001},gid=${TCGID:-1001},fmask=0022,dmask=0022" /dev/${LOADER_DISK}${p3} /mnt/tcrp
 
     if [ "$(mount | grep /mnt/tcrp-p1 | wc -l)" = "0" ]; then
         echo "Failed mount /dev/${LOADER_DISK}${p1} to /mnt/tcrp-p1, stopping boot process"
@@ -1536,7 +1546,13 @@ function mountxtcrp() {
 
     [ "$(mount | grep /mnt/${LOADER_DISK}1 | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p1} /mnt/${LOADER_DISK}1
     [ "$(mount | grep /mnt/${LOADER_DISK}2 | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p2} /mnt/${LOADER_DISK}2
-    [ "$(mount | grep /mnt/${LOADER_DISK}3 | wc -l)" = "0" ] && mount /dev/${LOADER_DISK}${p3} /mnt/${LOADER_DISK}3
+    # Same tc-writable mount as mountall()'s /mnt/tcrp above - this is
+    # an independent second mount of the same partition 3 (not a bind
+    # mount), so the uid/gid/fmask options have to be repeated here to
+    # keep both mount points consistently tc-writable.
+    TCUID="$(id -u tc 2>/dev/null)"; TCGID="$(id -g tc 2>/dev/null)"
+    [ "$(mount | grep /mnt/${LOADER_DISK}3 | wc -l)" = "0" ] && \
+        mount -o "uid=${TCUID:-1001},gid=${TCGID:-1001},fmask=0022,dmask=0022" /dev/${LOADER_DISK}${p3} /mnt/${LOADER_DISK}3
 
 }
 
