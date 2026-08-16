@@ -1886,7 +1886,7 @@ function mshell_auto_rebuild() {
         timeout 600 bash -c '
             . /home/tc/functions.sh
             TCB=true
-            VERBOSE_MODE=ON
+            VERBOSE_MODE=OFF
             getloaderdisk
             getBus "${loaderdisk}"
 
@@ -2055,8 +2055,16 @@ function initialize() {
             #    login shell (`-`), so PATH is left at the bare
             #    /bin:/usr/bin default and sudo can't find fdisk et al.
             #    Exporting the same PATH .profile sets works around it.
+            #  - LOADER_DISK itself is a plain (non-exported) variable
+            #    set by mountall() moments ago in this same root shell -
+            #    su -c starts a brand new process, which only inherits
+            #    exported variables, so it has to be passed through
+            #    explicitly too (confirmed on real hardware: every
+            #    manual test up to this point had exported it directly
+            #    before invoking, masking that the real IWANTTOCONFIGURE
+            #    path never does).
             if [ -f /mnt/tcrp/.mshell-auto-rebuild ]; then
-                su - tc -s /bin/bash -c "export PATH=/usr/bin:/usr/sbin:/opt/arpl:/sbin; $(declare -f mshell_auto_rebuild); mshell_auto_rebuild" && exit 0
+                su - tc -s /bin/bash -c "export PATH=/usr/bin:/usr/sbin:/opt/arpl:/sbin LOADER_DISK=${LOADER_DISK}; $(declare -f mshell_auto_rebuild); mshell_auto_rebuild" && exit 0
                 echo "mshell auto-rebuild did not complete - dropping to shell, see /home/tc/zlastbuild.log"
             fi
 
