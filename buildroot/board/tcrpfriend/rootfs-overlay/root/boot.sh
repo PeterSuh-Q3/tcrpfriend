@@ -1855,18 +1855,20 @@ function mshell_auto_rebuild() {
 
     # menu_m.sh normally populates these from user_config.json as soon
     # as it's sourced (interactively) - since we bypass menu_m.sh
-    # entirely, read the same keys ourselves. usbidentify is
-    # deliberately NOT called here (it's an interactive menu_m.sh
-    # dialog, not a functions.sh helper) - MSHELL Manager performs the
-    # equivalent check itself before ever writing the marker or
-    # rebooting, same rationale as skipping checkUserConfig().
+    # entirely, read the same keys ourselves. usbidentify/setSuggest
+    # are deliberately NOT called here - both are interactive
+    # menu_m.sh dialog helpers (setSuggest only builds the on-screen
+    # platform/bay/desc text; the actual build path doesn't consume
+    # its output), not functions.sh helpers. MSHELL Manager performs
+    # the config-validity check itself before ever writing the marker
+    # or rebooting, same rationale as skipping checkUserConfig().
     MODEL=$(readConfigKey "general" "model")
     BUILD=$(readConfigKey "general" "version")
     PREVENT_INIT=$(readConfigKey "general" "prevent_init")
     [ -z "${PREVENT_INIT}" ] && PREVENT_INIT="OFF"
     DMPM=$(readConfigKey "general" "devmod")
 
-    getip; dhcp_freeze; setSuggest "${MODEL}"
+    getip; dhcp_freeze
     writeConfigKey "general" "devmod" "${DMPM}"
 
     # Timeout/retry values are provisional pending a real timed build
@@ -1885,8 +1887,76 @@ function mshell_auto_rebuild() {
             . /home/tc/functions.sh
             TCB=true
             VERBOSE_MODE=ON
-            my "$1-$2" noconfig fri "$3"
-        ' _ "${MODEL}" "${BUILD}" "${PREVENT_INIT}" \
+            getloaderdisk
+            getBus "${loaderdisk}"
+
+            # my() only does this tcrp-addons pre-cache when BUS=block -
+            # on real hardware (BUS=sata here) it is skipped, and
+            # extension add_extensions processing (powersched,
+            # storagepanel, ...) then fails to persist its index file
+            # even though the network download itself succeeds. Doing
+            # it here unconditionally, regardless of BUS, since the
+            # cache is otherwise harmlessly unused if not needed.
+            if [ ! -d /dev/shm/tcrp-addons ] || [ -z "$(ls -A /dev/shm/tcrp-addons 2>/dev/null)" ]; then
+                cd /home/tc
+                # A retry (network hiccup, earlier interrupted attempt,
+                # ...) can leave this clone dir behind - git clone
+                # refuses to reuse a non-empty destination.
+                rm -rf ./tcrp-addons
+                git clone --depth=1 "https://github.com/PeterSuh-Q3/tcrp-addons.git"
+                mkdir -p /dev/shm/tcrp-addons
+                rm -rf ./tcrp-addons/.git/
+                mv -f ./tcrp-addons/* /dev/shm/tcrp-addons/
+            fi
+
+            # my() (and everything it calls) assumes menu_m.sh already
+            # populated this whole block from user_config.json the
+            # moment it loaded - confirmed the hard way, one set -u
+            # crash per missing key (MODEL/BUILD, then loaderdisk, then
+            # BUS, then MLMETHOD...). Loading the full block up front
+            # instead of chasing crashes one at a time.
+            MODEL=$(readConfigKey "general" "model")
+            BUILD=$(readConfigKey "general" "version")
+            SN=$(readConfigKey "extra_cmdline" "sn")
+            MACADDR1=$(readConfigKey "extra_cmdline" "mac1")
+            MACADDR2=$(readConfigKey "extra_cmdline" "mac2")
+            MACADDR3=$(readConfigKey "extra_cmdline" "mac3")
+            MACADDR4=$(readConfigKey "extra_cmdline" "mac4")
+            MACADDR5=$(readConfigKey "extra_cmdline" "mac5")
+            MACADDR6=$(readConfigKey "extra_cmdline" "mac6")
+            MACADDR7=$(readConfigKey "extra_cmdline" "mac7")
+            MACADDR8=$(readConfigKey "extra_cmdline" "mac8")
+            NETNUM="1"
+            LAYOUT=$(readConfigKey "general" "layout")
+            KEYMAP=$(readConfigKey "general" "keymap")
+            I915MODE=$(readConfigKey "general" "i915mode")
+            BFBAY=$(readConfigKey "general" "bay")
+            SSDBAY=$(readConfigKey "general" "ssdbay")
+            DMPM=$(readConfigKey "general" "devmod")
+            NVMES=$(readConfigKey "general" "nvmesystem")
+            VMTOOLS=$(readConfigKey "general" "vmtools")
+            LDRMODE=$(readConfigKey "general" "loadermode")
+            MDLNAME=$(readConfigKey "general" "modulename")
+            MLMETHOD=$(readConfigKey "general" "mlmethod")
+            ucode=$(readConfigKey "general" "ucode")
+            FKC=$(readConfigKey "general" "friendautoupd")
+            CONFIG_BUILDDATE=$(readConfigKey "general" "builddate")
+            CONFIG_BOARD=$(readConfigKey "general" "board")
+            PREVENT_INIT=$(readConfigKey "general" "prevent_init")
+            [ -z "${PREVENT_INIT}" ] && PREVENT_INIT="OFF"
+
+            # my() trailing args are keyword flags, not a value -
+            # passing PREVENT_INIT (OFF/ON) as a positional arg falls
+            # through its case *) and aborts with exit 99. prevent_param
+            # is the flag its case statement actually recognizes (not
+            # the "prevent_init" menu_m.sh itself passes - that mismatch
+            # looks like a pre-existing upstream bug, left alone here).
+            if [ "${PREVENT_INIT}" = "OFF" ]; then
+                my "${MODEL}-${BUILD}" noconfig fri
+            else
+                my "${MODEL}-${BUILD}" noconfig fri prevent_param
+            fi
+        ' \
             2>&1 | tee -a /home/tc/zlastbuild.log
         build_rc=${PIPESTATUS[0]}
         [ ${build_rc} -eq 0 ] && break
@@ -1969,8 +2039,20 @@ function initialize() {
             # ("root is not in the sudoers file"). `declare -f` reprints the
             # function body so tc's shell gets the same definition without
             # duplicating it.
+            #
+            # Two more traps confirmed on real hardware:
+            #  - tc's passwd shell is /bin/sh (-> bash), and a *non*-
+            #    interactive shell invoked under the name "sh" runs in
+            #    POSIX mode: hyphenated function names like
+            #    add-addons() in functions.sh become a hard parse error
+            #    ("not a valid identifier"), aborting the source. `-s
+            #    /bin/bash` makes busybox su exec real bash instead.
+            #  - busybox su's -c path never reads ~/.profile even as a
+            #    login shell (`-`), so PATH is left at the bare
+            #    /bin:/usr/bin default and sudo can't find fdisk et al.
+            #    Exporting the same PATH .profile sets works around it.
             if [ -f /mnt/tcrp/.mshell-auto-rebuild ]; then
-                su - tc -c "$(declare -f mshell_auto_rebuild); mshell_auto_rebuild" && exit 0
+                su - tc -s /bin/bash -c "export PATH=/usr/bin:/usr/sbin:/opt/arpl:/sbin; $(declare -f mshell_auto_rebuild); mshell_auto_rebuild" && exit 0
                 echo "mshell auto-rebuild did not complete - dropping to shell, see /home/tc/zlastbuild.log"
             fi
 
