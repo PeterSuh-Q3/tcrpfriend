@@ -1841,13 +1841,22 @@ function chk_nvmecnt() {
 # the marker or rebooting, so by the time we get here the config is
 # already known-good.
 function mshell_auto_rebuild() {
+    # boot.sh never sources functions.sh on its own - unlike the
+    # su - tc path, which lands in menu.sh/menu_m.sh and sources it
+    # there. initialize() already re-extracts xtcrp.tgz to /home/tc
+    # fresh this boot, so functions.sh is on disk and ready by now.
+    . /home/tc/functions.sh
+
     getloaderdisk   # my()/writeConfigKey/backuploader need their own
                      # lowercase loaderdisk populated; every path WE
                      # build ourselves below uses LOADER_DISK instead
                      # (already verified by mountall()/mountxtcrp()
                      # moments ago - no need for the two to agree).
 
-    usbidentify; getip; dhcp_freeze; setSuggest "${MODEL}"
+    # usbidentify deliberately NOT called here - MSHELL Manager
+    # performs the equivalent check itself before ever writing the
+    # marker or rebooting, same rationale as skipping checkUserConfig().
+    getip; dhcp_freeze; setSuggest "${MODEL}"
     writeConfigKey "general" "devmod" "${DMPM}"
 
     # Timeout/retry values are provisional pending a real timed build
