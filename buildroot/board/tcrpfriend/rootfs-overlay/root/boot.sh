@@ -1853,9 +1853,19 @@ function mshell_auto_rebuild() {
                      # (already verified by mountall()/mountxtcrp()
                      # moments ago - no need for the two to agree).
 
-    # usbidentify deliberately NOT called here - MSHELL Manager
-    # performs the equivalent check itself before ever writing the
-    # marker or rebooting, same rationale as skipping checkUserConfig().
+    # menu_m.sh normally populates these from user_config.json as soon
+    # as it's sourced (interactively) - since we bypass menu_m.sh
+    # entirely, read the same keys ourselves. usbidentify is
+    # deliberately NOT called here (it's an interactive menu_m.sh
+    # dialog, not a functions.sh helper) - MSHELL Manager performs the
+    # equivalent check itself before ever writing the marker or
+    # rebooting, same rationale as skipping checkUserConfig().
+    MODEL=$(readConfigKey "general" "model")
+    BUILD=$(readConfigKey "general" "version")
+    PREVENT_INIT=$(readConfigKey "general" "prevent_init")
+    [ -z "${PREVENT_INIT}" ] && PREVENT_INIT="OFF"
+    DMPM=$(readConfigKey "general" "devmod")
+
     getip; dhcp_freeze; setSuggest "${MODEL}"
     writeConfigKey "general" "devmod" "${DMPM}"
 
@@ -1894,21 +1904,23 @@ function mshell_auto_rebuild() {
     # from disk copy -> sync + backuploader", reproduced directly.
     if [ "$(md5sum "${userconfigfile}" | awk '{print $1}')" \
        != "$(md5sum "/mnt/${LOADER_DISK}3/user_config.json" | awk '{print $1}')" ]; then
-        cp "${userconfigfile}" "/mnt/${LOADER_DISK}3/user_config.json"
+        sudo cp "${userconfigfile}" "/mnt/${LOADER_DISK}3/user_config.json"
         backuploader
     fi
     writebackcache
 
     # Next physical reboot should land on normal DSM (entry 0), not
     # come back here - both paths built from LOADER_DISK, matching
-    # what mountall() already mounted successfully.
-    rm -f /mnt/tcrp/.mshell-auto-rebuild
-    sed -i 's/set default="[0-9]"/set default="0"/' /mnt/${LOADER_DISK}1/boot/grub/grub.cfg
+    # what mountall() already mounted successfully. rm/sed run via
+    # sudo like every other write to these mounts - tc itself has no
+    # write permission on them.
+    sudo rm -f /mnt/tcrp/.mshell-auto-rebuild
+    sudo sed -i 's/set default="[0-9]"/set default="0"/' /mnt/${LOADER_DISK}1/boot/grub/grub.cfg
 
     # No physical reboot for the success path - kexec straight into
     # the just-built DSM kernel, the same call menu_m.sh's own
     # FRKRNL=YES branch makes (`y) sudo /root/boot.sh normal`).
-    exec /root/boot.sh normal
+    exec sudo /root/boot.sh normal
 }
 
 function initialize() {
@@ -1948,8 +1960,17 @@ function initialize() {
             echo -e "To use the xTCRP web console, access \e[33m${IP}:7681\e[0m with a web browser."
 
             # [0.1.4q] MSHELL Manager auto-rebuild trigger.
+            #
+            # Runs as tc, not root - functions.sh's build/config/backup
+            # helpers all call `sudo` internally on the assumption they're
+            # invoked by tc (the same way menu.sh/menu_m.sh always run as
+            # tc, escalating per-command). Calling mshell_auto_rebuild
+            # directly here as root broke every one of those `sudo` calls
+            # ("root is not in the sudoers file"). `declare -f` reprints the
+            # function body so tc's shell gets the same definition without
+            # duplicating it.
             if [ -f /mnt/tcrp/.mshell-auto-rebuild ]; then
-                mshell_auto_rebuild && exit 0
+                su - tc -c "$(declare -f mshell_auto_rebuild); mshell_auto_rebuild" && exit 0
                 echo "mshell auto-rebuild did not complete - dropping to shell, see /home/tc/zlastbuild.log"
             fi
 
