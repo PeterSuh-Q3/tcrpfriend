@@ -209,8 +209,7 @@ function showlastupdate() {
 0.1.4p Use recorded module-pack provenance with latest-release fallback during ramdisk patching.
 0.1.4q Add MSHELL Manager auto-rebuild hook (non-interactive build+backup+kexec).
 0.1.4r Mount /mnt/tcrp tc-writable (uid=tc,gid=tc) and make the pre-reboot backup
-       trigger symlink-aware, for tinycore-redpill's /home/tc/user_config.json
-       symlink feature.
+       trigger symlink-aware, for tinycore-redpill's /home/tc/user_config.json symlink feature.
 
 EOF
 }
