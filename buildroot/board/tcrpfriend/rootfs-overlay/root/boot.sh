@@ -1988,7 +1988,14 @@ function mshell_auto_rebuild() {
     # chk_filetime_n_backup() lives in menu_m.sh, not functions.sh, so
     # it isn't available here - its body is just "RAM copy differs
     # from disk copy -> sync + backuploader", reproduced directly.
-    if [ "$(md5sum "${userconfigfile}" | awk '{print $1}')" \
+    # 2026-08-16: functions_t.sh 의 mshellSymlinkUserConfig() 가 켜져 있으면
+    # ${userconfigfile} 는 /mnt/${LOADER_DISK}3/user_config.json 을 가리키는
+    # 심볼릭 링크라 아래 md5 비교는 항상 "같다"가 되어 backuploader() 가 다시는
+    # 호출되지 않는다 - 재부팅 전 백업이라는 이 블록의 목적이 사라지므로 심볼릭
+    # 링크인 경우는 무조건 backuploader() 를 호출한다.
+    if [ -L "${userconfigfile}" ]; then
+        backuploader
+    elif [ "$(md5sum "${userconfigfile}" | awk '{print $1}')" \
        != "$(md5sum "/mnt/${LOADER_DISK}3/user_config.json" | awk '{print $1}')" ]; then
         sudo cp "${userconfigfile}" "/mnt/${LOADER_DISK}3/user_config.json"
         backuploader
