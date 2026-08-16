@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.4q"
+BOOTVER="0.1.4r"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -181,6 +181,14 @@ function history() {
 	       kexec straight into the result via boot.sh normal (no su - tc, no
 	       second physical reboot). Also guarded the trailing dispatch so this
 	       file can be sourced for testing without executing it.
+	0.1.4r Mount partition3 (/mnt/tcrp) tc-writable (uid=tc,gid=tc,fmask/dmask=0022)
+	       so /home/tc/user_config.json can become a real symlink onto it instead
+	       of a second, separately-synced copy (matches tinycore-redpill's
+	       test-track mshellSymlinkUserConfig()). Made the pre-reboot backup
+	       trigger in mshell_auto_rebuild() symlink-aware: it now calls
+	       backuploader() unconditionally when userconfigfile is a symlink,
+	       since the old md5 diff check always read "no difference" once both
+	       paths point at the same file.
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -200,6 +208,9 @@ function showlastupdate() {
        dhcpcd.conf persistent keeps IP/route/DNS), preventing mid-boot IP changes on short-lease networks.
 0.1.4p Use recorded module-pack provenance with latest-release fallback during ramdisk patching.
 0.1.4q Add MSHELL Manager auto-rebuild hook (non-interactive build+backup+kexec).
+0.1.4r Mount /mnt/tcrp tc-writable (uid=tc,gid=tc) and make the pre-reboot backup
+       trigger symlink-aware, for tinycore-redpill's /home/tc/user_config.json
+       symlink feature.
 
 EOF
 }
