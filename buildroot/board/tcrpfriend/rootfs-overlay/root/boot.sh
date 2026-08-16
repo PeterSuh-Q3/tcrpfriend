@@ -1977,7 +1977,11 @@ function mshell_auto_rebuild() {
         sudo cp "${userconfigfile}" "/mnt/${LOADER_DISK}3/user_config.json"
         backuploader
     fi
-    writebackcache
+    # writebackcache() lives in menu_m.sh, not functions.sh - it just
+    # polls /proc/meminfo's Dirty: value in a loop until it drops below
+    # a threshold before a reboot/poweroff. `sync` does the same job
+    # more directly: flushes all dirty pages and blocks until done.
+    sync
 
     # Next physical reboot should land on normal DSM (entry 0), not
     # come back here - both paths built from LOADER_DISK, matching
