@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.4r"
+BOOTVER="0.1.4s"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -189,6 +189,14 @@ function history() {
 	       backuploader() unconditionally when userconfigfile is a symlink,
 	       since the old md5 diff check always read "no difference" once both
 	       paths point at the same file.
+	0.1.4s Fixes a v0.1.4r bug: the new symlink-aware backuploader() call added
+	       in mshell_auto_rebuild() crashed with "tcrppart: unbound variable".
+	       backuploader() reads the global tcrppart, but my()'s own backup runs
+	       inside the 600s timeout subshell where tcrppart is set - that value
+	       never propagates back to the parent shell once the subshell exits,
+	       so the parent-shell backuploader() call (the new v0.1.4r one) ran
+	       with tcrppart unset. Now populated from the same loaderdisk the
+	       parent shell already resolved, right before that call.
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -210,6 +218,8 @@ function showlastupdate() {
 0.1.4q Add MSHELL Manager auto-rebuild hook (non-interactive build+backup+kexec).
 0.1.4r Mount /mnt/tcrp tc-writable (uid=tc,gid=tc) and make the pre-reboot backup
        trigger symlink-aware, for tinycore-redpill's /home/tc/user_config.json symlink feature.
+0.1.4s Fix v0.1.4r's "tcrppart: unbound variable" crash in the new symlink-aware
+       backuploader() call (tcrppart never propagated out of my()'s build subshell).
 
 EOF
 }
