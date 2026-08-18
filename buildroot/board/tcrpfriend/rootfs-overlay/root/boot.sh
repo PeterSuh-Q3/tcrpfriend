@@ -1939,7 +1939,19 @@ function mshell_auto_rebuild() {
                 # ...) can leave this clone dir behind - git clone
                 # refuses to reuse a non-empty destination.
                 rm -rf ./tcrp-addons
-                git clone --depth=1 "https://github.com/PeterSuh-Q3/tcrp-addons.git"
+                # Not checking clone success here left /dev/shm/tcrp-addons
+                # created-but-empty on failure (mkdir succeeds regardless,
+                # mv -f silently no-ops with nothing to move) - a later
+                # extension-processing step would then fail confusingly
+                # far from the real cause ("Failed to copy .../rpext-
+                # index.json"), instead of this attempt failing cleanly
+                # right here so the outer retry loop in
+                # mshell_auto_rebuild can retry from a clean state.
+                if ! git clone --depth=1 "https://github.com/PeterSuh-Q3/tcrp-addons.git" || \
+                   [ ! -d ./tcrp-addons/.git ]; then
+                    echo "[ERROR] Failed to clone tcrp-addons from GitHub. Check network connectivity and try again."
+                    exit 99
+                fi
                 mkdir -p /dev/shm/tcrp-addons
                 rm -rf ./tcrp-addons/.git/
                 mv -f ./tcrp-addons/* /dev/shm/tcrp-addons/
