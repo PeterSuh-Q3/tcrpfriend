@@ -1,7 +1,8 @@
 # Additional required package settings
-BR2_PACKAGE_GCC=y
-BR2_PACKAGE_GCC_VERSION="12.3.0"
-BR2_PACKAGE_GCC_LATEST=y
+# 2026-08-21: 타깃 롬에 GCC 컴파일러를 올려두는 옵션(BR2_PACKAGE_GCC*, 빌드
+# 자체를 위한 호스트 툴체인 BR2_GCC_VERSION_12_X 등과는 별개)이었는데,
+# rootfs-overlay 스크립트 어디에서도 런타임에 gcc/cc1을 호출하는 곳이 없어
+# initrd-friend 용량 다이어트 대상으로 제거함(용량 실측을 위한 시험 빌드).
 
 #
 # Automatically generated file; DO NOT EDIT.
@@ -980,7 +981,7 @@ BR2_PACKAGE_FBV_JPEG=y
 BR2_PACKAGE_FBV_GIF=y
 # BR2_PACKAGE_FREERDP is not set
 # BR2_PACKAGE_GRAPHICSMAGICK is not set
-BR2_PACKAGE_IMAGEMAGICK=y
+# BR2_PACKAGE_IMAGEMAGICK is not set
 # BR2_PACKAGE_LIBGLVND is not set
 # BR2_PACKAGE_LINUX_FUSION is not set
 # BR2_PACKAGE_MESA3D is not set
@@ -2949,10 +2950,7 @@ BR2_PACKAGE_RSYNC=y
 # BR2_PACKAGE_RYGEL is not set
 # BR2_PACKAGE_S6_DNS is not set
 # BR2_PACKAGE_S6_NETWORKING is not set
-BR2_PACKAGE_SAMBA4=y
-# BR2_PACKAGE_SAMBA4_AD_DC is not set
-# BR2_PACKAGE_SAMBA4_ADS is not set
-# BR2_PACKAGE_SAMBA4_SMBTORTURE is not set
+# BR2_PACKAGE_SAMBA4 is not set
 # BR2_PACKAGE_SCONESERVER is not set
 # BR2_PACKAGE_SER2NET is not set
 # BR2_PACKAGE_SHADOWSOCKS_LIBEV is not set
@@ -3382,8 +3380,7 @@ BR2_PACKAGE_XVISOR_ARCH_SUPPORTS=y
 BR2_PACKAGE_NANO=y
 BR2_PACKAGE_NANO_TINY=y
 # BR2_PACKAGE_UEMACS is not set
-BR2_PACKAGE_VIM=y
-BR2_PACKAGE_VIM_RUNTIME=y
+# BR2_PACKAGE_VIM is not set
 
 #
 # Filesystem images
