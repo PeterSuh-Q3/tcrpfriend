@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.4s"
+BOOTVER="0.1.4t"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -197,6 +197,13 @@ function history() {
 	       so the parent-shell backuploader() call (the new v0.1.4r one) ran
 	       with tcrppart unset. Now populated from the same loaderdisk the
 	       parent shell already resolved, right before that call.
+	0.1.4t Dropped GCC, VIM, ImageMagick, and Samba4 from the target rootfs
+	       (tcrpfriend_defconfig and tcrpfriend_defconfig.k6). None of these
+	       show up anywhere in the rootfs-overlay runtime scripts - confirmed
+	       via grep before removing (nano is already bundled as the editor,
+	       so dropping vim isn't a functional loss). Measured result:
+	       initrd-friend 96,803,044 -> 79,447,164 bytes (92.3MB -> 75.8MB,
+	       -17.9%).
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -220,6 +227,8 @@ function showlastupdate() {
        trigger symlink-aware, for tinycore-redpill's /home/tc/user_config.json symlink feature.
 0.1.4s Fix v0.1.4r's "tcrppart: unbound variable" crash in the new symlink-aware
        backuploader() call (tcrppart never propagated out of my()'s build subshell).
+0.1.4t Drop unused GCC, VIM, ImageMagick, and Samba4 from the target rootfs
+       (initrd-friend: 92.3MB -> 75.8MB, -17.9%).
 
 EOF
 }
