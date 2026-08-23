@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.4v"
+BOOTVER="0.1.4w"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -212,8 +212,19 @@ function history() {
 	       static ifcfg-ethN, since extractramdisk() reseeds $temprd from
 	       Synology's stock rd.gz (which ships its own DHCP ifcfg-ethN) and
 	       --ignore-existing then skips the preserved static one from the old
-	       ramdisk. New apply_static_ip_override() re-applies ipsettings onto
-	       $temprd right after the merge, so it always wins.
+	       ramdisk. Added apply_static_ip_override() to re-apply it after the
+	       merge - real-hardware testing then showed the whole ifcfg-ethN
+	       approach doesn't survive DSM's own boot anyway (see 0.1.4w).
+	0.1.4w Static IP now travels as a kernel cmdline parameter
+	       (network.<MAC>=ip/netmask/gw/dns, RR/RROrg-style) added dynamically
+	       at kexec time, instead of writing ifcfg-ethN into the DSM ramdisk -
+	       confirmed on real hardware that DSM's own systemd network manager
+	       ("eth0 DHCP Client" unit) re-applies its own persisted config once
+	       the real root filesystem takes over, discarding whatever the initrd
+	       shipped. Removes apply_static_ip_override() (dead end). New
+	       cmdline_append() also fixes CMDLINE_LINE's hardcoded per-token
+	       leading space, which could leave stray/duplicate spaces depending on
+	       which optional flags were appended.
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -235,6 +246,9 @@ function showlastupdate() {
        lease instead of replacing it; honor ipsettings.ipiface for NIC selection.
 0.1.4v Fix patchramdisk()'s rsync smart-merge silently dropping the static
        ifcfg-ethN back to Synology's stock DHCP config during a kernel/module patch.
+0.1.4w Switch static IP to a kernel cmdline parameter (network.<MAC>=...) added
+       at kexec time - the ramdisk ifcfg-ethN approach doesn't survive DSM's own
+       boot. Also fixes CMDLINE_LINE's hardcoded-space token assembly.
 
 EOF
 }
@@ -733,9 +747,32 @@ function redownload_module_packs() {
     fi
 }
 
-# CIDR 프리픽스(0-32)를 점4개짜리 넷마스크로 변환.
-# tinycore-redpill의 functions.sh _cidr_to_netmask()와 동일 로직(중복 구현 -
-# boot.sh는 별도 buildroot rootfs라 그쪽 functions.sh를 source할 수 없다).
+# 커널 cmdline처럼 공백 1칸으로 구분된 문자열에 토큰을 이어붙인다.
+# "CMDLINE_LINE+='token '"처럼 조각마다 트레일링 스페이스를 하드코딩하는
+# 기존 방식은, 어떤 옵션 플래그가 조건부로 붙느냐에 따라 중복/누락 공백이
+# 생길 수 있어 신뢰할 수 없었다(2026-08-23, static IP cmdline 조립 중
+# 발견 - tinycore-redpill의 functions.sh에도 동일 목적의 헬퍼를 별도로
+# 둔다, 그쪽은 이 함수를 source할 수 없는 별도 rootfs라 중복 구현). 항상
+# 정확히 스페이스 1칸으로만 구분되도록 정규화하고, 빈 토큰은 무시한다.
+# 사용: CMDLINE_LINE="$(cmdline_append "${CMDLINE_LINE}" "token1" "token2")"
+function cmdline_append() {
+    local acc="$1" tok
+    shift
+    while [ "${acc: -1}" = " " ]; do acc="${acc% }"; done
+    while [ "${acc:0:1}" = " " ]; do acc="${acc# }"; done
+    for tok in "$@"; do
+        [ -z "${tok}" ] && continue
+        if [ -z "${acc}" ]; then
+            acc="${tok}"
+        else
+            acc="${acc} ${tok}"
+        fi
+    done
+    printf '%s' "${acc}"
+}
+
+# CIDR 프리픽스(0-32)를 점4개짜리 넷마스크로 변환. buildStaticNetworkCmdline()
+# (아래, kexec cmdline 조립부에서 호출)이 쓴다.
 function _cidr_to_netmask() {
     local prefix="${1:-0}" i mask=""
     for i in 0 1 2 3; do
@@ -752,16 +789,16 @@ function _cidr_to_netmask() {
     echo "${mask%.}"
 }
 
-# user_config.json의 ipsettings를 기준으로, 주어진 램디스크 루트($1) 안의
-# ifcfg-ethN을 static/DHCP로 (재)작성한다. patchramdisk()의 rsync 스마트
-# 머지 직후에 호출해서, Synology 순정 rd.gz가 이미 갖고 있던 ifcfg-ethN이나
-# rsync가 보존한 구버전 파일을 항상 최신 ipsettings로 덮어쓰게 한다
-# (2026-08-23, 실기 45.34에서 static IP가 조용히 사라지던 문제 확인 후 추가).
-function apply_static_ip_override() {
-    local rd_root="$1"
-    local ns_dir="${rd_root}/etc/sysconfig/network-scripts"
-    [ -d "$ns_dir" ] || return 0
-
+# user_config.json의 ipsettings가 static이면 RR(RROrg/rr) 방식의
+# network.<MAC>=ip/netmask/gw/dns 커널 cmdline 파라미터를 echo한다(없으면
+# 빈 문자열). DSM 램디스크 안의 ifcfg-ethN을 직접 고치는 방식은 실기
+# 검증 결과 무효했다 - initrd 시점엔 파일이 정확히 들어가 있어도, DSM
+# 부팅 후 자체 systemd 네트워크 매니저("eth0 DHCP Client" 유닛)가 별도
+# 저장된 설정으로 다시 덮어써서 반영이 안 됐다(실기 45.34, 2026-08-23).
+# RR 프로젝트도 정확히 같은 이유로 ifcfg 접근을 쓰지 않고 커널 cmdline으로
+# 넘긴다는 걸 확인하고 이 방식으로 전환했다. CMDLINE_LINE 조립부(아래)에서
+# 호출한다.
+function buildStaticNetworkCmdline() {
     local ipset iface addr gw dns
     ipset="$(jq -r -e .ipsettings.ipset /mnt/tcrp/user_config.json 2>/dev/null)"
     [ "${ipset}" = "static" ] || return 0
@@ -773,28 +810,21 @@ function apply_static_ip_override() {
 
     if ! echo "${iface}" | grep -qE '^eth[0-7]$' || \
        ! echo "${addr}" | grep -qE '^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}$'; then
-        msgwarning "apply_static_ip_override: invalid ipsettings (iface=${iface}, addr=${addr}); ramdisk keeps DHCP.\n"
+        msgwarning "buildStaticNetworkCmdline: invalid ipsettings (iface=${iface}, addr=${addr}); staying on DHCP.\n" >&2
+        return 0
+    fi
+
+    local mac
+    mac="$(cat "/sys/class/net/${iface}/address" 2>/dev/null | tr -d ':' | tr 'a-f' 'A-F')"
+    if [ -z "${mac}" ]; then
+        msgwarning "buildStaticNetworkCmdline: could not read MAC for ${iface}; staying on DHCP.\n" >&2
         return 0
     fi
 
     local ip="${addr%%/*}" prefix="${addr##*/}" netmask
     netmask="$(_cidr_to_netmask "${prefix}")"
 
-    {
-        echo "DEVICE=${iface}"
-        echo "BOOTPROTO=none"
-        echo "ONBOOT=yes"
-        echo "IPADDR=${ip}"
-        echo "NETMASK=${netmask}"
-        [ -n "${gw}" ] && echo "GATEWAY=${gw}"
-        echo "IPV6INIT=dhcp"
-        echo "IPV6_ACCEPT_RA=1"
-    } >"${ns_dir}/ifcfg-${iface}"
-
-    [ -n "${dns}" ] && [ "$(grep -c "${dns}" "${rd_root}/etc/resolv.conf" 2>/dev/null)" -eq 0 ] && \
-        echo "nameserver ${dns}" >>"${rd_root}/etc/resolv.conf"
-
-    msgnormal "apply_static_ip_override: ${iface} -> static ${ip}/${prefix} (netmask ${netmask}), gateway=${gw:-none}\n"
+    echo "network.${mac}=${ip}/${netmask}/${gw}/${dns}"
 }
 
 function patchramdisk() {
@@ -890,15 +920,6 @@ function patchramdisk() {
     # --ignore-existing 옵션을 쓰면, 기존(old_rd.temp)에 있는 파일(커스텀 패치)은
     # $temprd(새 파일)의 것으로 덮어씌워지지 않고 보존됩니다.
     rsync -av --ignore-existing $OLD_RD/ $temprd/
-
-    # $temprd는 extractramdisk()에서 Synology 순정 rd.gz를 새로 풀어 만든
-    # 것이라 자체 ifcfg-eth0(DHCP)를 이미 갖고 있다 - 위 rsync가 그 파일을
-    # "이미 존재함"으로 보고 $OLD_RD 쪽(loader가 구운 static 설정)을
-    # 건너뛰어 버린다. 그 결과 사용자가 설정한 static IP가 여기서 조용히
-    # 사라지고 순정 DHCP만 남는 문제를 실기(45.34)에서 재현/확인했다
-    # (2026-08-23). rsync 병합 직후, 재조립 전에 static ifcfg-ethN을
-    # ipsettings 기준으로 다시 한번 명시적으로 덮어써서 항상 이기게 한다.
-    apply_static_ip_override "${temprd}"
 
     # Reassembly ramdisk
 	echo "Reassempling ramdisk"
@@ -1833,7 +1854,7 @@ function boot() {
 	        # 2026.06.27 dom_szmax: blockdev 바이트 정확 계산 + 10MiB 버퍼 (RR 방식, fdisk 단위파싱 버그 회피)
 	        _DOM_SZ=$(blockdev --getsz "/dev/${LOADER_DISK}" 2>/dev/null)
 	        _DOM_SS=$(blockdev --getss "/dev/${LOADER_DISK}" 2>/dev/null)
-	        CMDLINE_LINE+="dom_szmax=$(( ${_DOM_SZ:-0} * ${_DOM_SS:-0} / 1024 / 1024 + 10 )) "
+	        CMDLINE_LINE="$(cmdline_append "${CMDLINE_LINE}" "dom_szmax=$(( ${_DOM_SZ:-0} * ${_DOM_SS:-0} / 1024 / 1024 + 10 ))")"
 	    	if [ "${LDTYPE}" = "SHR" ]; then
 	            CMDLINE_LINE=$(echo "$CMDLINE_LINE" | sed -E 's/synoboot_satadom=[12]\s*//g')
 			else
@@ -1841,26 +1862,36 @@ function boot() {
 		        SATA_LINE=$(jq -r -e '.general.sata_line' /mnt/tcrp/user_config.json)
 				SATA_DOM=$(echo "$SATA_LINE" | grep -oE 'synoboot_satadom=[^ ]+' | cut -d= -f2)
 			    if [ -n "$SATA_DOM" ]; then
-	                CMDLINE_LINE+="synoboot_satadom=${SATA_DOM} "
+	                CMDLINE_LINE="$(cmdline_append "${CMDLINE_LINE}" "synoboot_satadom=${SATA_DOM}")"
 	            fi
 	  	    fi
 	    fi
     fi
-    #[ "$1" = "gettycon" ] && CMDLINE_LINE+=" gettycon "
+    #[ "$1" = "gettycon" ] && CMDLINE_LINE="$(cmdline_append "${CMDLINE_LINE}" "gettycon")"
 
-    [ "$1" = "forcejunior" ] && CMDLINE_LINE+="force_junior "
+    [ "$1" = "forcejunior" ] && CMDLINE_LINE="$(cmdline_append "${CMDLINE_LINE}" "force_junior")"
 
-    #CMDLINE_LINE+="skip_vender_mac_interfaces=0,1,2,3,4,5,6,7 "
+    #CMDLINE_LINE="$(cmdline_append "${CMDLINE_LINE}" "skip_vender_mac_interfaces=0,1,2,3,4,5,6,7")"
 
     #If EFI then add withefi to CMDLINE_LINE
     if [ "$EFIMODE" = "yes" ] && [ $(echo ${CMDLINE_LINE} | grep withefi | wc -l) -le 0 ]; then
-        CMDLINE_LINE+="withefi " && echo -en "\r$(msgwarning "$(TEXT "EFI booted system with no EFI option, adding withefi to cmdline")")\n"
+        CMDLINE_LINE="$(cmdline_append "${CMDLINE_LINE}" "withefi")" && echo -en "\r$(msgwarning "$(TEXT "EFI booted system with no EFI option, adding withefi to cmdline")")\n"
     fi
 
     if [ "$(dmidecode -s system-manufacturer | grep -c VMware)" -eq 1 ]; then
-        CMDLINE_LINE+="mev=vmware "
+        CMDLINE_LINE="$(cmdline_append "${CMDLINE_LINE}" "mev=vmware")"
     elif [ "$(dmidecode -s system-manufacturer | grep -c QEMU)" -eq 1 ]; then
-        CMDLINE_LINE+="mev=qemu "
+        CMDLINE_LINE="$(cmdline_append "${CMDLINE_LINE}" "mev=qemu")"
+    fi
+
+    # ipsettings가 static이면 network.<MAC>=ip/netmask/gw/dns를 cmdline에
+    # 추가한다(RR 방식, 2026-08-23 채택 - 위 buildStaticNetworkCmdline() 주석
+    # 참고). static이 아니거나 설정이 무효하면 빈 문자열이라 CMDLINE_LINE은
+    # 그대로 유지된다.
+    NETWORK_CMDLINE="$(buildStaticNetworkCmdline)"
+    if [ -n "${NETWORK_CMDLINE}" ]; then
+        CMDLINE_LINE="$(cmdline_append "${CMDLINE_LINE}" "${NETWORK_CMDLINE}")"
+        echo -en "\r$(msgnormal "Static IP requested via cmdline: ${NETWORK_CMDLINE}")\n"
     fi
 
     export MOD_ZIMAGE_FILE="/mnt/tcrp/zImage-dsm"
