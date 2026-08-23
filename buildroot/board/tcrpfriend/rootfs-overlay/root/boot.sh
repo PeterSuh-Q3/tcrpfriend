@@ -1352,7 +1352,16 @@ function setmac() {
 
 function setnetwork() {
 
-    ethdev=$(ip a | grep UP | grep -v LOOP | head -1 | awk '{print $2}' | sed -e 's/://g')
+    # ipiface: user_config.json에 사용자가 menu_m.sh의 staticIpMenu()로 직접
+    # 지정한 대상 NIC(예: "eth1"). 예전엔 이 필드가 없어서 "ip a 결과 중
+    # UP 상태인 첫 인터페이스"를 그냥 집었는데, 멀티 NIC 실기에서는 사용자가
+    # 의도한 것과 다른 NIC이 잡힐 수 있었다(실기 미검증, 2026-08-23 발견).
+    # 하위호환: ipiface가 없는 예전 설정이면 기존 자동추측 방식으로 폴백.
+    ethdev="$(jq -r -e .ipsettings.ipiface /mnt/tcrp/user_config.json 2>/dev/null)"
+    if [ -z "${ethdev}" ] || [ "${ethdev}" = "null" ]; then
+        ethdev=$(ip a | grep UP | grep -v LOOP | head -1 | awk '{print $2}' | sed -e 's/://g')
+        echo "ipsettings.ipiface not set, falling back to auto-detected interface ${ethdev}" | tee -a boot.log
+    fi
 
     echo "Network settings are set to static proceeding setting static IP settings" | tee -a boot.log
     staticip="$(jq -r -e .ipsettings.ipaddr /mnt/tcrp/user_config.json)"
@@ -1360,7 +1369,23 @@ function setnetwork() {
     staticgw="$(jq -r -e .ipsettings.ipgw /mnt/tcrp/user_config.json)"
     staticproxy="$(jq -r -e .ipsettings.ipproxy /mnt/tcrp/user_config.json)"
 
-    [ -n "$staticip" ] && [ $(ip a | grep $staticip | wc -l) -eq 0 ] && ip a add "$staticip" dev $ethdev | tee -a boot.log
+    if ! echo "${staticip}" | grep -qE '^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}$'; then
+        msgalert "Invalid static IP address in user_config.json (${staticip}); staying on DHCP.\n" | tee -a boot.log
+        return
+    fi
+
+    # 예전 구현은 ${ethdev}가 이미 dhcpcd로 받은 주소를 그대로 둔 채
+    # ip a add로 static 주소를 하나 더 얹기만 했다 - 인터페이스에 DHCP/static
+    # 주소가 동시에 남아 소스 주소 선택과 라우팅이 예측 불가능해지는 문제가
+    # 있었다(실기 검증 안 됨, 2026-08-23 발견). dhcpcd -k로 이 인터페이스의
+    # 임대만 정확히 해제한다(다른 NIC이 있다면 그쪽 dhcpcd는 그대로 유지) -
+    # setmac()처럼 서비스 전체를 내렸다 올리면 멀티 NIC 환경에서 static이
+    # 아닌 다른 NIC의 DHCP까지 같이 끊어졌다 붙는다.
+    dhcpcd -k "${ethdev}" >/dev/null 2>&1
+    ip addr flush dev "${ethdev}" 2>&1 | tee -a boot.log
+    ip link set dev "${ethdev}" up 2>&1 | tee -a boot.log
+
+    ip a add "$staticip" dev $ethdev | tee -a boot.log
     [ -n "$staticdns" ] && [ $(grep ${staticdns} /etc/resolv.conf | wc -l) -eq 0 ] && sed -i "a nameserver $staticdns" /etc/resolv.conf | tee -a boot.log
     [ -n "$staticgw" ] && [ $(ip route | grep "default via ${staticgw}" | wc -l) -eq 0 ] && ip route add default via $staticgw dev $ethdev | tee -a boot.log
     [ -n "$staticproxy" ] &&
