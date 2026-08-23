@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.4w"
+BOOTVER="0.1.4x"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -225,6 +225,17 @@ function history() {
 	       cmdline_append() also fixes CMDLINE_LINE's hardcoded per-token
 	       leading space, which could leave stray/duplicate spaces depending on
 	       which optional flags were appended.
+	0.1.4x buildStaticNetworkCmdline() was reading the target interface's MAC
+	       from /sys/class/net/<iface>/address at cmdline-build time, which on
+	       a model using MAC spoofing (mac1..mac8 in extra_cmdline) returns the
+	       NIC's permanent hardware MAC, not the MAC DSM actually assigns to
+	       that interface once the cmdline's own mac1..mac8 values take effect
+	       - confirmed on real hardware, where eth0 booted with mac1's spoofed
+	       address while /sys still reported the old permaddr, so the misc
+	       add-on's post-boot MAC compare never matched and the static IP was
+	       silently never applied. Now reads the interface's own
+	       extra_cmdline.mac<N> value instead of /sys, matching what DSM will
+	       actually present.
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -249,6 +260,9 @@ function showlastupdate() {
 0.1.4w Switch static IP to a kernel cmdline parameter (network.<MAC>=...) added
        at kexec time - the ramdisk ifcfg-ethN approach doesn't survive DSM's own
        boot. Also fixes CMDLINE_LINE's hardcoded-space token assembly.
+0.1.4x Fix buildStaticNetworkCmdline() reading the pre-spoof permanent MAC from
+       /sys instead of the interface's own extra_cmdline.mac<N>, which broke
+       static IP entirely on models using MAC spoofing.
 
 EOF
 }
@@ -814,10 +828,20 @@ function buildStaticNetworkCmdline() {
         return 0
     fi
 
-    local mac
-    mac="$(cat "/sys/class/net/${iface}/address" 2>/dev/null | tr -d ':' | tr 'a-f' 'A-F')"
-    if [ -z "${mac}" ]; then
-        msgwarning "buildStaticNetworkCmdline: could not read MAC for ${iface}; staying on DHCP.\n" >&2
+    # /sys/class/net/<iface>/address at this point (still inside FRIEND, before
+    # DSM's kernel applies the cmdline's own mac1..mac8 spoofing) reports the NIC's
+    # permanent hardware MAC, not the MAC DSM will actually present on eth0 once
+    # booted - confirmed on real hardware (a model using MAC spoofing showed
+    # /sys eth0 = permaddr while the booted DSM's eth0 was mac1, so mshell-network's
+    # post-boot MAC compare never matched and the static IP was silently never
+    # applied). extra_cmdline.mac<N+1> (the same value already embedded in the
+    # cmdline as mac<N+1>=) is what DSM will actually assign to ethN, so use that
+    # instead of reading the interface here.
+    local macidx mac
+    macidx=$(( ${iface#eth} + 1 ))
+    mac="$(jq -r -e ".extra_cmdline.mac${macidx}" /mnt/tcrp/user_config.json 2>/dev/null | tr -d ':' | tr 'a-f' 'A-F')"
+    if [ -z "${mac}" ] || [ "${mac}" = "NULL" ]; then
+        msgwarning "buildStaticNetworkCmdline: could not read mac${macidx} for ${iface}; staying on DHCP.\n" >&2
         return 0
     fi
 
