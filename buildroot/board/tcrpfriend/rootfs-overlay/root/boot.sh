@@ -220,15 +220,7 @@ function showlastupdate() {
 0.1.3i Activate build root openssl bin for DSM password make and renewal Reset(Change) DSM Password function
        Add menu for "Add New DSM User"
 0.1.3m Enable FRIEND Kernel on HP N36L/N40L/N54L (Supports Older AMD CPUs)
-0.1.4f Linking the DSM reinstallation (Junior) entry in the Grub boot entry	   
-0.1.4i For RD patching, use the separated lkm(redpill.ko) according to the platform and DSM version
-0.1.4m Display all GPUs on console (one per line) instead of only the first
-0.1.4o Suppress DHCP lease renewal during boot (stop dhcpcd after the IP is obtained;
-       dhcpcd.conf persistent keeps IP/route/DNS), preventing mid-boot IP changes on short-lease networks.
-0.1.4p Use recorded module-pack provenance with latest-release fallback during ramdisk patching.
 0.1.4q Add MSHELL Manager auto-rebuild hook (non-interactive build+backup+kexec).
-0.1.4r Mount /mnt/tcrp tc-writable (uid=tc,gid=tc) and make the pre-reboot backup
-       trigger symlink-aware, for tinycore-redpill's /home/tc/user_config.json symlink feature.
 0.1.4s Fix v0.1.4r's "tcrppart: unbound variable" crash in the new symlink-aware
        backuploader() call (tcrppart never propagated out of my()'s build subshell).
 0.1.4t Drop unused GCC, VIM, ImageMagick, and Samba4 from the target rootfs
