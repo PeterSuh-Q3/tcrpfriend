@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.4t"
+BOOTVER="0.1.4u"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -204,6 +204,10 @@ function history() {
 	       so dropping vim isn't a functional loss). Measured result:
 	       initrd-friend 96,803,044 -> 79,447,164 bytes (92.3MB -> 75.8MB,
 	       -17.9%).
+	0.1.4u setnetwork() now flushes the DHCP lease (dhcpcd -k <iface>) before
+	       applying a static IP, instead of layering it on top of the
+	       existing DHCP address, and honors user_config.json's new
+	       ipsettings.ipiface instead of guessing the first UP interface.
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -229,6 +233,8 @@ function showlastupdate() {
        backuploader() call (tcrppart never propagated out of my()'s build subshell).
 0.1.4t Drop unused GCC, VIM, ImageMagick, and Samba4 from the target rootfs
        (initrd-friend: 92.3MB -> 75.8MB, -17.9%).
+0.1.4u Fix setnetwork() layering a static IP on top of an unreleased DHCP
+       lease instead of replacing it; honor ipsettings.ipiface for NIC selection.
 
 EOF
 }
