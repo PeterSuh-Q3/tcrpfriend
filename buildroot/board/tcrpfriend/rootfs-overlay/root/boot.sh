@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.4u"
+BOOTVER="0.1.4v"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -208,6 +208,12 @@ function history() {
 	       applying a static IP, instead of layering it on top of the
 	       existing DHCP address, and honors user_config.json's new
 	       ipsettings.ipiface instead of guessing the first UP interface.
+	0.1.4v patchramdisk()'s rsync smart-merge could silently drop the loader's
+	       static ifcfg-ethN, since extractramdisk() reseeds $temprd from
+	       Synology's stock rd.gz (which ships its own DHCP ifcfg-ethN) and
+	       --ignore-existing then skips the preserved static one from the old
+	       ramdisk. New apply_static_ip_override() re-applies ipsettings onto
+	       $temprd right after the merge, so it always wins.
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -227,6 +233,8 @@ function showlastupdate() {
        (initrd-friend: 92.3MB -> 75.8MB, -17.9%).
 0.1.4u Fix setnetwork() layering a static IP on top of an unreleased DHCP
        lease instead of replacing it; honor ipsettings.ipiface for NIC selection.
+0.1.4v Fix patchramdisk()'s rsync smart-merge silently dropping the static
+       ifcfg-ethN back to Synology's stock DHCP config during a kernel/module patch.
 
 EOF
 }
@@ -725,6 +733,70 @@ function redownload_module_packs() {
     fi
 }
 
+# CIDR 프리픽스(0-32)를 점4개짜리 넷마스크로 변환.
+# tinycore-redpill의 functions.sh _cidr_to_netmask()와 동일 로직(중복 구현 -
+# boot.sh는 별도 buildroot rootfs라 그쪽 functions.sh를 source할 수 없다).
+function _cidr_to_netmask() {
+    local prefix="${1:-0}" i mask=""
+    for i in 0 1 2 3; do
+        if [ "${prefix}" -ge 8 ]; then
+            mask="${mask}255."
+            prefix=$((prefix - 8))
+        elif [ "${prefix}" -gt 0 ]; then
+            mask="${mask}$((256 - 2 ** (8 - prefix)))."
+            prefix=0
+        else
+            mask="${mask}0."
+        fi
+    done
+    echo "${mask%.}"
+}
+
+# user_config.json의 ipsettings를 기준으로, 주어진 램디스크 루트($1) 안의
+# ifcfg-ethN을 static/DHCP로 (재)작성한다. patchramdisk()의 rsync 스마트
+# 머지 직후에 호출해서, Synology 순정 rd.gz가 이미 갖고 있던 ifcfg-ethN이나
+# rsync가 보존한 구버전 파일을 항상 최신 ipsettings로 덮어쓰게 한다
+# (2026-08-23, 실기 45.34에서 static IP가 조용히 사라지던 문제 확인 후 추가).
+function apply_static_ip_override() {
+    local rd_root="$1"
+    local ns_dir="${rd_root}/etc/sysconfig/network-scripts"
+    [ -d "$ns_dir" ] || return 0
+
+    local ipset iface addr gw dns
+    ipset="$(jq -r -e .ipsettings.ipset /mnt/tcrp/user_config.json 2>/dev/null)"
+    [ "${ipset}" = "static" ] || return 0
+
+    iface="$(jq -r -e .ipsettings.ipiface /mnt/tcrp/user_config.json 2>/dev/null)"
+    addr="$(jq -r -e .ipsettings.ipaddr /mnt/tcrp/user_config.json 2>/dev/null)"
+    gw="$(jq -r -e .ipsettings.ipgw /mnt/tcrp/user_config.json 2>/dev/null)"
+    dns="$(jq -r -e .ipsettings.ipdns /mnt/tcrp/user_config.json 2>/dev/null)"
+
+    if ! echo "${iface}" | grep -qE '^eth[0-7]$' || \
+       ! echo "${addr}" | grep -qE '^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}$'; then
+        msgwarning "apply_static_ip_override: invalid ipsettings (iface=${iface}, addr=${addr}); ramdisk keeps DHCP.\n"
+        return 0
+    fi
+
+    local ip="${addr%%/*}" prefix="${addr##*/}" netmask
+    netmask="$(_cidr_to_netmask "${prefix}")"
+
+    {
+        echo "DEVICE=${iface}"
+        echo "BOOTPROTO=none"
+        echo "ONBOOT=yes"
+        echo "IPADDR=${ip}"
+        echo "NETMASK=${netmask}"
+        [ -n "${gw}" ] && echo "GATEWAY=${gw}"
+        echo "IPV6INIT=dhcp"
+        echo "IPV6_ACCEPT_RA=1"
+    } >"${ns_dir}/ifcfg-${iface}"
+
+    [ -n "${dns}" ] && [ "$(grep -c "${dns}" "${rd_root}/etc/resolv.conf" 2>/dev/null)" -eq 0 ] && \
+        echo "nameserver ${dns}" >>"${rd_root}/etc/resolv.conf"
+
+    msgnormal "apply_static_ip_override: ${iface} -> static ${ip}/${prefix} (netmask ${netmask}), gateway=${gw:-none}\n"
+}
+
 function patchramdisk() {
 
     if [ ! -n "$IP" ]; then
@@ -815,11 +887,20 @@ function patchramdisk() {
 
     # Rsync를 이용해 기존 파일과 섞기 (우리가 만든 파일 보존!)
     echo "Smart Merging (with rsync -av --ignore-existing) existing initrd-dsm..."
-    # --ignore-existing 옵션을 쓰면, 기존(old_rd.temp)에 있는 파일(커스텀 패치)은 
+    # --ignore-existing 옵션을 쓰면, 기존(old_rd.temp)에 있는 파일(커스텀 패치)은
     # $temprd(새 파일)의 것으로 덮어씌워지지 않고 보존됩니다.
     rsync -av --ignore-existing $OLD_RD/ $temprd/
-	
-	# Reassembly ramdisk
+
+    # $temprd는 extractramdisk()에서 Synology 순정 rd.gz를 새로 풀어 만든
+    # 것이라 자체 ifcfg-eth0(DHCP)를 이미 갖고 있다 - 위 rsync가 그 파일을
+    # "이미 존재함"으로 보고 $OLD_RD 쪽(loader가 구운 static 설정)을
+    # 건너뛰어 버린다. 그 결과 사용자가 설정한 static IP가 여기서 조용히
+    # 사라지고 순정 DHCP만 남는 문제를 실기(45.34)에서 재현/확인했다
+    # (2026-08-23). rsync 병합 직후, 재조립 전에 static ifcfg-ethN을
+    # ipsettings 기준으로 다시 한번 명시적으로 덮어써서 항상 이기게 한다.
+    apply_static_ip_override "${temprd}"
+
+    # Reassembly ramdisk
 	echo "Reassempling ramdisk"
 	if [ "${RD_COMPRESSED}" == "true" ]; then
 		(cd "${temprd}" && find . | cpio -o -H newc -R root:root | xz -9 --format=lzma >"/root/initrd-dsm") >/dev/null 2>&1 >/dev/null
