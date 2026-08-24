@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.4y"
+BOOTVER="0.1.4z"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -242,6 +242,9 @@ function history() {
 	       stale MSHELL Manager SPK even after getlatestmshell("noask") has
 	       downloaded the current script. A refresh failure aborts the attempt
 	       for retry instead of silently producing a stale package.
+	0.1.4z Centralize user_config.json SHA-256 change detection in functions.sh.
+	       Reuse the same local-hash backup routine from menu_m.sh and boot.sh,
+	       and avoid redundant loader backups for settings-only changes.
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -271,6 +274,9 @@ function showlastupdate() {
        static IP entirely on models using MAC spoofing.
 0.1.4y Refresh my.sh.gz before auto-rebuild and re-source functions.sh so the
        current build stages the latest MSHELL Manager; fail/retry if refresh fails.
+0.1.4z Centralize user_config.json SHA-256 change detection in functions.sh;
+       reuse it from menu_m.sh and boot.sh and avoid redundant backups for
+       settings-only changes.
 
 EOF
 }
