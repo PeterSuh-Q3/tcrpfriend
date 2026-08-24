@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.4x"
+BOOTVER="0.1.4y"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -236,6 +236,12 @@ function history() {
 	       silently never applied. Now reads the interface's own
 	       extra_cmdline.mac<N> value instead of /sys, matching what DSM will
 	       actually present.
+	0.1.4y Auto-rebuild now refreshes my.sh.gz before invoking my(), then
+	       re-sources the refreshed functions.sh in the same build process.
+	       This prevents an already-loaded older my() function from staging its
+	       stale MSHELL Manager SPK even after getlatestmshell("noask") has
+	       downloaded the current script. A refresh failure aborts the attempt
+	       for retry instead of silently producing a stale package.
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -263,6 +269,8 @@ function showlastupdate() {
 0.1.4x Fix buildStaticNetworkCmdline() reading the pre-spoof permanent MAC from
        /sys instead of the interface's own extra_cmdline.mac<N>, which broke
        static IP entirely on models using MAC spoofing.
+0.1.4y Refresh my.sh.gz before auto-rebuild and re-source functions.sh so the
+       current build stages the latest MSHELL Manager; fail/retry if refresh fails.
 
 EOF
 }
@@ -2088,6 +2096,26 @@ function mshell_auto_rebuild() {
     for attempt in 1 2 3; do
         echo "=== mshell auto-rebuild attempt ${attempt}/3 ==="
         timeout 600 bash -c '
+            . /home/tc/functions.sh
+
+            # `my()` normally calls getlatestmshell() from inside its own
+            # body.  That is too late for this build: updating my.sh.gz
+            # replaces functions.sh on disk, but the currently executing
+            # `my` function remains the old definition and stages the old
+            # MSHELL Manager release into this initrd.  Refresh before
+            # entering my(), then source the refreshed functions explicitly
+            # so this very auto-rebuild uses its current release lookup.
+            TCB=true
+            getlatestmshell "noask"
+            mshell_update_rc=$?
+            case "${mshell_update_rc}" in
+                0) echo "MSHELL script is already current for auto-rebuild" ;;
+                1) echo "MSHELL script refreshed for this auto-rebuild" ;;
+                *)
+                    echo "[ERROR] Could not refresh MSHELL script before auto-rebuild (exit ${mshell_update_rc})"
+                    exit 98
+                    ;;
+            esac
             . /home/tc/functions.sh
             TCB=true
             VERBOSE_MODE=OFF
