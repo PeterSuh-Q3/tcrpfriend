@@ -2065,6 +2065,11 @@ function mshell_auto_rebuild() {
                      # (already verified by mountall()/mountxtcrp()
                      # moments ago - no need for the two to agree).
 
+    # functions.sh owns the shared persistence check.  Capture the state
+    # before the rebuild because the loader copy may be a symlink to this file.
+    local userconfig_before_hash
+    userconfig_before_hash="$(sha256sum /home/tc/user_config.json 2>/dev/null | awk '{print $1}')"
+
     # menu_m.sh normally populates these from user_config.json as soon
     # as it's sourced (interactively) - since we bypass menu_m.sh
     # entirely, read the same keys ourselves. usbidentify/setSuggest
@@ -2213,31 +2218,11 @@ function mshell_auto_rebuild() {
         return ${build_rc}
     fi
 
-    # chk_filetime_n_backup() lives in menu_m.sh, not functions.sh, so
-    # it isn't available here - its body is just "RAM copy differs
-    # from disk copy -> sync + backuploader", reproduced directly.
-    # 2026-08-16: functions_t.sh 의 mshellSymlinkUserConfig() 가 켜져 있으면
-    # ${userconfigfile} 는 /mnt/${LOADER_DISK}3/user_config.json 을 가리키는
-    # 심볼릭 링크라 아래 md5 비교는 항상 "같다"가 되어 backuploader() 가 다시는
-    # 호출되지 않는다 - 재부팅 전 백업이라는 이 블록의 목적이 사라지므로 심볼릭
-    # 링크인 경우는 무조건 backuploader() 를 호출한다.
-    if [ -L "${userconfigfile}" ]; then
-        # backuploader() 는 (local 없이) 전역 tcrppart 를 참조한다
-        # (functions.sh:local backup_path="/mnt/${tcrppart}"). my() 내부의
-        # 자체 backuploader() 호출은 위 600초 timeout 서브셸(bash -c '...')
-        # 안에서 실행되어 그 안에서만 tcrppart 가 채워지고, 서브셸이 끝나면
-        # 그 값은 이 부모 셸(mshell_auto_rebuild() 자신)로 전파되지 않는다.
-        # 여기서 부모 셸의 tcrppart 를 채우지 않은 채 backuploader 를 부르면
-        # "tcrppart: unbound variable" 로 죽는다(실기에서 재현/확인됨) -
-        # 1877행에서 이미 채운 loaderdisk 로 동일하게 채워준다.
-        getBus "${loaderdisk}" >/dev/null
-        tcrppart="${loaderdisk}3"
-        backuploader
-    elif [ "$(md5sum "${userconfigfile}" | awk '{print $1}')" \
-       != "$(md5sum "/mnt/${LOADER_DISK}3/user_config.json" | awk '{print $1}')" ]; then
-        sudo cp "${userconfigfile}" "/mnt/${LOADER_DISK}3/user_config.json"
-        backuploader
-    fi
+    # Populate the parent-shell backup context, then use the shared
+    # SHA-256-based check from functions.sh.
+    getBus "${loaderdisk}" >/dev/null
+    tcrppart="${loaderdisk}3"
+    chk_filetime_n_backup "${userconfig_before_hash}"
     # writebackcache() lives in menu_m.sh, not functions.sh - it just
     # polls /proc/meminfo's Dirty: value in a loop until it drops below
     # a threshold before a reboot/poweroff. `sync` does the same job
