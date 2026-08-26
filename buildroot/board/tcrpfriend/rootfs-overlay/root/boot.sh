@@ -13,6 +13,8 @@ BOOTVER="0.1.4z"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
+# 캡쳐 공유 시 콘솔에 노출되는 Serial/MAC 을 즉시 가리기 위한 런타임 토글 ('m' 키, countdown() 참고)
+MASKSENSITIVE="false"
 
 # Apply i18n
 export TEXTDOMAINDIR="/root/lang"
@@ -352,6 +354,33 @@ function msgpurple() {
 }
 function msgcyan() {
     echo -en "\033[1;36m$1\033[0m"
+}
+function msgmagenta() {
+    echo -en "\033[1;95m$1\033[0m"
+}
+
+# MASKSENSITIVE="true" 이면 값을 고정 문자열로 가려서 반환한다 (캡쳐 공유용).
+function masktext() {
+    local val="$1"
+    [ "${MASKSENSITIVE}" = "true" ] && [ -n "${val}" ] && echo "********" || echo "${val}"
+}
+
+# CMDLINE_LINE 안의 sn=..., mac1=...~mac8=... 토큰과, MAC이 노출되는 나머지
+# 두 경우도 가려서 반환한다:
+#   - netconsole=...,<port>@<ip>/<mac> : 콜론 표기 MAC (netconsole 대상 MAC)
+#   - network.<MAC없이 하이픈>=ip/netmask/gw/dns : buildStaticNetworkCmdline()이
+#     붙이는 고정 IP용 토큰으로, MAC 자체가 파라미터 이름에 들어간다
+function maskcmdline() {
+    local line="$1"
+    if [ "${MASKSENSITIVE}" = "true" ]; then
+        echo "${line}" | sed -E \
+            -e 's/(^| )(sn=)[^ ]+/\1\2********/' \
+            -e 's/(^| )(mac[0-9]=)[^ ]+/\1\2************/g' \
+            -e 's/(^| )(network\.)[0-9A-Fa-f]+=[^ ]+/\1\2************=************/g' \
+            -e 's/([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}/**:**:**:**:**:**/g'
+    else
+        echo "${line}"
+    fi
 }
 
 function check_internet() {
@@ -1135,6 +1164,17 @@ function countdown() {
                 initialize
                 boot forcejunior
                 ;;
+            'm') # m key
+                [ "${MASKSENSITIVE}" = "true" ] && MASKSENSITIVE="false" || MASKSENSITIVE="true"
+                clear
+                gethw
+                showcmdlineandhints
+                if [ "${MASKSENSITIVE}" = "true" ]; then
+                    echo -e "$(msgmagenta "$(TEXT "m key pressed! Sensitive info (Serial/MAC) is now masked for screenshot sharing")")"
+                else
+                    echo -e "$(msgmagenta "$(TEXT "m key pressed! Sensitive info (Serial/MAC) is now unmasked")")"
+                fi
+                ;;
             *)
                 ;;
         esac
@@ -1160,7 +1200,7 @@ function gethw() {
 
     checkmachine
 
-    echo -ne "Model : $(msgnormal "$model"), Serial : $(msgnormal "$serial"), Mac : $(msgnormal "$mac1"), Build : $(msgnormal "$version"), Update : $(msgnormal "$smallfixnumber"), LKM : $(msgnormal "${redpillmake}")\n"
+    echo -ne "Model : $(msgnormal "$model"), Serial : $(msgnormal "$(masktext "$serial")"), Mac : $(msgnormal "$(masktext "$mac1")"), Build : $(msgnormal "$version"), Update : $(msgnormal "$smallfixnumber"), LKM : $(msgnormal "${redpillmake}")\n"
     echo -ne "Platform : $(msgnormal "$ORIGIN_PLATFORM"), Loader BUS: $(msgnormal "${BUS}${SHR_EX_TEXT}"), Module Type: $(msgnormal "$mtype ($mlmethod)")\n"
 	# Display every VGA (class 0300) controller, one GPU per line.
 	GPU_NUM=0
@@ -1188,6 +1228,20 @@ GPUEOF
 	    msgblue "System is running in Legacy boot mode\n"
 	    EFIMODE="no"
 	fi
+}
+
+# cmdline과 r/e/j/m 단축키 안내를 출력한다. countdown()에서 'm' 키로 마스킹을
+# 토글할 때도 재사용해 화면을 즉시 다시 그린다.
+function showcmdlineandhints() {
+    echo -e "$(msgcyan "$(TEXT "User config is on '/mnt/tcrp/user_config.json'")")"
+    echo
+    echo "zImage : ${MOD_ZIMAGE_FILE} initrd : ${MOD_RDGZ_FILE}, Module Processing Method : $(msgnormal "${dmpm}")"
+    echo "cmdline : $(msgblue "$(maskcmdline "${CMDLINE_LINE}")")"
+    echo
+    echo -e "$(msgalert "$(TEXT "Press <r> to enter a menu for Reset DSM Password")")"
+    echo -e "$(msgnormal "$(TEXT "Press <e> to enter a menu for Edit USB/SATA Command Line")")"
+    echo -e "$(msgwarning "$(TEXT "Press <j> to enter a Junior mode (to re-install DSM)")")"
+    echo -e "$(msgmagenta "$(TEXT "Press <m> to mask/unmask sensitive info (Serial/MAC) for screenshot sharing")")"
 }
 
 function checkmachine() {
@@ -1935,20 +1989,18 @@ function boot() {
     export MOD_ZIMAGE_FILE="/mnt/tcrp/zImage-dsm"
     export MOD_RDGZ_FILE="/mnt/tcrp/initrd-dsm"
 
-    echo -e "$(msgcyan "$(TEXT "User config is on '/mnt/tcrp/user_config.json'")")"
-    echo
-    echo "zImage : ${MOD_ZIMAGE_FILE} initrd : ${MOD_RDGZ_FILE}, Module Processing Method : $(msgnormal "${dmpm}")"
-    echo "cmdline : $(msgblue "${CMDLINE_LINE}")"
-    echo
-    #if [ "$1" != "gettycon" ] && [ "$1" != "forcejunior" ]; then    
-    if [ "$1" != "forcejunior" ]; then    
+    #if [ "$1" != "gettycon" ] && [ "$1" != "forcejunior" ]; then
+    if [ "$1" != "forcejunior" ]; then
  #       msgalert "Press <g> to enter a Getty Console to solve trouble\n"
-        echo -e "$(msgalert "$(TEXT "Press <r> to enter a menu for Reset DSM Password")")"
-        echo -e "$(msgnormal "$(TEXT "Press <e> to enter a menu for Edit USB/SATA Command Line")")"
-        echo -e "$(msgwarning "$(TEXT "Press <j> to enter a Junior mode (to re-install DSM)")")"
+        showcmdlineandhints
 #    elif [ "$1" = "gettycon" ]; then
 #        msgalert "Entering a Getty Console to solve trouble...\n"
     elif [ "$1" = "forcejunior" ]; then
+        echo -e "$(msgcyan "$(TEXT "User config is on '/mnt/tcrp/user_config.json'")")"
+        echo
+        echo "zImage : ${MOD_ZIMAGE_FILE} initrd : ${MOD_RDGZ_FILE}, Module Processing Method : $(msgnormal "${dmpm}")"
+        echo "cmdline : $(msgblue "${CMDLINE_LINE}")"
+        echo
         echo -e "$(msgwarning "$(TEXT "Entering a Junior mode (to re-install DSM)...")")"
     fi
     

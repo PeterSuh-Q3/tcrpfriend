@@ -208,3 +208,15 @@ msgstr "Az alapértelmezett TTYD gyökérjelszó \" üres \"...\" "
 #: boot.sh:1111
 msgid "User config is on '/mnt/tcrp/user_config.json'"
 msgstr "Felhasználói konfiguráció a \"/mnt/tcrp/user_config.json \"...\""
+
+#: boot.sh:1147
+msgid "Press <m> to mask/unmask sensitive info (Serial/MAC) for screenshot sharing"
+msgstr "Nyomja meg az <m> billentyűt az érzékeny adatok (sorozatszám/MAC) elrejtéséhez/megjelenítéséhez képernyőkép megosztásához"
+
+#: boot.sh:1149
+msgid "m key pressed! Sensitive info (Serial/MAC) is now masked for screenshot sharing"
+msgstr "m billentyű megnyomva! Az érzékeny adatok (sorozatszám/MAC) most el vannak rejtve a képernyőkép megosztásához"
+
+#: boot.sh:1153
+msgid "m key pressed! Sensitive info (Serial/MAC) is now unmasked"
+msgstr "m billentyű megnyomva! Az érzékeny adatok (sorozatszám/MAC) elrejtése megszűnt"

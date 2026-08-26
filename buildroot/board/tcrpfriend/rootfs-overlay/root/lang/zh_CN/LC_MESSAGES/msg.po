@@ -183,3 +183,15 @@ msgstr "默认 TTYD root 密码为“空白” "
 #: boot.sh:1111
 msgid "User config is on '/mnt/tcrp/user_config.json'"
 msgstr "用户配置在'/mnt/tcrp/user_config.json'上"
+
+#: boot.sh:1147
+msgid "Press <m> to mask/unmask sensitive info (Serial/MAC) for screenshot sharing"
+msgstr "按 <m> 可为截图分享遮盖/取消遮盖敏感信息（序列号/MAC）"
+
+#: boot.sh:1149
+msgid "m key pressed! Sensitive info (Serial/MAC) is now masked for screenshot sharing"
+msgstr "已按下 m 键！为截图分享已遮盖敏感信息（序列号/MAC）"
+
+#: boot.sh:1153
+msgid "m key pressed! Sensitive info (Serial/MAC) is now unmasked"
+msgstr "已按下 m 键！已取消遮盖敏感信息（序列号/MAC）"

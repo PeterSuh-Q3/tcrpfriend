@@ -207,3 +207,15 @@ msgstr "डिफ़ॉल्ट TTYD रूट पासवर्ड 'रिक
 #: boot.sh:1111
 msgid "User config is on '/mnt/tcrp/user_config.json'"
 msgstr "उपयोगकर्ता विन्यास '/mnt/tcrp/user_config.json पर है '"
+
+#: boot.sh:1147
+msgid "Press <m> to mask/unmask sensitive info (Serial/MAC) for screenshot sharing"
+msgstr "स्क्रीनशॉट साझा करने के लिए संवेदनशील जानकारी (सीरियल/MAC) को छिपाने/दिखाने के लिए <m> दबाएँ"
+
+#: boot.sh:1149
+msgid "m key pressed! Sensitive info (Serial/MAC) is now masked for screenshot sharing"
+msgstr "m कुंजी दबाई गई! स्क्रीनशॉट साझा करने के लिए संवेदनशील जानकारी (सीरियल/MAC) अब छिपा दी गई है"
+
+#: boot.sh:1153
+msgid "m key pressed! Sensitive info (Serial/MAC) is now unmasked"
+msgstr "m कुंजी दबाई गई! संवेदनशील जानकारी (सीरियल/MAC) अब छिपी नहीं है"

@@ -200,3 +200,15 @@ msgstr "كلمة السر الجذري لـ (تي دي) هي \"بلانك\" ' "
 #: boot.sh:1111
 msgid "User config is on '/mnt/tcrp/user_config.json'"
 msgstr "مركب المستعمل على / / / / خط/ مستعمل config.json '"
+
+#: boot.sh:1147
+msgid "Press <m> to mask/unmask sensitive info (Serial/MAC) for screenshot sharing"
+msgstr "اضغط <m> لإخفاء/إظهار المعلومات الحساسة (الرقم التسلسلي/MAC) قبل مشاركة لقطة الشاشة"
+
+#: boot.sh:1149
+msgid "m key pressed! Sensitive info (Serial/MAC) is now masked for screenshot sharing"
+msgstr "تم الضغط على مفتاح m! المعلومات الحساسة (الرقم التسلسلي/MAC) مخفية الآن لمشاركة لقطة الشاشة"
+
+#: boot.sh:1153
+msgid "m key pressed! Sensitive info (Serial/MAC) is now unmasked"
+msgstr "تم الضغط على مفتاح m! لم تعد المعلومات الحساسة (الرقم التسلسلي/MAC) مخفية"

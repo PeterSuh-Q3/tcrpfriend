@@ -210,3 +210,15 @@ msgstr "Palavra-passe de raiz padrão TTYD é 'blank ' "
 #: boot.sh:1111
 msgid "User config is on '/mnt/tcrp/user_config.json'"
 msgstr "A configuração do usuário está em '/mnt/tcrp/user_config.json '"
+
+#: boot.sh:1147
+msgid "Press <m> to mask/unmask sensitive info (Serial/MAC) for screenshot sharing"
+msgstr "Pressione <m> para ocultar/exibir informações sensíveis (Número de série/MAC) antes de compartilhar uma captura de tela"
+
+#: boot.sh:1149
+msgid "m key pressed! Sensitive info (Serial/MAC) is now masked for screenshot sharing"
+msgstr "Tecla m pressionada! As informações sensíveis (Número de série/MAC) agora estão ocultas para compartilhamento de captura de tela"
+
+#: boot.sh:1153
+msgid "m key pressed! Sensitive info (Serial/MAC) is now unmasked"
+msgstr "Tecla m pressionada! As informações sensíveis (Número de série/MAC) não estão mais ocultas"

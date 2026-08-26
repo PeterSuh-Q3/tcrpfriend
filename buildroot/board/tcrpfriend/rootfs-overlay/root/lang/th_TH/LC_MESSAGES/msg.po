@@ -192,3 +192,15 @@ msgstr "รหัสผ่านรูท TTYD เริ่มต้นคือ
 #: boot.sh:1111
 msgid "User config is on '/mnt/tcrp/user_config.json'"
 msgstr "การกำหนดค่าผู้ใช้อยู่ที่ '/mnt/tcrp/user_config.json'"
+
+#: boot.sh:1147
+msgid "Press <m> to mask/unmask sensitive info (Serial/MAC) for screenshot sharing"
+msgstr "กด <m> เพื่อซ่อน/แสดงข้อมูลที่ละเอียดอ่อน (Serial/MAC) สำหรับการแชร์ภาพหน้าจอ"
+
+#: boot.sh:1149
+msgid "m key pressed! Sensitive info (Serial/MAC) is now masked for screenshot sharing"
+msgstr "กดปุ่ม m แล้ว! ข้อมูลที่ละเอียดอ่อน (Serial/MAC) ถูกซ่อนแล้วสำหรับการแชร์ภาพหน้าจอ"
+
+#: boot.sh:1153
+msgid "m key pressed! Sensitive info (Serial/MAC) is now unmasked"
+msgstr "กดปุ่ม m แล้ว! ยกเลิกการซ่อนข้อมูลที่ละเอียดอ่อน (Serial/MAC) แล้ว"

@@ -214,3 +214,15 @@ msgstr "Das Standard-TTYD-Root-Passwort ist 'leer'. "
 msgid "User config is on '/mnt/tcrp/user_config.json'"
 msgstr ""
 "Die Benutzerkonfiguration befindet sich auf '/mnt/tcrp/user_config.json'"
+
+#: boot.sh:1147
+msgid "Press <m> to mask/unmask sensitive info (Serial/MAC) for screenshot sharing"
+msgstr "Drücken Sie <m>, um sensible Daten (Seriennummer/MAC) für die Freigabe von Screenshots zu maskieren/demaskieren"
+
+#: boot.sh:1149
+msgid "m key pressed! Sensitive info (Serial/MAC) is now masked for screenshot sharing"
+msgstr "m-Taste gedrückt! Sensible Daten (Seriennummer/MAC) sind jetzt für die Freigabe von Screenshots maskiert"
+
+#: boot.sh:1153
+msgid "m key pressed! Sensitive info (Serial/MAC) is now unmasked"
+msgstr "m-Taste gedrückt! Sensible Daten (Seriennummer/MAC) sind jetzt nicht mehr maskiert"

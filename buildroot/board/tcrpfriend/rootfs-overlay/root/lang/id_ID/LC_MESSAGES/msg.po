@@ -206,3 +206,15 @@ msgstr "Kata sandi akar TTYD default adalah 'blank Sitemap "
 #: boot.sh:1111
 msgid "User config is on '/mnt/tcrp/user_config.json'"
 msgstr "Config.json Sitemap"
+
+#: boot.sh:1147
+msgid "Press <m> to mask/unmask sensitive info (Serial/MAC) for screenshot sharing"
+msgstr "Tekan <m> untuk menyembunyikan/menampilkan info sensitif (Serial/MAC) untuk berbagi tangkapan layar"
+
+#: boot.sh:1149
+msgid "m key pressed! Sensitive info (Serial/MAC) is now masked for screenshot sharing"
+msgstr "Tombol m ditekan! Info sensitif (Serial/MAC) kini disembunyikan untuk berbagi tangkapan layar"
+
+#: boot.sh:1153
+msgid "m key pressed! Sensitive info (Serial/MAC) is now unmasked"
+msgstr "Tombol m ditekan! Info sensitif (Serial/MAC) tidak lagi disembunyikan"

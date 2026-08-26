@@ -192,3 +192,15 @@ msgstr "デフォルト TTYD の root パスワードは 'blank お問い合わ�
 #: boot.sh:1111
 msgid "User config is on '/mnt/tcrp/user_config.json'"
 msgstr "ユーザー設定は '/mnt/tcrp/user_config.json にあります。 お問い合わせ"
+
+#: boot.sh:1147
+msgid "Press <m> to mask/unmask sensitive info (Serial/MAC) for screenshot sharing"
+msgstr "<m> を押すとスクリーンショット共有用にシリアル/MACなどの機密情報をマスク/解除します"
+
+#: boot.sh:1149
+msgid "m key pressed! Sensitive info (Serial/MAC) is now masked for screenshot sharing"
+msgstr "mキーが押されました！スクリーンショット共有用に機密情報（Serial/MAC）がマスクされました"
+
+#: boot.sh:1153
+msgid "m key pressed! Sensitive info (Serial/MAC) is now unmasked"
+msgstr "mキーが押されました！機密情報（Serial/MAC）のマスクが解除されました"

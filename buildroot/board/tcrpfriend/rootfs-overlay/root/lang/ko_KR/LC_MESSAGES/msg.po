@@ -197,3 +197,15 @@ msgstr "기본 TTYD 루트 비밀번호는 '공백'입니다 "
 #: boot.sh:1111
 msgid "User config is on '/mnt/tcrp/user_config.json'"
 msgstr "사용자 구성은 '/mnt/tcrp/user_config.json'에 있습니다"
+
+#: boot.sh:1147
+msgid "Press <m> to mask/unmask sensitive info (Serial/MAC) for screenshot sharing"
+msgstr "<m> 을 눌러 캡쳐 공유를 위해 민감정보(Serial/MAC)를 마스크/해제합니다"
+
+#: boot.sh:1149
+msgid "m key pressed! Sensitive info (Serial/MAC) is now masked for screenshot sharing"
+msgstr "m 키를 누릅니다! 캡쳐 공유를 위해 민감정보(Serial/MAC)가 마스크 처리되었습니다"
+
+#: boot.sh:1153
+msgid "m key pressed! Sensitive info (Serial/MAC) is now unmasked"
+msgstr "m 키를 누릅니다! 민감정보(Serial/MAC) 마스크가 해제되었습니다"

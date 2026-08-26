@@ -210,3 +210,15 @@ msgstr "Le mot de passe root TTYD par défaut est « vide » "
 #: boot.sh:1111
 msgid "User config is on '/mnt/tcrp/user_config.json'"
 msgstr "La configuration utilisateur est sur '/mnt/tcrp/user_config.json'"
+
+#: boot.sh:1147
+msgid "Press <m> to mask/unmask sensitive info (Serial/MAC) for screenshot sharing"
+msgstr "Appuyez sur <m> pour masquer/afficher les informations sensibles (numéro de série/MAC) avant un partage de capture d'écran"
+
+#: boot.sh:1149
+msgid "m key pressed! Sensitive info (Serial/MAC) is now masked for screenshot sharing"
+msgstr "Touche m appuyée ! Les informations sensibles (numéro de série/MAC) sont désormais masquées pour le partage de capture d'écran"
+
+#: boot.sh:1153
+msgid "m key pressed! Sensitive info (Serial/MAC) is now unmasked"
+msgstr "Touche m appuyée ! Les informations sensibles (numéro de série/MAC) ne sont plus masquées"

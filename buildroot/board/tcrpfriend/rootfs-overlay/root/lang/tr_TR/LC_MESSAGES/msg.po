@@ -203,3 +203,15 @@ msgstr "Varsayılan TTYD kök şifresi ‘blankk ‘ ‘ ‘ "
 #: boot.sh:1111
 msgid "User config is on '/mnt/tcrp/user_config.json'"
 msgstr "Kullanıcı yapılandırması ‘/mnt/tcrp/user_ configure.json ‘ ‘ ‘"
+
+#: boot.sh:1147
+msgid "Press <m> to mask/unmask sensitive info (Serial/MAC) for screenshot sharing"
+msgstr "Ekran görüntüsü paylaşımı için hassas bilgileri (Seri No/MAC) gizlemek/göstermek üzere <m> tuşuna basın"
+
+#: boot.sh:1149
+msgid "m key pressed! Sensitive info (Serial/MAC) is now masked for screenshot sharing"
+msgstr "m tuşuna basıldı! Ekran görüntüsü paylaşımı için hassas bilgiler (Seri No/MAC) artık gizlendi"
+
+#: boot.sh:1153
+msgid "m key pressed! Sensitive info (Serial/MAC) is now unmasked"
+msgstr "m tuşuna basıldı! Hassas bilgilerin (Seri No/MAC) gizlenmesi kaldırıldı"

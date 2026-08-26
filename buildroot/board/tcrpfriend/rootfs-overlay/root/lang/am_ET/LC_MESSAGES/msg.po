@@ -188,3 +188,15 @@ msgstr "ነባሪ የ TTYD root ይለፍ ቃል ባዶ ነው"
 #: boot.sh:1111
 msgid "User config is on '/mnt/tcrp/user_config.json'"
 msgstr "የተጠቃሚ ማዋቀር በ'/mnt/tcrp/user_config.json ላይ ነው።\""
+
+#: boot.sh:1147
+msgid "Press <m> to mask/unmask sensitive info (Serial/MAC) for screenshot sharing"
+msgstr "ለስክሪንሾት ማጋሪያ ሚስጥራዊ መረጃን (Serial/MAC) ለመደበቅ/ለማሳየት <m> ይጫኑ"
+
+#: boot.sh:1149
+msgid "m key pressed! Sensitive info (Serial/MAC) is now masked for screenshot sharing"
+msgstr "የ m ቁልፍ ተጫነ! ሚስጥራዊ መረጃ (Serial/MAC) አሁን ለስክሪንሾት ማጋሪያ ተደብቋል"
+
+#: boot.sh:1153
+msgid "m key pressed! Sensitive info (Serial/MAC) is now unmasked"
+msgstr "የ m ቁልፍ ተጫነ! ሚስጥራዊ መረጃ (Serial/MAC) መደበቅ ቆሟል"
