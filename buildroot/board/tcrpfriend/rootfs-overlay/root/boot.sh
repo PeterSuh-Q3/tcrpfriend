@@ -1168,6 +1168,7 @@ function countdown() {
             'm') # m key
                 [ "${MASKSENSITIVE}" = "true" ] && MASKSENSITIVE="false" || MASKSENSITIVE="true"
                 clear
+                showlastupdate
                 gethw
                 showcmdlineandhints
                 if [ "${MASKSENSITIVE}" = "true" ]; then
