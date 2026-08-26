@@ -359,6 +359,9 @@ function msgcyan() {
 function msgmagenta() {
     echo -en "\033[1;95m$1\033[0m"
 }
+function msglightcyan() {
+    echo -en "\033[1;96m$1\033[0m"
+}
 
 # MASKSENSITIVE="true" 이면 값을 고정 문자열로 가려서 반환한다 (캡쳐 공유용).
 function masktext() {
@@ -1238,7 +1241,7 @@ function showcmdlineandhints() {
     echo -e "$(msgcyan "$(TEXT "User config is on '/mnt/tcrp/user_config.json'")")"
     echo
     echo "zImage : ${MOD_ZIMAGE_FILE} initrd : ${MOD_RDGZ_FILE}, Module Processing Method : $(msgnormal "${dmpm}")"
-    echo "cmdline : $(msgblue "$(maskcmdline "${CMDLINE_LINE}")")"
+    echo "cmdline : $(msglightcyan "$(maskcmdline "${CMDLINE_LINE}")")"
     echo
     echo -e "$(msgalert "$(TEXT "Press <r> to enter a menu for Reset DSM Password")")"
     echo -e "$(msgnormal "$(TEXT "Press <e> to enter a menu for Edit USB/SATA Command Line")")"
@@ -2001,7 +2004,7 @@ function boot() {
         echo -e "$(msgcyan "$(TEXT "User config is on '/mnt/tcrp/user_config.json'")")"
         echo
         echo "zImage : ${MOD_ZIMAGE_FILE} initrd : ${MOD_RDGZ_FILE}, Module Processing Method : $(msgnormal "${dmpm}")"
-        echo "cmdline : $(msgblue "${CMDLINE_LINE}")"
+        echo "cmdline : $(msglightcyan "${CMDLINE_LINE}")"
         echo
         echo -e "$(msgwarning "$(TEXT "Entering a Junior mode (to re-install DSM)...")")"
     fi
