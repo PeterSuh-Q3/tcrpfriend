@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 260826
+# Date : 260827
 # User Variables :
 ###############################################################################
 
@@ -9,12 +9,15 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.5a"
+BOOTVER="0.1.5b"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
 # 캡쳐 공유 시 콘솔에 노출되는 Serial/MAC 을 즉시 가리기 위한 런타임 토글 ('m' 키, countdown() 참고)
 MASKSENSITIVE="false"
+# setmac()/getip() 등 boot()의 네트워크 설정 구간 출력을 담아뒀다가, 'm' 키로
+# 화면을 다시 그릴 때 (마스킹 적용해) 재출력하기 위한 로그 (boot(), countdown() 참고)
+BOOTSCREEN_LOG="/tmp/tcrpfriend_bootscreen.log"
 
 # Apply i18n
 export TEXTDOMAINDIR="/root/lang"
@@ -253,6 +256,12 @@ function history() {
 	       netconsole target MAC (xx:xx:xx:xx:xx:xx), and the static-IP
 	       network.<MAC>=... token. New light-magenta msgmagenta() color and
 	       i18n strings added for all 18 locales.
+	0.1.5b <m> redraw now also replays setmac()/getip()/checkupgrade()/getusb()/
+	       checkinternet()'s output (previously lost on clear) via a new
+	       BOOTSCREEN_LOG captured with tee during boot(), masking any MAC
+	       address found in it (maskmaconly()). showlastupdate() is shown
+	       again on redraw too. cmdline line color changed from blue to
+	       light cyan (msglightcyan()) for better visibility.
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -280,6 +289,9 @@ function showlastupdate() {
        settings-only changes.
 0.1.5a Add <m> hotkey to mask/unmask Serial/MAC (incl. netconsole and static-IP
        network.<MAC>= cmdline tokens) on screen for screenshot sharing.
+0.1.5b Fix <m> redraw dropping the setmac/getip/checkupgrade/getusb/checkinternet
+       output block; it is now replayed with MAC masking applied. cmdline is
+       now shown in light cyan instead of blue.
 
 EOF
 }
@@ -361,6 +373,16 @@ function msgmagenta() {
 }
 function msglightcyan() {
     echo -en "\033[1;96m$1\033[0m"
+}
+
+# MASKSENSITIVE="true" 이면 stdin에 있는 콜론 표기 MAC(xx:xx:xx:xx:xx:xx)만 가려서
+# 통과시킨다. BOOTSCREEN_LOG 재출력('m' 키, countdown() 참고)에 사용한다.
+function maskmaconly() {
+    if [ "${MASKSENSITIVE}" = "true" ]; then
+        sed -E 's/([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}/**:**:**:**:**:**/g'
+    else
+        cat
+    fi
 }
 
 # MASKSENSITIVE="true" 이면 값을 고정 문자열로 가려서 반환한다 (캡쳐 공유용).
@@ -1173,6 +1195,7 @@ function countdown() {
                 clear
                 showlastupdate
                 gethw
+                [ -s "${BOOTSCREEN_LOG}" ] && maskmaconly <"${BOOTSCREEN_LOG}"
                 showcmdlineandhints
                 if [ "${MASKSENSITIVE}" = "true" ]; then
                     echo -e "$(msgmagenta "$(TEXT "m key pressed! Sensitive info (Serial/MAC) is now masked for screenshot sharing")")"
@@ -1878,6 +1901,13 @@ function boot() {
 
     gethw
 
+    # 아래 네트워크 설정 구간(setmac/getip/checkupgrade/getusb/checkinternet 등)의
+    # 출력을 BOOTSCREEN_LOG 에도 남긴다 - 'm' 키로 화면을 다시 그릴 때 이 구간이
+    # 사라지지 않도록 재출력(마스킹 적용)하기 위함이다. countdown()의 'm' case 참고.
+    : >"${BOOTSCREEN_LOG}"
+    exec 3>&1 4>&2
+    exec > >(tee -a "${BOOTSCREEN_LOG}") 2>&1
+
     #Compare with the number of pre-counted disks in tcrp 0.1.1i
     if [ "${chkdisk}" = "true" ]; then
         if [ "${usrdisks}" != "${DISKCNT}" ]; then
@@ -1930,6 +1960,9 @@ function boot() {
     checkinternet
 
     [ "${INTERNET}" = "ON" ] && upgradefriend
+
+    # BOOTSCREEN_LOG 캡처 종료, 표준출력/에러를 원래 fd로 복원
+    exec 1>&3 2>&4 3>&- 4>&-
 
     if [ -f /mnt/tcrp/stopatfriend ]; then
         echo "Stop at friend detected, stopping boot"
