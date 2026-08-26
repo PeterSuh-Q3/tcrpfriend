@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 260624
+# Date : 260826
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.4z"
+BOOTVER="0.1.5a"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -264,16 +264,9 @@ function showlastupdate() {
        backuploader() call (tcrppart never propagated out of my()'s build subshell).
 0.1.4t Drop unused GCC, VIM, ImageMagick, and Samba4 from the target rootfs
        (initrd-friend: 92.3MB -> 75.8MB, -17.9%).
-0.1.4u Fix setnetwork() layering a static IP on top of an unreleased DHCP
-       lease instead of replacing it; honor ipsettings.ipiface for NIC selection.
-0.1.4v Fix patchramdisk()'s rsync smart-merge silently dropping the static
-       ifcfg-ethN back to Synology's stock DHCP config during a kernel/module patch.
 0.1.4w Switch static IP to a kernel cmdline parameter (network.<MAC>=...) added
        at kexec time - the ramdisk ifcfg-ethN approach doesn't survive DSM's own
        boot. Also fixes CMDLINE_LINE's hardcoded-space token assembly.
-0.1.4x Fix buildStaticNetworkCmdline() reading the pre-spoof permanent MAC from
-       /sys instead of the interface's own extra_cmdline.mac<N>, which broke
-       static IP entirely on models using MAC spoofing.
 0.1.4y Refresh my.sh.gz before auto-rebuild and re-source functions.sh so the
        current build stages the latest MSHELL Manager; fail/retry if refresh fails.
 0.1.4z Centralize user_config.json SHA-256 change detection in functions.sh;
