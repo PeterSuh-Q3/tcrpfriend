@@ -247,6 +247,12 @@ function history() {
 	0.1.4z Centralize user_config.json SHA-256 change detection in functions.sh.
 	       Reuse the same local-hash backup routine from menu_m.sh and boot.sh,
 	       and avoid redundant loader backups for settings-only changes.
+	0.1.5a Add <m> hotkey (alongside r/e/j) to mask/unmask Serial and MAC
+	       addresses shown on the console for screenshot sharing. Masks
+	       gethw()'s Serial/Mac line and the printed cmdline's sn=, mac1..mac8=,
+	       netconsole target MAC (xx:xx:xx:xx:xx:xx), and the static-IP
+	       network.<MAC>=... token. New light-magenta msgmagenta() color and
+	       i18n strings added for all 18 locales.
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -272,6 +278,8 @@ function showlastupdate() {
 0.1.4z Centralize user_config.json SHA-256 change detection in functions.sh;
        reuse it from menu_m.sh and boot.sh and avoid redundant backups for
        settings-only changes.
+0.1.5a Add <m> hotkey to mask/unmask Serial/MAC (incl. netconsole and static-IP
+       network.<MAC>= cmdline tokens) on screen for screenshot sharing.
 
 EOF
 }
