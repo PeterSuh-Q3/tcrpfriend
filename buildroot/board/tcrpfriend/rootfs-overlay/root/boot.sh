@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.5b"
+BOOTVER="0.1.5c"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -262,6 +262,16 @@ function history() {
 	       address found in it (maskmaconly()). showlastupdate() is shown
 	       again on redraw too. cmdline line color changed from blue to
 	       light cyan (msglightcyan()) for better visibility.
+0.1.5c ipsettings switches from a flat single-NIC object to an array
+	       supporting up to 8 NICs (matching the mac1..mac8 cmdline ceiling),
+	       with exactly one entry flagged primary owning the default route.
+	       migrate_ipsettings_schema() converts old flat configs in place
+	       (and moves ipproxy out to the new top-level netproxy.ipproxy,
+	       since a proxy isn't a per-NIC concept). buildStaticNetworkCmdline()
+	       now emits one network.<MAC>= token per configured NIC (non-primary
+	       entries carry empty gw/dns so only one default route is ever
+	       requested), and setnetwork() loops every entry at runtime, gating
+	       "ip route add default" to the primary NIC.
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -292,6 +302,9 @@ function showlastupdate() {
 0.1.5b Fix <m> redraw dropping the setmac/getip/checkupgrade/getusb/checkinternet
        output block; it is now replayed with MAC masking applied. cmdline is
        now shown in light cyan instead of blue.
+0.1.5c Support up to 8 static-IP NICs (ipsettings is now an array with one
+       primary NIC owning the default route); old single-NIC configs are
+       migrated automatically.
 
 EOF
 }
