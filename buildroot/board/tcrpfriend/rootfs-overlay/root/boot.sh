@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.5c"
+BOOTVER="0.1.5b"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -262,13 +262,6 @@ function history() {
 	       address found in it (maskmaconly()). showlastupdate() is shown
 	       again on redraw too. cmdline line color changed from blue to
 	       light cyan (msglightcyan()) for better visibility.
-	0.1.5c Sanitize CMDLINE_LINE right after reading general.usb_line: a stale
-	       user_config.json saved before cmdline_append() existed could have
-	       tokens glued without a space (confirmed on real hardware:
-	       "syno_hw_version=SA6400mev=qemu" as one token, corrupting the
-	       hw_version value). Inserts a space before syno_hw_version=, mev=,
-	       dom_szmax=, synoboot_satadom=, and network.<MAC>= whenever found
-	       glued to a preceding character; a no-op on already-correct cmdlines.
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -299,9 +292,6 @@ function showlastupdate() {
 0.1.5b Fix <m> redraw dropping the setmac/getip/checkupgrade/getusb/checkinternet
        output block; it is now replayed with MAC masking applied. cmdline is
        now shown in light cyan instead of blue.
-0.1.5c Sanitize CMDLINE_LINE against stale usb_line values saved before
-       cmdline_append() existed, where tokens could be glued without a space
-       (e.g. syno_hw_version=SA6400mev=qemu, confirmed on real hardware).
 
 EOF
 }
@@ -1987,25 +1977,6 @@ function boot() {
     fi
 
     CMDLINE_LINE=$(jq -r -e '.general .usb_line' /mnt/tcrp/user_config.json)
-
-    # 방어적 정화: 이 값은 tinycore-redpill 쪽에서 저장한 것을 그대로 읽어온
-    # 것인데, cmdline_append() 도입(2026-08-23) 이전에 저장된 user_config.json
-    # 이라면 과거의 공백-누락 버그로 "syno_hw_version=SA6400mev=qemu" 처럼 두
-    # 토큰이 공백 없이 붙어 저장돼 있을 수 있다(실기 확인 - syno_hw_version 값
-    # 자체가 깨져 시놀로지 하드웨어 버전 인식이 실패할 위험). 이후의
-    # cmdline_append() 호출들은 전부 정상이지만 이미 붙어있는 과거 값까지
-    # 되돌려 고쳐주지는 않으므로, 여기서 한 번 복구한다. 임의의 "글자+식별자="
-    # 패턴을 전부 건드리면 정상 토큰 안의 문자열까지 잘못 잘라버리므로(예:
-    # "console=" 중간의 "onsole=" 오매칭), 이 스크립트 자신이 CMDLINE_LINE에
-    # 추가하는 특정 키들만 표적으로 삼는다(functions.sh:sync_usb_line() 의
-    # per-key 방식과 동일 패턴). 이미 정상인 cmdline 에는 매칭되는 곳이 없어
-    # 아무 영향이 없다(멱등).
-    for _sanitize_key in syno_hw_version mev dom_szmax synoboot_satadom; do
-        CMDLINE_LINE="$(echo "${CMDLINE_LINE}" | sed -E "s/([^ ])${_sanitize_key}=/\1 ${_sanitize_key}=/g")"
-    done
-    CMDLINE_LINE="$(echo "${CMDLINE_LINE}" | sed -E 's/([^ ])network\./\1 network./g')"
-    unset _sanitize_key
-
 	if [ "$(echo "${KVER:-4}" | cut -d'.' -f1)" -lt 5 ]; then
 	    if [ ! "${BUS}" = "usb" ] && [ ! "${BUS}" = "nvme" ]; then
 	        # Check dom size and set max size accordingly
