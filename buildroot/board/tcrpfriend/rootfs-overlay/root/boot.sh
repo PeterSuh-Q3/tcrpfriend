@@ -872,52 +872,104 @@ function _cidr_to_netmask() {
     echo "${mask%.}"
 }
 
-# user_config.json의 ipsettings가 static이면 RR(RROrg/rr) 방식의
-# network.<MAC>=ip/netmask/gw/dns 커널 cmdline 파라미터를 echo한다(없으면
-# 빈 문자열). DSM 램디스크 안의 ifcfg-ethN을 직접 고치는 방식은 실기
-# 검증 결과 무효했다 - initrd 시점엔 파일이 정확히 들어가 있어도, DSM
-# 부팅 후 자체 systemd 네트워크 매니저("eth0 DHCP Client" 유닛)가 별도
-# 저장된 설정으로 다시 덮어써서 반영이 안 됐다(실기 45.34, 2026-08-23).
-# RR 프로젝트도 정확히 같은 이유로 ifcfg 접근을 쓰지 않고 커널 cmdline으로
+# ipsettings는 원래 flat object(NIC 1개) 스키마였다가 멀티 NIC(최대 8포트)
+# 지원을 위해 배열로 바뀌었다(2026-08-27). tcrpfriend는 별도 buildroot
+# rootfs라 tinycore-redpill의 functions.sh를 source할 수 없으므로, 그쪽의
+# migrate_ipsettings_schema()와 동일한 로직을 여기 독립적으로 둔다. 예전
+# flat object를 만나면 primary:true를 붙인 1-원소 배열로, 그 외
+# null/누락이면 빈 배열로 감싼다. 몇 번을 호출해도 안전하도록 멱등하며,
+# updateuserconfigfile()의 usrcfgver 게이트는 이미 배열로 바뀐 설정을
+# 다시 건드리지 않으므로 이 함수를 실제 사용 시점(아래 두 함수)마다 직접
+# 호출해 항상 최신 스키마를 보장한다.
+function migrate_ipsettings_schema() {
+    local cfg="/mnt/tcrp/user_config.json"
+    local t json oldproxy
+    [ -f "${cfg}" ] || return 0
+    t="$(jq -r '(.ipsettings // [] | type)' "${cfg}" 2>/dev/null)"
+
+    if [ "${t}" = "object" ]; then
+        oldproxy=$(jq -r '.ipsettings.ipproxy // empty' "${cfg}" 2>/dev/null)
+        json=$(jq 'if (.ipsettings.ipset // "") == "static" and (.ipsettings.ipaddr // "") != "" then
+                .ipsettings = [ (.ipsettings | del(.ipproxy) | . + {primary:true}) ]
+            else
+                .ipsettings = []
+            end' "${cfg}")
+        [ -n "${oldproxy}" ] && json=$(echo "${json}" | jq --arg p "${oldproxy}" '.netproxy.ipproxy = $p')
+        echo "${json}" | jq . >"${cfg}.tmp" && cp "${cfg}.tmp" "${cfg}" && rm -f "${cfg}.tmp"
+    elif [ "${t}" != "array" ]; then
+        jq '.ipsettings = []' "${cfg}" >"${cfg}.tmp" && cp "${cfg}.tmp" "${cfg}" && rm -f "${cfg}.tmp"
+    fi
+
+    jq 'if ((.ipsettings|type)=="array") and ((.ipsettings|length) > 0)
+            and (([.ipsettings[] | select(.primary==true)] | length) == 0)
+        then .ipsettings[0].primary = true
+        else . end' "${cfg}" >"${cfg}.tmp" && cp "${cfg}.tmp" "${cfg}" && rm -f "${cfg}.tmp"
+}
+
+# user_config.json의 ipsettings 배열에 있는 static 항목마다 RR(RROrg/rr)
+# 방식의 network.<MAC>=ip/netmask/gw/dns 커널 cmdline 파라미터를 만들어
+# 개행으로 이어붙여 echo한다(없으면 빈 문자열). primary가 아닌 항목은
+# gw/dns를 비운 세그먼트로 넘겨 기본 라우트가 여러 NIC에서 경쟁하지
+# 않게 한다. DSM 램디스크 안의 ifcfg-ethN을 직접 고치는 방식은 실기 검증
+# 결과 무효했다 - initrd 시점엔 파일이 정확히 들어가 있어도, DSM 부팅 후
+# 자체 systemd 네트워크 매니저("eth0 DHCP Client" 유닛)가 별도 저장된
+# 설정으로 다시 덮어써서 반영이 안 됐다(실기 45.34, 2026-08-23). RR
+# 프로젝트도 정확히 같은 이유로 ifcfg 접근을 쓰지 않고 커널 cmdline으로
 # 넘긴다는 걸 확인하고 이 방식으로 전환했다. CMDLINE_LINE 조립부(아래)에서
 # 호출한다.
 function buildStaticNetworkCmdline() {
-    local ipset iface addr gw dns
-    ipset="$(jq -r -e .ipsettings.ipset /mnt/tcrp/user_config.json 2>/dev/null)"
-    [ "${ipset}" = "static" ] || return 0
+    migrate_ipsettings_schema
 
-    iface="$(jq -r -e .ipsettings.ipiface /mnt/tcrp/user_config.json 2>/dev/null)"
-    addr="$(jq -r -e .ipsettings.ipaddr /mnt/tcrp/user_config.json 2>/dev/null)"
-    gw="$(jq -r -e .ipsettings.ipgw /mnt/tcrp/user_config.json 2>/dev/null)"
-    dns="$(jq -r -e .ipsettings.ipdns /mnt/tcrp/user_config.json 2>/dev/null)"
+    local count
+    count=$(jq -r '(.ipsettings // [] | length)' /mnt/tcrp/user_config.json 2>/dev/null)
+    case "${count}" in ''|*[!0-9]*) count=0 ;; esac
+    [ "${count}" -gt 0 ] || return 0
 
-    if ! echo "${iface}" | grep -qE '^eth[0-7]$' || \
-       ! echo "${addr}" | grep -qE '^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}$'; then
-        msgwarning "buildStaticNetworkCmdline: invalid ipsettings (iface=${iface}, addr=${addr}); staying on DHCP.\n" >&2
-        return 0
-    fi
+    local i iface addr gw dns isprimary tokens=""
+    for ((i = 0; i < count; i++)); do
+        iface="$(jq -r ".ipsettings[${i}].ipiface // empty" /mnt/tcrp/user_config.json 2>/dev/null)"
+        addr="$(jq -r ".ipsettings[${i}].ipaddr // empty" /mnt/tcrp/user_config.json 2>/dev/null)"
+        gw="$(jq -r ".ipsettings[${i}].ipgw // empty" /mnt/tcrp/user_config.json 2>/dev/null)"
+        dns="$(jq -r ".ipsettings[${i}].ipdns // empty" /mnt/tcrp/user_config.json 2>/dev/null)"
+        isprimary="$(jq -r ".ipsettings[${i}].primary // false" /mnt/tcrp/user_config.json 2>/dev/null)"
 
-    # /sys/class/net/<iface>/address at this point (still inside FRIEND, before
-    # DSM's kernel applies the cmdline's own mac1..mac8 spoofing) reports the NIC's
-    # permanent hardware MAC, not the MAC DSM will actually present on eth0 once
-    # booted - confirmed on real hardware (a model using MAC spoofing showed
-    # /sys eth0 = permaddr while the booted DSM's eth0 was mac1, so mshell-network's
-    # post-boot MAC compare never matched and the static IP was silently never
-    # applied). extra_cmdline.mac<N+1> (the same value already embedded in the
-    # cmdline as mac<N+1>=) is what DSM will actually assign to ethN, so use that
-    # instead of reading the interface here.
-    local macidx mac
-    macidx=$(( ${iface#eth} + 1 ))
-    mac="$(jq -r -e ".extra_cmdline.mac${macidx}" /mnt/tcrp/user_config.json 2>/dev/null | tr -d ':' | tr 'a-f' 'A-F')"
-    if [ -z "${mac}" ] || [ "${mac}" = "NULL" ]; then
-        msgwarning "buildStaticNetworkCmdline: could not read mac${macidx} for ${iface}; staying on DHCP.\n" >&2
-        return 0
-    fi
+        if ! echo "${iface}" | grep -qE '^eth[0-7]$' || \
+           ! echo "${addr}" | grep -qE '^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}$'; then
+            msgwarning "buildStaticNetworkCmdline: invalid ipsettings entry (iface=${iface}, addr=${addr}); skipping.\n" >&2
+            continue
+        fi
 
-    local ip="${addr%%/*}" prefix="${addr##*/}" netmask
-    netmask="$(_cidr_to_netmask "${prefix}")"
+        # /sys/class/net/<iface>/address at this point (still inside FRIEND, before
+        # DSM's kernel applies the cmdline's own mac1..mac8 spoofing) reports the NIC's
+        # permanent hardware MAC, not the MAC DSM will actually present on ethN once
+        # booted - confirmed on real hardware (a model using MAC spoofing showed
+        # /sys eth0 = permaddr while the booted DSM's eth0 was mac1, so mshell-network's
+        # post-boot MAC compare never matched and the static IP was silently never
+        # applied). extra_cmdline.mac<N+1> (the same value already embedded in the
+        # cmdline as mac<N+1>=) is what DSM will actually assign to ethN, so use that
+        # instead of reading the interface here.
+        local macidx mac
+        macidx=$(( ${iface#eth} + 1 ))
+        mac="$(jq -r -e ".extra_cmdline.mac${macidx}" /mnt/tcrp/user_config.json 2>/dev/null | tr -d ':' | tr 'a-f' 'A-F')"
+        if [ -z "${mac}" ] || [ "${mac}" = "NULL" ]; then
+            msgwarning "buildStaticNetworkCmdline: could not read mac${macidx} for ${iface}; skipping.\n" >&2
+            continue
+        fi
 
-    echo "network.${mac}=${ip}/${netmask}/${gw}/${dns}"
+        local ip="${addr%%/*}" prefix="${addr##*/}" netmask
+        netmask="$(_cidr_to_netmask "${prefix}")"
+
+        # primary가 아닌 NIC은 gw/dns를 비워 기본 라우트를 딱 하나로 유지한다.
+        if [ "${isprimary}" != "true" ]; then
+            gw=""
+            dns=""
+        fi
+
+        [ -n "${tokens}" ] && tokens="${tokens} "
+        tokens="${tokens}network.${mac}=${ip}/${netmask}/${gw}/${dns}"
+    done
+
+    echo "${tokens}"
 }
 
 function patchramdisk() {
@@ -1129,7 +1181,7 @@ function updateuserconfigfile() {
         jsonfile=$([ "$(echo $jsonfile | jq '.general .redpillmake')" = "null" ] && echo $jsonfile | jq '.general |= . + { "redpillmake":"dev" }' || echo $jsonfile | jq .)
         jsonfile=$([ "$(echo $jsonfile | jq '.general .friendautoupd')" = "null" ] && echo $jsonfile | jq '.general |= . + { "friendautoupd":"true" }' || echo $jsonfile | jq .)
         jsonfile=$([ "$(echo $jsonfile | jq '.general .hidesensitive')" = "null" ] && echo $jsonfile | jq '.general |= . + { "hidesensitive":"false" }' || echo $jsonfile | jq .)
-        jsonfile=$([ "$(echo $jsonfile | jq '.ipsettings')" = "null" ] && echo $jsonfile | jq '. |= .  + {"ipsettings": { "ipset":"", "ipaddr":"", "ipgw":"", "ipdns":"", "ipproxy":"" }}' || echo $jsonfile | jq .)
+        jsonfile=$([ "$(echo $jsonfile | jq '.ipsettings')" = "null" ] && echo $jsonfile | jq '. |= .  + {"ipsettings": []}' || echo $jsonfile | jq .)
         cp $userconfigfile $backupfile
         echo $jsonfile | jq . >$userconfigfile && echo "Done" || echo "Failed"
 
@@ -1571,62 +1623,78 @@ function setmac() {
 }
 
 function setnetwork() {
+    migrate_ipsettings_schema
 
-    # ipiface: user_config.json에 사용자가 menu_m.sh의 staticIpMenu()로 직접
-    # 지정한 대상 NIC(예: "eth1"). 예전엔 이 필드가 없어서 "ip a 결과 중
-    # UP 상태인 첫 인터페이스"를 그냥 집었는데, 멀티 NIC 실기에서는 사용자가
-    # 의도한 것과 다른 NIC이 잡힐 수 있었다(실기 미검증, 2026-08-23 발견).
-    # 하위호환: ipiface가 없는 예전 설정이면 기존 자동추측 방식으로 폴백.
-    ethdev="$(jq -r -e .ipsettings.ipiface /mnt/tcrp/user_config.json 2>/dev/null)"
-    if [ -z "${ethdev}" ] || [ "${ethdev}" = "null" ]; then
-        ethdev=$(ip a | grep UP | grep -v LOOP | head -1 | awk '{print $2}' | sed -e 's/://g')
-        echo "ipsettings.ipiface not set, falling back to auto-detected interface ${ethdev}" | tee -a boot.log
-    fi
+    local count
+    count=$(jq -r '(.ipsettings // [] | length)' /mnt/tcrp/user_config.json 2>/dev/null)
+    case "${count}" in ''|*[!0-9]*) count=0 ;; esac
 
-    echo "Network settings are set to static proceeding setting static IP settings" | tee -a boot.log
-    staticip="$(jq -r -e .ipsettings.ipaddr /mnt/tcrp/user_config.json)"
-    staticdns="$(jq -r -e .ipsettings.ipdns /mnt/tcrp/user_config.json)"
-    staticgw="$(jq -r -e .ipsettings.ipgw /mnt/tcrp/user_config.json)"
-    staticproxy="$(jq -r -e .ipsettings.ipproxy /mnt/tcrp/user_config.json)"
-
-    if ! echo "${staticip}" | grep -qE '^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}$'; then
-        msgalert "Invalid static IP address in user_config.json (${staticip}); staying on DHCP.\n" | tee -a boot.log
+    if [ "${count}" -eq 0 ]; then
+        # 하위호환: 배열이 비어있는데(마이그레이션 실패 등) ipiface만 남은
+        # 극히 드문 경우를 위한 예전 자동추측 폴백은 제거하지 않되, 정상
+        # 경로에서는 절대 여기로 오지 않는다(migrate_ipsettings_schema가
+        # 항상 배열을 보장하므로).
+        echo "No static IP entries in ipsettings; staying on DHCP." | tee -a boot.log
         return
     fi
 
-    # 예전 구현은 ${ethdev}가 이미 dhcpcd로 받은 주소를 그대로 둔 채
-    # ip a add로 static 주소를 하나 더 얹기만 했다 - 인터페이스에 DHCP/static
-    # 주소가 동시에 남아 소스 주소 선택과 라우팅이 예측 불가능해지는 문제가
-    # 있었다(실기 검증 안 됨, 2026-08-23 발견). dhcpcd -k로 이 인터페이스의
-    # 임대만 정확히 해제한다(다른 NIC이 있다면 그쪽 dhcpcd는 그대로 유지) -
-    # setmac()처럼 서비스 전체를 내렸다 올리면 멀티 NIC 환경에서 static이
-    # 아닌 다른 NIC의 DHCP까지 같이 끊어졌다 붙는다.
-    dhcpcd -k "${ethdev}" >/dev/null 2>&1
-    ip addr flush dev "${ethdev}" 2>&1 | tee -a boot.log
-    ip link set dev "${ethdev}" up 2>&1 | tee -a boot.log
+    staticproxy="$(jq -r '.netproxy.ipproxy // empty' /mnt/tcrp/user_config.json 2>/dev/null)"
+    if [ -n "${staticproxy}" ]; then
+        export HTTP_PROXY="$staticproxy" HTTPS_PROXY="$staticproxy"
+        export http_proxy="$staticproxy" https_proxy="$staticproxy"
+    fi
 
-    ip a add "$staticip" dev $ethdev | tee -a boot.log
-    [ -n "$staticdns" ] && [ $(grep ${staticdns} /etc/resolv.conf | wc -l) -eq 0 ] && sed -i "a nameserver $staticdns" /etc/resolv.conf | tee -a boot.log
-    [ -n "$staticgw" ] && [ $(ip route | grep "default via ${staticgw}" | wc -l) -eq 0 ] && ip route add default via $staticgw dev $ethdev | tee -a boot.log
-    [ -n "$staticproxy" ] &&
-        export HTTP_PROXY="$staticproxy" && export HTTPS_PROXY="$staticproxy" &&
-        export http_proxy="$staticproxy" && export https_proxy="$staticproxy" | tee -a boot.log
+    local i
+    for ((i = 0; i < count; i++)); do
+        ethdev="$(jq -r ".ipsettings[${i}].ipiface // empty" /mnt/tcrp/user_config.json 2>/dev/null)"
+        staticip="$(jq -r ".ipsettings[${i}].ipaddr // empty" /mnt/tcrp/user_config.json 2>/dev/null)"
+        staticdns="$(jq -r ".ipsettings[${i}].ipdns // empty" /mnt/tcrp/user_config.json 2>/dev/null)"
+        staticgw="$(jq -r ".ipsettings[${i}].ipgw // empty" /mnt/tcrp/user_config.json 2>/dev/null)"
+        isprimary="$(jq -r ".ipsettings[${i}].primary // false" /mnt/tcrp/user_config.json 2>/dev/null)"
 
-    IP="$(ip route get 1.1.1.1 2>/dev/null | grep $ethdev | awk '{print $7}')"
-    if [ -n "${IP}" ]; then
-        DRIVER=$(ls -ld /sys/class/net/${ethdev}/device/driver 2>/dev/null | awk -F '/' '{print $NF}')
-        VENDOR=$(cat /sys/class/net/${ethdev}/device/vendor | sed 's/0x//')
-        DEVICE=$(cat /sys/class/net/${ethdev}/device/device | sed 's/0x//')
-        if [ ! -z "${VENDOR}" ] && [ ! -z "${DEVICE}" ]; then
-            MATCHDRIVER=$(echo "$(matchpciidmodule ${VENDOR} ${DEVICE})")
-            if [ ! -z "${MATCHDRIVER}" ]; then
-                if [ "${MATCHDRIVER}" != "${DRIVER}" ]; then
-                    DRIVER=${MATCHDRIVER}
+        if [ -z "${ethdev}" ] || ! echo "${staticip}" | grep -qE '^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}$'; then
+            msgalert "Invalid static IP entry in user_config.json (iface=${ethdev}, addr=${staticip}); skipping.\n" | tee -a boot.log
+            continue
+        fi
+
+        echo "Applying static IP settings for ${ethdev}" | tee -a boot.log
+
+        # 예전 구현은 ${ethdev}가 이미 dhcpcd로 받은 주소를 그대로 둔 채
+        # ip a add로 static 주소를 하나 더 얹기만 했다 - 인터페이스에 DHCP/static
+        # 주소가 동시에 남아 소스 주소 선택과 라우팅이 예측 불가능해지는 문제가
+        # 있었다(실기 검증 안 됨, 2026-08-23 발견). dhcpcd -k로 이 인터페이스의
+        # 임대만 정확히 해제한다(다른 NIC이 있다면 그쪽 dhcpcd는 그대로 유지) -
+        # setmac()처럼 서비스 전체를 내렸다 올리면 멀티 NIC 환경에서 static이
+        # 아닌 다른 NIC의 DHCP까지 같이 끊어졌다 붙는다.
+        dhcpcd -k "${ethdev}" >/dev/null 2>&1
+        ip addr flush dev "${ethdev}" 2>&1 | tee -a boot.log
+        ip link set dev "${ethdev}" up 2>&1 | tee -a boot.log
+
+        ip a add "$staticip" dev $ethdev | tee -a boot.log
+        [ -n "$staticdns" ] && [ $(grep ${staticdns} /etc/resolv.conf | wc -l) -eq 0 ] && sed -i "a nameserver $staticdns" /etc/resolv.conf | tee -a boot.log
+        # 기본 라우트는 primary NIC 하나만 소유한다 - 여러 NIC이 각자
+        # ip route add default를 실행하면 경로가 계속 뒤집히거나 커널이
+        # 임의로 하나만 골라 예측 불가능해진다(2026-08-27, 멀티 NIC 설계).
+        if [ "${isprimary}" = "true" ] && [ -n "$staticgw" ] && [ $(ip route | grep "default via ${staticgw}" | wc -l) -eq 0 ]; then
+            ip route add default via $staticgw dev $ethdev | tee -a boot.log
+        fi
+
+        IP="$(ip route get 1.1.1.1 2>/dev/null | grep $ethdev | awk '{print $7}')"
+        if [ -n "${IP}" ]; then
+            DRIVER=$(ls -ld /sys/class/net/${ethdev}/device/driver 2>/dev/null | awk -F '/' '{print $NF}')
+            VENDOR=$(cat /sys/class/net/${ethdev}/device/vendor | sed 's/0x//')
+            DEVICE=$(cat /sys/class/net/${ethdev}/device/device | sed 's/0x//')
+            if [ ! -z "${VENDOR}" ] && [ ! -z "${DEVICE}" ]; then
+                MATCHDRIVER=$(echo "$(matchpciidmodule ${VENDOR} ${DEVICE})")
+                if [ ! -z "${MATCHDRIVER}" ]; then
+                    if [ "${MATCHDRIVER}" != "${DRIVER}" ]; then
+                        DRIVER=${MATCHDRIVER}
+                    fi
                 fi
             fi
-        fi    
-        echo "IP Address : $(msgnormal "${IP}"), Network Interface Card : ${ethdev} [${VENDOR}:${DEVICE}] (${DRIVER}) "    
-    fi
+            echo "IP Address : $(msgnormal "${IP}"), Network Interface Card : ${ethdev} [${VENDOR}:${DEVICE}] (${DRIVER}) "
+        fi
+    done
 }
 
 function wait_mmc() {
@@ -1918,16 +1986,17 @@ function boot() {
         fi
     fi
 
-    # user_config.json ipsettings block
+    # user_config.json ipsettings block (2026-08-27: 배열, 최대 8포트)
 
-    #  "ipsettings" : {
-    #     "ipset": "static",
-    #     "ipaddr":"192.168.71.146/24",
-    #     "ipgw" : "192.168.71.1",
-    #     "ipdns": "",
-    #     "ipproxy" : ""
-    # },
-    if [ "$(jq -r -e .ipsettings.ipset /mnt/tcrp/user_config.json)" = "static" ]; then
+    #  "ipsettings" : [
+    #     {"ipset":"static","ipiface":"eth0","ipaddr":"192.168.71.146/24",
+    #      "ipgw":"192.168.71.1","ipdns":"","primary":true},
+    #     {"ipset":"static","ipiface":"eth1","ipaddr":"10.0.0.10/24",
+    #      "ipgw":"","ipdns":"","primary":false}
+    #  ],
+    #  "netproxy": {"ipproxy": ""}
+    migrate_ipsettings_schema
+    if [ "$(jq -r '(.ipsettings // [] | length) > 0' /mnt/tcrp/user_config.json 2>/dev/null)" = "true" ]; then
         setnetwork
     else
         sortnetif 2>&1 | awk '{ print strftime("%Y-%m-%d %H:%M:%S"), $0; }' >>$FRIENDLOG
