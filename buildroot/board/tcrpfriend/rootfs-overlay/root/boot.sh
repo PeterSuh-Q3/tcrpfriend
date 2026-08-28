@@ -1741,15 +1741,32 @@ function setnetwork() {
         # setmac()처럼 서비스 전체를 내렸다 올리면 멀티 NIC 환경에서 static이
         # 아닌 다른 NIC의 DHCP까지 같이 끊어졌다 붙는다.
         dhcpcd -k "${ethdev}" >/dev/null 2>&1
+        # FRIEND is normally dhcpcd based, but a BusyBox udhcpc lease can be
+        # inherited in mixed environments.  Do not leave it running: it may
+        # re-add a DHCP address/default route after this static configuration.
+        for udhcpc_pidfile in "/var/run/udhcpc.${ethdev}.pid" "/run/udhcpc.${ethdev}.pid"; do
+            if [ -r "${udhcpc_pidfile}" ]; then
+                udhcpc_pid=$(cat "${udhcpc_pidfile}" 2>/dev/null)
+                case "${udhcpc_pid}" in
+                    ''|*[!0-9]*) ;;
+                    *)
+                        if [ -r "/proc/${udhcpc_pid}/cmdline" ] \
+                            && tr '\0' ' ' < "/proc/${udhcpc_pid}/cmdline" | grep -q "udhcpc.*-i ${ethdev}"; then
+                            kill "${udhcpc_pid}" >/dev/null 2>&1 || true
+                        fi
+                        ;;
+                esac
+            fi
+        done
         ip addr flush dev "${ethdev}" 2>&1 | tee -a boot.log
         ip link set dev "${ethdev}" up 2>&1 | tee -a boot.log
 
         ip a add "$staticip" dev $ethdev | tee -a boot.log
-        # 기본 라우트는 primary NIC 하나만 소유한다 - 여러 NIC이 각자
-        # ip route add default를 실행하면 경로가 계속 뒤집히거나 커널이
-        # 임의로 하나만 골라 예측 불가능해진다(2026-08-27, 멀티 NIC 설계).
-        if [ "${isprimary}" = "true" ] && [ -n "$staticgw" ] && [ $(ip route | grep "default via ${staticgw}" | wc -l) -eq 0 ]; then
-            ip route add default via $staticgw dev $ethdev | tee -a boot.log
+        # 기본 라우트는 primary NIC 하나만 소유한다. 다른 DHCP NIC이 남긴
+        # default route도 먼저 모두 제거한 뒤 replace로 primary를 확정한다.
+        if [ "${isprimary}" = "true" ] && [ -n "$staticgw" ]; then
+            while ip route del default >/dev/null 2>&1; do :; done
+            ip route replace default via "$staticgw" dev "$ethdev" | tee -a boot.log
         fi
 
         IP="$(ip route get 1.1.1.1 2>/dev/null | grep $ethdev | awk '{print $7}')"
