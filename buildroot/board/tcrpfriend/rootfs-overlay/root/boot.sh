@@ -1499,52 +1499,81 @@ function getip() {
     ethdevs=$(ls /sys/class/net/ | grep -v lo || true)
 
     sleep 3
-    # Wait for an IP
-    for eth in $ethdevs; do 
-        COUNT=0
-        DRIVER=$(ls -ld /sys/class/net/${eth}/device/driver 2>/dev/null | awk -F '/' '{print $NF}')
-        if [ $(ls -l /sys/class/net/${eth}/device | grep "0000:" | wc -l) -gt 0 ]; then
-            BUSID=$(ls -ld /sys/class/net/${eth}/device 2>/dev/null | awk -F '0000:' '{print $NF}')
-        elif [ $(ls -l /sys/class/net/${eth} | grep "usb" | wc -l) -gt 0 ]; then
-            BUSID="USB"
-        else
-            BUSID=""
-        fi
-		
-		read VENDOR DEVICE < <(get_vendor_device $eth)
-		if [ ! -z "${VENDOR}" ] && [ ! -z "${DEVICE}" ]; then
-			MATCHDRIVER=$(echo "$(matchpciidmodule ${VENDOR} ${DEVICE})")
-			if [ ! -z "${MATCHDRIVER}" ]; then
-				if [ "${MATCHDRIVER}" != "${DRIVER}" ]; then
-					DRIVER=${MATCHDRIVER}
-				fi
-			fi
-		fi
 
-        while true; do
-            if [ ${COUNT} -eq 5 ]; then
-                break
+    # 예전 구현은 "default 라우트 + metric을 가진 인터페이스"만 화면에 표시했다.
+    # 이게 원래는 "DHCP로 기본 라우트를 받은 NIC 하나"만 있던 시절엔 문제
+    # 없었지만, 멀티 NIC 정적 IP(2026-08-27)를 넣고 나니 기본 라우트는
+    # primary NIC 하나만 갖도록 설계했으므로 non-primary static NIC과, 기본
+    # 라우트를 안 받은 DHCP NIC이 전부 화면에서 사라져버렸다(실기 지적,
+    # 2026-08-29) - 즉 "IP는 있는데 default route는 없는" 흔한 케이스를
+    # 전부 숨겨버리는 버그였다. 이제 IP가 있는 인터페이스는 전부 보여주되,
+    # Static/DHCP 두 섹션으로 나눠 정적/동적 설정이 섞여 있어도 한눈에
+    # 구분되게 한다.
+    local eth count ip4 driver busid vendor device matchdriver is_static
+    local -a static_lines=() dhcp_lines=()
+    LASTIP=""
+
+    for eth in $ethdevs; do
+        driver=$(ls -ld /sys/class/net/${eth}/device/driver 2>/dev/null | awk -F '/' '{print $NF}')
+        if [ $(ls -l /sys/class/net/${eth}/device 2>/dev/null | grep "0000:" | wc -l) -gt 0 ]; then
+            busid=$(ls -ld /sys/class/net/${eth}/device 2>/dev/null | awk -F '0000:' '{print $NF}')
+        elif [ $(ls -l /sys/class/net/${eth} 2>/dev/null | grep "usb" | wc -l) -gt 0 ]; then
+            busid="USB"
+        else
+            busid=""
+        fi
+
+        read vendor device < <(get_vendor_device $eth)
+        if [ ! -z "${vendor}" ] && [ ! -z "${device}" ]; then
+            matchdriver=$(echo "$(matchpciidmodule ${vendor} ${device})")
+            if [ ! -z "${matchdriver}" ]; then
+                if [ "${matchdriver}" != "${driver}" ]; then
+                    driver=${matchdriver}
+                fi
             fi
-            COUNT=$((${COUNT} + 1))
-            if [ $(ip route | grep default | grep metric | grep ${eth} | wc -l) -eq 1 ]; then
-                IP="$(ip route show dev ${eth} 2>/dev/null | grep default | grep metric | awk '{print $7}')"
-                #IP="$(ip route get 1.1.1.1 2>/dev/null | grep ${eth} | awk '{print $7}')"
-                IP=$(echo -n "${IP}" | tr '\n' '\b')
-                LASTIP="${IP}"
-                break
-            else
-                IP=""
-            fi
+        fi
+
+        # DHCP는 리스를 받는 데 시간이 걸릴 수 있어 최대 5초 대기. static은
+        # setnetwork()가 이미 부팅 초반에 적용해 놨어야 정상이라 보통 바로 잡힌다.
+        count=0
+        ip4=""
+        while [ ${count} -lt 5 ]; do
+            ip4="$(ip -4 addr show dev "${eth}" 2>/dev/null | awk '/inet /{print $2; exit}')"
+            [ -n "${ip4}" ] && break
+            count=$((count + 1))
             sleep 1
         done
-        [ -n "${IP}" ] && echo "IP Addr : $(msgnormal "${IP}"), Network Interface Card : ${BUSID}, ${eth} [${VENDOR}:${DEVICE}] (${DRIVER}) "
-		IP=""
-		BUSID=""
-		VENDOR=""
-		DEVICE=""
-		DRIVER=""
+        [ -z "${ip4}" ] && continue
+
+        LASTIP="${ip4%%/*}"
+        is_static=$(jq -r --arg d "${eth}" '[.ipsettings[]? | select(.ipiface == $d)] | length' "${userconfigfile}" 2>/dev/null)
+        local line="$(msgnormal "${ip4}"), Network Interface Card : ${busid}, ${eth} [${vendor}:${device}] (${driver}) "
+        if [ "${is_static}" != "0" ] && [ -n "${is_static}" ]; then
+            static_lines+=("${line}")
+            [ "$(jq -r --arg d "${eth}" '[.ipsettings[]? | select(.ipiface == $d)][0].primary // false' "${userconfigfile}" 2>/dev/null)" = "true" ] && PRIMARYIP="${ip4%%/*}"
+        else
+            dhcp_lines+=("${line}")
+        fi
     done
-    IP="${LASTIP}"
+
+    if [ ${#static_lines[@]} -gt 0 ]; then
+        echo "-- Static IP --"
+        for line in "${static_lines[@]}"; do
+            echo "IP Addr : ${line}"
+        done
+    fi
+    if [ ${#dhcp_lines[@]} -gt 0 ]; then
+        echo "-- DHCP --"
+        for line in "${dhcp_lines[@]}"; do
+            echo "IP Addr : ${line}"
+        done
+    fi
+
+    # 이 뒤로는 $IP 를 "네트워크가 살아있는지"만 판단하는 존재 여부 플래그로
+    # 쓰는 호출부(patchramdisk/checkupgrade/upgradefriend 등)만 있고, 값
+    # 자체를 실제 통신에 쓰는 곳은 없다 - primary가 있으면 그 IP를, 없으면
+    # 마지막으로 확인된 IP를 대표값으로 남긴다.
+    IP="${PRIMARYIP:-${LASTIP}}"
 }
 
 function checkfiles() {
