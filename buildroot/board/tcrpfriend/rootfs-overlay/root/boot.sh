@@ -890,33 +890,45 @@ function _cidr_to_netmask() {
 # rootfs라 tinycore-redpill의 functions.sh를 source할 수 없으므로, 그쪽의
 # migrate_ipsettings_schema()와 동일한 로직을 여기 독립적으로 둔다. 예전
 # flat object를 만나면 primary:true를 붙인 1-원소 배열로, 그 외
-# null/누락이면 빈 배열로 감싼다. 몇 번을 호출해도 안전하도록 멱등하며,
+# null/누락이면 빈 배열로 감싼다. proxy와 DNS는 NIC 개념이 아니므로(DNS는
+# 특히 Linux resolv.conf가 인터페이스를 구분하지 않아 NIC별로 둬도 "그 NIC
+# 전용"으로 격리되지 않는다 - 2026-08-28 설계 정정) 최상위 .netproxy.ipproxy
+# / .netdns.ipdns로 옮긴다. 몇 번을 호출해도 안전하도록 멱등하며,
 # updateuserconfigfile()의 usrcfgver 게이트는 이미 배열로 바뀐 설정을
 # 다시 건드리지 않으므로 이 함수를 실제 사용 시점(아래 두 함수)마다 직접
 # 호출해 항상 최신 스키마를 보장한다.
 function migrate_ipsettings_schema() {
     local cfg="/mnt/tcrp/user_config.json"
-    local t json oldproxy
+    local t json oldproxy olddns
     [ -f "${cfg}" ] || return 0
     t="$(jq -r '(.ipsettings // [] | type)' "${cfg}" 2>/dev/null)"
 
     if [ "${t}" = "object" ]; then
         oldproxy=$(jq -r '.ipsettings.ipproxy // empty' "${cfg}" 2>/dev/null)
+        olddns=$(jq -r '.ipsettings.ipdns // empty' "${cfg}" 2>/dev/null)
         json=$(jq 'if (.ipsettings.ipset // "") == "static" and (.ipsettings.ipaddr // "") != "" then
-                .ipsettings = [ (.ipsettings | del(.ipproxy) | . + {primary:true}) ]
+                .ipsettings = [ (.ipsettings | del(.ipproxy, .ipdns) | . + {primary:true}) ]
             else
                 .ipsettings = []
             end' "${cfg}")
         [ -n "${oldproxy}" ] && json=$(echo "${json}" | jq --arg p "${oldproxy}" '.netproxy.ipproxy = $p')
+        [ -n "${olddns}" ] && json=$(echo "${json}" | jq --arg d "${olddns}" '.netdns.ipdns = $d')
         echo "${json}" | jq . >"${cfg}.tmp" && cp "${cfg}.tmp" "${cfg}" && rm -f "${cfg}.tmp"
     elif [ "${t}" != "array" ]; then
         jq '.ipsettings = []' "${cfg}" >"${cfg}.tmp" && cp "${cfg}.tmp" "${cfg}" && rm -f "${cfg}.tmp"
     fi
 
-    jq 'if ((.ipsettings|type)=="array") and ((.ipsettings|length) > 0)
-            and (([.ipsettings[] | select(.primary==true)] | length) == 0)
-        then .ipsettings[0].primary = true
-        else . end' "${cfg}" >"${cfg}.tmp" && cp "${cfg}.tmp" "${cfg}" && rm -f "${cfg}.tmp"
+    jq '
+      (if ((.ipsettings|type)=="array") and (([.ipsettings[]? | select((.ipdns? // "") != "")] | length) > 0)
+              and ((.netdns.ipdns // "") == "")
+          then .netdns.ipdns = ([.ipsettings[] | select((.ipdns? // "") != "")][0].ipdns)
+          else . end)
+      | (if (.ipsettings|type)=="array" then .ipsettings = [.ipsettings[] | del(.ipdns)] else . end)
+      | (if ((.ipsettings|type)=="array") and ((.ipsettings|length) > 0)
+              and (([.ipsettings[] | select(.primary==true)] | length) == 0)
+          then .ipsettings[0].primary = true
+          else . end)
+    ' "${cfg}" >"${cfg}.tmp" && cp "${cfg}.tmp" "${cfg}" && rm -f "${cfg}.tmp"
 }
 
 # user_config.json의 ipsettings 배열에 있는 static 항목마다 RR(RROrg/rr)
@@ -938,12 +950,14 @@ function buildStaticNetworkCmdline() {
     case "${count}" in ''|*[!0-9]*) count=0 ;; esac
     [ "${count}" -gt 0 ] || return 0
 
+    local globaldns
+    globaldns="$(jq -r '.netdns.ipdns // empty' /mnt/tcrp/user_config.json 2>/dev/null)"
+
     local i iface addr gw dns isprimary tokens=""
     for ((i = 0; i < count; i++)); do
         iface="$(jq -r ".ipsettings[${i}].ipiface // empty" /mnt/tcrp/user_config.json 2>/dev/null)"
         addr="$(jq -r ".ipsettings[${i}].ipaddr // empty" /mnt/tcrp/user_config.json 2>/dev/null)"
         gw="$(jq -r ".ipsettings[${i}].ipgw // empty" /mnt/tcrp/user_config.json 2>/dev/null)"
-        dns="$(jq -r ".ipsettings[${i}].ipdns // empty" /mnt/tcrp/user_config.json 2>/dev/null)"
         isprimary="$(jq -r ".ipsettings[${i}].primary // false" /mnt/tcrp/user_config.json 2>/dev/null)"
 
         if ! echo "${iface}" | grep -qE '^eth[0-7]$' || \
@@ -972,10 +986,16 @@ function buildStaticNetworkCmdline() {
         local ip="${addr%%/*}" prefix="${addr##*/}" netmask
         netmask="$(_cidr_to_netmask "${prefix}")"
 
-        # primary가 아닌 NIC은 gw/dns를 비워 기본 라우트를 딱 하나로 유지한다.
+        # 게이트웨이/DNS는 둘 다 전역으로 딱 하나만 존재한다(2026-08-28: DNS도
+        # NIC별 입력을 없애고 .netdns.ipdns 전역 값으로 통합 - Linux resolv.conf가
+        # 인터페이스를 구분하지 않아 NIC별로 둬도 "그 NIC 전용"으로 격리되지
+        # 않기 때문). primary NIC의 토큰에만 실어서 misc addon(install-all.sh)이
+        # NIC마다 중복으로 /etc/rc.network_routing을 호출하는 걸 피한다.
+        dns=""
         if [ "${isprimary}" != "true" ]; then
             gw=""
-            dns=""
+        else
+            dns="${globaldns}"
         fi
 
         [ -n "${tokens}" ] && tokens="${tokens} "
@@ -1657,11 +1677,15 @@ function setnetwork() {
         export http_proxy="$staticproxy" https_proxy="$staticproxy"
     fi
 
+    # DNS는 NIC별 값이 아니라 전역 하나다(2026-08-28) - NIC 개수와 무관하게 한
+    # 번만 적용한다.
+    staticdns="$(jq -r '.netdns.ipdns // empty' /mnt/tcrp/user_config.json 2>/dev/null)"
+    [ -n "$staticdns" ] && [ $(grep ${staticdns} /etc/resolv.conf | wc -l) -eq 0 ] && sed -i "a nameserver $staticdns" /etc/resolv.conf | tee -a boot.log
+
     local i
     for ((i = 0; i < count; i++)); do
         ethdev="$(jq -r ".ipsettings[${i}].ipiface // empty" /mnt/tcrp/user_config.json 2>/dev/null)"
         staticip="$(jq -r ".ipsettings[${i}].ipaddr // empty" /mnt/tcrp/user_config.json 2>/dev/null)"
-        staticdns="$(jq -r ".ipsettings[${i}].ipdns // empty" /mnt/tcrp/user_config.json 2>/dev/null)"
         staticgw="$(jq -r ".ipsettings[${i}].ipgw // empty" /mnt/tcrp/user_config.json 2>/dev/null)"
         isprimary="$(jq -r ".ipsettings[${i}].primary // false" /mnt/tcrp/user_config.json 2>/dev/null)"
 
@@ -1684,7 +1708,6 @@ function setnetwork() {
         ip link set dev "${ethdev}" up 2>&1 | tee -a boot.log
 
         ip a add "$staticip" dev $ethdev | tee -a boot.log
-        [ -n "$staticdns" ] && [ $(grep ${staticdns} /etc/resolv.conf | wc -l) -eq 0 ] && sed -i "a nameserver $staticdns" /etc/resolv.conf | tee -a boot.log
         # 기본 라우트는 primary NIC 하나만 소유한다 - 여러 NIC이 각자
         # ip route add default를 실행하면 경로가 계속 뒤집히거나 커널이
         # 임의로 하나만 골라 예측 불가능해진다(2026-08-27, 멀티 NIC 설계).
@@ -1999,15 +2022,17 @@ function boot() {
         fi
     fi
 
-    # user_config.json ipsettings block (2026-08-27: 배열, 최대 8포트)
+    # user_config.json ipsettings block (2026-08-27: 배열, 최대 8포트.
+    # 2026-08-28: DNS는 NIC별 필드가 아니라 netdns.ipdns 전역 값 하나)
 
     #  "ipsettings" : [
     #     {"ipset":"static","ipiface":"eth0","ipaddr":"192.168.71.146/24",
-    #      "ipgw":"192.168.71.1","ipdns":"","primary":true},
+    #      "ipgw":"192.168.71.1","primary":true},
     #     {"ipset":"static","ipiface":"eth1","ipaddr":"10.0.0.10/24",
-    #      "ipgw":"","ipdns":"","primary":false}
+    #      "ipgw":"","primary":false}
     #  ],
-    #  "netproxy": {"ipproxy": ""}
+    #  "netproxy": {"ipproxy": ""},
+    #  "netdns": {"ipdns": ""}
     migrate_ipsettings_schema
     if [ "$(jq -r '(.ipsettings // [] | length) > 0' /mnt/tcrp/user_config.json 2>/dev/null)" = "true" ]; then
         setnetwork
