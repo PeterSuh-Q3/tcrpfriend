@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 260827
+# Date : 260905
 # User Variables :
 ###############################################################################
 
@@ -262,7 +262,7 @@ function history() {
 	       address found in it (maskmaconly()). showlastupdate() is shown
 	       again on redraw too. cmdline line color changed from blue to
 	       light cyan (msglightcyan()) for better visibility.
-0.1.5c ipsettings switches from a flat single-NIC object to an array
+    0.1.5c ipsettings switches from a flat single-NIC object to an array
 	       supporting up to 8 NICs (matching the mac1..mac8 cmdline ceiling),
 	       with exactly one entry flagged primary owning the default route.
 	       migrate_ipsettings_schema() converts old flat configs in place
@@ -287,34 +287,17 @@ EOF
 function showlastupdate() {
     cat <<EOF
 0.1.0  friend kernel version up from 5.15.26 to 6.4.16
-0.1.3i Activate build root openssl bin for DSM password make and renewal Reset(Change) DSM Password function
-       Add menu for "Add New DSM User"
 0.1.3m Enable FRIEND Kernel on HP N36L/N40L/N54L (Supports Older AMD CPUs)
 0.1.4q Add MSHELL Manager auto-rebuild hook (non-interactive build+backup+kexec).
-0.1.4s Fix v0.1.4r's "tcrppart: unbound variable" crash in the new symlink-aware
-       backuploader() call (tcrppart never propagated out of my()'s build subshell).
-0.1.4t Drop unused GCC, VIM, ImageMagick, and Samba4 from the target rootfs
-       (initrd-friend: 92.3MB -> 75.8MB, -17.9%).
 0.1.4w Switch static IP to a kernel cmdline parameter (network.<MAC>=...) added
-       at kexec time - the ramdisk ifcfg-ethN approach doesn't survive DSM's own
-       boot. Also fixes CMDLINE_LINE's hardcoded-space token assembly.
-0.1.4y Refresh my.sh.gz before auto-rebuild and re-source functions.sh so the
-       current build stages the latest MSHELL Manager; fail/retry if refresh fails.
-0.1.4z Centralize user_config.json SHA-256 change detection in functions.sh;
-       reuse it from menu_m.sh and boot.sh and avoid redundant backups for
-       settings-only changes.
+       at kexec time - the ramdisk ifcfg-ethN approach doesn't survive DSM's own boot.
 0.1.5a Add <m> hotkey to mask/unmask Serial/MAC (incl. netconsole and static-IP
        network.<MAC>= cmdline tokens) on screen for screenshot sharing.
-0.1.5b Fix <m> redraw dropping the setmac/getip/checkupgrade/getusb/checkinternet
-       output block; it is now replayed with MAC masking applied. cmdline is
-       now shown in light cyan instead of blue.
 0.1.5c Support up to 8 static-IP NICs (ipsettings is now an array with one
-       primary NIC owning the default route); old single-NIC configs are
-       migrated automatically.
+       primary NIC owning the default route)
 0.1.5d Guard DSM kexec handoff against duplicate TTYD/local-console boot
-       sessions. A second session now exits with a short in-progress notice;
-       low-level kexec diagnostics are kept in /tmp/tcrp-kexec.log.
-
+       sessions. 
+	   
 EOF
 }
 
