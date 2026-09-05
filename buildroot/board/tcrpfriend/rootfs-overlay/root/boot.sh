@@ -306,6 +306,7 @@ function showlastupdate() {
 0.1.5e Stop ConnMan before static-IP setup so DHCP cannot re-add addresses,
        DNS routes, or a competing path on another NIC. resolv.conf is rebuilt
        from netdns.ipdns and the primary NIC owns the gateway/default route.
+	   
 EOF
 }
 
