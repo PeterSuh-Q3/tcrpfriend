@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.5c"
+BOOTVER="0.1.5d"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -272,6 +272,12 @@ function history() {
 	       entries carry empty gw/dns so only one default route is ever
 	       requested), and setnetwork() loops every entry at runtime, gating
 	       "ip route add default" to the primary NIC.
+	0.1.5d Prevent duplicate TTYD/local-console boot.sh sessions from racing
+	       during the DSM kexec handoff. The first session obtains an atomic
+	       /run lock; later sessions show a short "handoff already in progress"
+	       notice instead of the misleading "Device or resource busy" kexec
+	       segment dump. Actual kexec diagnostics are retained in
+	       /tmp/tcrp-kexec.log.
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -305,6 +311,9 @@ function showlastupdate() {
 0.1.5c Support up to 8 static-IP NICs (ipsettings is now an array with one
        primary NIC owning the default route); old single-NIC configs are
        migrated automatically.
+0.1.5d Guard DSM kexec handoff against duplicate TTYD/local-console boot
+       sessions. A second session now exits with a short in-progress notice;
+       low-level kexec diagnostics are kept in /tmp/tcrp-kexec.log.
 
 EOF
 }
@@ -2251,15 +2260,39 @@ function boot() {
         
         [ "${hidesensitive}" = "true" ] && clear
 
-		# Executes DSM kernel via KEXEC
+		# Only one console may hand off to DSM.  Opening ttyd in a second
+		# browser can start another boot.sh while the first one has already
+		# loaded the DSM kernel.  kexec then reports "Device or resource busy"
+		# and dumps its internal segment list, although DSM is already being
+		# started by the first console.  Use an atomic mkdir lock so the extra
+		# console exits quietly instead of presenting that benign race as a
+		# boot failure.
+		KEXEC_LOCK="/run/tcrp-kexec-handoff.lock"
+		KEXEC_LOG="/tmp/tcrp-kexec.log"
+		if ! mkdir "${KEXEC_LOCK}" 2>/dev/null; then
+			echo -e "$(msgwarning "$(TEXT "DSM kernel handoff is already in progress. This console can be closed.")")"
+			return 0
+		fi
+
+		# Executes DSM kernel via KEXEC.  Keep diagnostic output in a file:
+		# a real kexec failure remains diagnosable without alarming users with
+		# the low-level segment dump on the local/ttyd console.
 		KEXECARGS="-a"
 		if [ "$(echo "${KVER:-4}" | cut -d'.' -f1)" -lt 4 ] && [ "$EFIMODE" = "no" ]; then
 			printf "\033[1;33m%s\033[0m\n" "$(TEXT "Warning, running kexec with --noefi param, strange things will happen!!")"
 			KEXECARGS+=" --noefi"
 		fi
-		kexec ${KEXECARGS} -l "${MOD_ZIMAGE_FILE}" --initrd "${MOD_RDGZ_FILE}" --command-line="${CMDLINE_LINE}"
+		if ! kexec ${KEXECARGS} -l "${MOD_ZIMAGE_FILE}" --initrd "${MOD_RDGZ_FILE}" --command-line="${CMDLINE_LINE}" >"${KEXEC_LOG}" 2>&1; then
+			rm -rf "${KEXEC_LOCK}"
+			echo -e "$(msgalert "$(TEXT "DSM kernel handoff could not start. Details were saved to /tmp/tcrp-kexec.log.")")"
+			return 1
+		fi
 
-		kexec -f -e
+		if ! kexec -f -e >>"${KEXEC_LOG}" 2>&1; then
+			rm -rf "${KEXEC_LOCK}"
+			echo -e "$(msgalert "$(TEXT "DSM kernel handoff could not continue. Details were saved to /tmp/tcrp-kexec.log.")")"
+			return 1
+		fi
     fi
 }
 
