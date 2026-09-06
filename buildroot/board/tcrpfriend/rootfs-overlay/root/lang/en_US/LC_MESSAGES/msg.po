@@ -50,8 +50,8 @@ msgid "r key pressed! Entering Menu for Reset DSM Password!"
 msgstr "r key pressed! Entering Menu for Reset DSM Password!"
 
 #: boot.sh:620
-msgid "e key pressed! Entering Menu for Edit USB/SATA Command Line!"
-msgstr "e key pressed! Entering Menu for Edit USB/SATA Command Line!"
+msgid "e key pressed! Entering Menu for Edit USB_LINE (cmdline)!"
+msgstr "e key pressed! Entering Menu for Edit USB_LINE (cmdline)!"
 
 #: boot.sh:626
 msgid "j key pressed! Prepare Entering Force Junior (to re-install DSM)!"
@@ -130,8 +130,8 @@ msgid "Press <r> to enter a menu for Reset DSM Password"
 msgstr "Press <r> to enter a menu for Reset DSM Password"
 
 #: boot.sh:1117
-msgid "Press <e> to enter a menu for Edit USB/SATA Command Line"
-msgstr "Press <e> to enter a menu for Edit USB/SATA Command Line"
+msgid "Press <e> to enter a menu for Edit USB_LINE (cmdline)"
+msgstr "Press <e> to enter a menu for Edit USB_LINE (cmdline)"
 
 #: boot.sh:1118
 msgid "Press <j> to enter a Junior mode (to re-install DSM)"
@@ -208,3 +208,10 @@ msgstr "m key pressed! Sensitive info (Serial/MAC) is now masked for screenshot 
 #: boot.sh:1153
 msgid "m key pressed! Sensitive info (Serial/MAC) is now unmasked"
 msgstr "m key pressed! Sensitive info (Serial/MAC) is now unmasked"
+
+#: boot.sh:2309
+msgid "Enter the following address in your web browser :"
+msgstr "Enter the following address in your web browser :"
+#: boot.sh:2306
+msgid "DSM Web Assistant may take 20-40 seconds; network may not be ready yet."
+msgstr "DSM Web Assistant may take 20-40 seconds; network may not be ready yet."

@@ -50,8 +50,8 @@ msgid "r key pressed! Entering Menu for Reset DSM Password!"
 msgstr "已按下 r 鍵！進入重置 DSM 密碼選單！"
 
 #: boot.sh:620
-msgid "e key pressed! Entering Menu for Edit USB/SATA Command Line!"
-msgstr "已按下 e 鍵！進入編輯 USB/SATA 命令列選單！"
+msgid "e key pressed! Entering Menu for Edit USB_LINE (cmdline)!"
+msgstr "已按下 e 鍵！進入編輯 USB_LINE (cmdline) 命令列選單！"
 
 #: boot.sh:626
 msgid "j key pressed! Prepare Entering Force Junior (to re-install DSM)!"
@@ -120,8 +120,8 @@ msgid "Press <r> to enter a menu for Reset DSM Password"
 msgstr "按 <r> 進入重置 DSM 密碼的選單"
 
 #: boot.sh:1117
-msgid "Press <e> to enter a menu for Edit USB/SATA Command Line"
-msgstr "按 <e> 進入編輯 USB/SATA 命令列選單"
+msgid "Press <e> to enter a menu for Edit USB_LINE (cmdline)"
+msgstr "按 <e> 進入編輯 USB_LINE (cmdline) 命令列選單"
 
 #: boot.sh:1118
 msgid "Press <j> to enter a Junior mode (to re-install DSM)"
@@ -194,3 +194,10 @@ msgstr "已按下 m 鍵！為截圖分享已遮蓋敏感資訊（序號/MAC）"
 #: boot.sh:1153
 msgid "m key pressed! Sensitive info (Serial/MAC) is now unmasked"
 msgstr "已按下 m 鍵！已取消遮蓋敏感資訊（序號/MAC）"
+
+#: boot.sh:2309
+msgid "Enter the following address in your web browser :"
+msgstr "請在網頁瀏覽器中輸入以下位址："
+#: boot.sh:2306
+msgid "DSM Web Assistant may take 20-40 seconds; network may not be ready yet."
+msgstr "DSM Web Assistant 可能需要 20-40 秒；網路可能尚未就緒。"

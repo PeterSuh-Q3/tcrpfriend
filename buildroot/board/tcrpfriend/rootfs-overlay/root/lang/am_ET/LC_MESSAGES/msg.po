@@ -48,7 +48,7 @@ msgid "r key pressed! Entering Menu for Reset DSM Password!"
 msgstr "ቁልፍ ተጭኗል! የ DSM የይለፍ ቃልን ዳግም ለማስጀመር ሜኑ በማስገባት ላይ!"
 
 #: boot.sh:620
-msgid "e key pressed! Entering Menu for Edit USB/SATA Command Line!"
+msgid "e key pressed! Entering Menu for Edit USB_LINE (cmdline)!"
 msgstr "e ቁልፍ ተጭኗል! የዩኤስቢ/SATA የትእዛዝ መስመርን ለማርትዕ ሜኑ በማስገባት ላይ!"
 
 #: boot.sh:626
@@ -122,7 +122,7 @@ msgid "Press <r> to enter a menu for Reset DSM Password"
 msgstr "የ DSM የይለፍ ቃልን ዳግም ለማስጀመር ሜኑ ለማስገባት <r>ን ይጫኑ"
 
 #: boot.sh:1117
-msgid "Press <e> to enter a menu for Edit USB/SATA Command Line"
+msgid "Press <e> to enter a menu for Edit USB_LINE (cmdline)"
 msgstr "የዩኤስቢ/SATA ትዕዛዝ መስመርን ለማርትዕ ሜኑ ለማስገባት <e>ን ይጫኑ"
 
 #: boot.sh:1118
@@ -200,3 +200,10 @@ msgstr "የ m ቁልፍ ተጫነ! ሚስጥራዊ መረጃ (Serial/MAC) አሁ
 #: boot.sh:1153
 msgid "m key pressed! Sensitive info (Serial/MAC) is now unmasked"
 msgstr "የ m ቁልፍ ተጫነ! ሚስጥራዊ መረጃ (Serial/MAC) መደበቅ ቆሟል"
+
+#: boot.sh:2309
+msgid "Enter the following address in your web browser :"
+msgstr "በድር አሳሽዎ ውስጥ የሚከተለውን አድራሻ ያስገቡ:"
+#: boot.sh:2306
+msgid "DSM Web Assistant may take 20-40 seconds; network may not be ready yet."
+msgstr "DSM Web Assistant 20-40 ሰከንድ ሊወስድ ይችላል፤ አውታረ መረቡ ገና ዝግጁ ላይሆን ይችላል።"

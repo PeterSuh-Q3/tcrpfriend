@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.5e"
+BOOTVER="0.1.5f"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -284,6 +284,11 @@ function history() {
 	       route to the primary DNS server through the non-primary NIC. Static
 	       boot now clears DHCP state, rewrites resolv.conf from netdns.ipdns,
 	       and pins the gateway/default route to the primary static NIC.
+	0.1.5f TTYD and DSM Web Assistant URLs now use the source IP and NIC from
+	       the route that actually reaches the Internet, rather than the last
+	       enumerated interface (which can be a link-local DHCP address). Static
+	       IP startup status is consolidated into one console line, and boot
+	       notices clarify TTYD credentials, USB_LINE, and localized web access.
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -306,6 +311,8 @@ function showlastupdate() {
 0.1.5e Stop ConnMan before static-IP setup so DHCP cannot re-add addresses,
        DNS routes, or a competing path on another NIC. resolv.conf is rebuilt
        from netdns.ipdns and the primary NIC owns the gateway/default route.
+0.1.5f Use the successful Internet route for TTYD/DSM URLs. Consolidate
+       static-IP status and clarify localized TTYD, USB_LINE, and web notices.
 	   
 EOF
 }
@@ -424,12 +431,26 @@ function maskcmdline() {
 }
 
 function check_internet() {
-  ping -c 1 -W 1 8.8.8.8 > /dev/null 2>&1
-  return $?
+  ping -c 1 -W 1 8.8.8.8 > /dev/null 2>&1 || return 1
+
+  # getip() lists every NIC and historically leaves $IP set to the last one
+  # it sees.  That can be a 169.254.x.x lease even while another NIC is the
+  # one that successfully reached the Internet.  Record the kernel-selected
+  # route source immediately after the successful probe for user-facing URLs.
+  local route
+  route="$(ip route get 8.8.8.8 2>/dev/null | head -n 1)"
+  INTERNET_IFACE="$(awk '{for (i=1; i<=NF; i++) if ($i == "dev") {print $(i+1); exit}}' <<<"${route}")"
+  INTERNET_IP="$(awk '{for (i=1; i<=NF; i++) if ($i == "src") {print $(i+1); exit}}' <<<"${route}")"
+  if [ -z "${INTERNET_IP}" ] && [ -n "${INTERNET_IFACE}" ]; then
+    INTERNET_IP="$(ip -4 addr show dev "${INTERNET_IFACE}" 2>/dev/null | awk '/inet / {print $2; exit}' | cut -d/ -f1)"
+  fi
+  return 0
 }
 
 function checkinternet() {
 
+    INTERNET_IFACE=""
+    INTERNET_IP=""
     echo -n $(TEXT "Detecting Internet -> ")
     # Record the start time.
     start_time=$(date +%s)
@@ -1273,7 +1294,7 @@ function countdown() {
                 mainmenu
                 ;;
             'e') # e key
-                TEXT "e key pressed! Entering Menu for Edit USB/SATA Command Line!"
+                TEXT "e key pressed! Entering Menu for Edit USB_LINE (cmdline)!"
                 check_python_deps passlib
                 sleep 3
                 mainmenu
@@ -1355,13 +1376,13 @@ GPUEOF
 # cmdline과 r/e/j/m 단축키 안내를 출력한다. countdown()에서 'm' 키로 마스킹을
 # 토글할 때도 재사용해 화면을 즉시 다시 그린다.
 function showcmdlineandhints() {
-    echo -e "$(msgcyan "$(TEXT "User config is on '/mnt/tcrp/user_config.json'")")"
+    echo -e "$(msgalert "$(TEXT "User config is on '/mnt/tcrp/user_config.json'")")"
     echo
     echo "zImage : ${MOD_ZIMAGE_FILE} initrd : ${MOD_RDGZ_FILE}, Module Processing Method : $(msgnormal "${dmpm}")"
     echo "cmdline : $(msglightcyan "$(maskcmdline "${CMDLINE_LINE}")")"
     echo
     echo -e "$(msgalert "$(TEXT "Press <r> to enter a menu for Reset DSM Password")")"
-    echo -e "$(msgnormal "$(TEXT "Press <e> to enter a menu for Edit USB/SATA Command Line")")"
+    echo -e "$(msgnormal "$(TEXT "Press <e> to enter a menu for Edit USB_LINE (cmdline)")")"
     echo -e "$(msgwarning "$(TEXT "Press <j> to enter a Junior mode (to re-install DSM)")")"
     echo -e "$(msgmagenta "$(TEXT "Press <m> to mask/unmask sensitive info (Serial/MAC) for screenshot sharing")")"
 }
@@ -1696,7 +1717,7 @@ function setmac() {
 function setnetwork() {
     migrate_ipsettings_schema
 
-    local count
+    local count connman_status static_summary=""
     count=$(jq -r '(.ipsettings // [] | length)' /mnt/tcrp/user_config.json 2>/dev/null)
     case "${count}" in ''|*[!0-9]*) count=0 ;; esac
 
@@ -1716,9 +1737,11 @@ function setnetwork() {
     # deliberately owns networking, so stop all DHCP managers before touching
     # addresses/routes. This also prevents an unconfigured NIC from becoming
     # an accidental competing default/DNS path during the loader build.
+    connman_status="ConnMan not present"
     if [ -x /etc/init.d/S45connman ]; then
-        echo "Static IP entries detected; stopping ConnMan." | tee -a boot.log
+        echo "Static IP entries detected; stopping ConnMan." >> boot.log
         /etc/init.d/S45connman stop >/dev/null 2>&1 || true
+        connman_status="ConnMan stopped"
     fi
     if [ -x /etc/init.d/S41dhcpcd ]; then
         /etc/init.d/S41dhcpcd stop >/dev/null 2>&1 || true
@@ -1753,7 +1776,8 @@ function setnetwork() {
             continue
         fi
 
-        echo "Applying static IP settings for ${ethdev}" | tee -a boot.log
+        echo "Applying static IP settings for ${ethdev} (${staticip})." >> boot.log
+        static_summary="${static_summary}${static_summary:+, }${ethdev}=${staticip}"
 
         # 예전 구현은 ${ethdev}가 이미 dhcpcd로 받은 주소를 그대로 둔 채
         # ip a add로 static 주소를 하나 더 얹기만 했다 - 인터페이스에 DHCP/static
@@ -1809,6 +1833,10 @@ function setnetwork() {
             echo "IP Address : $(msgnormal "${IP}"), Network Interface Card : ${ethdev} [${VENDOR}:${DEVICE}] (${DRIVER}) "
         fi
     done
+
+    # Keep the boot console compact when several NICs have static addresses.
+    # Detailed per-interface processing remains available in boot.log.
+    [ -n "${static_summary}" ] && echo "Static IP: ${connman_status}; applied ${static_summary}." | tee -a boot.log
 
     # With two static NICs on the same L2 subnet, the kernel can otherwise
     # resolve the primary gateway through the last-added secondary link route.
@@ -2230,7 +2258,7 @@ function boot() {
 #    elif [ "$1" = "gettycon" ]; then
 #        msgalert "Entering a Getty Console to solve trouble...\n"
     elif [ "$1" = "forcejunior" ]; then
-        echo -e "$(msgcyan "$(TEXT "User config is on '/mnt/tcrp/user_config.json'")")"
+        echo -e "$(msgalert "$(TEXT "User config is on '/mnt/tcrp/user_config.json'")")"
         echo
         echo "zImage : ${MOD_ZIMAGE_FILE} initrd : ${MOD_RDGZ_FILE}, Module Processing Method : $(msgnormal "${dmpm}")"
         echo "cmdline : $(msglightcyan "${CMDLINE_LINE}")"
@@ -2265,20 +2293,22 @@ function boot() {
         if [ "$1" != "forcejunior" ]; then
             countdown "booting"
         fi
+        # Prefer the source selected by the successful Internet route.  Keep
+        # the former representative IP as a fallback when the check was not
+        # available, so offline recovery behavior is unchanged.
+        ACCESS_IP="${INTERNET_IP:-${IP}}"
         echo -en "\r$(TEXT "Boot timeout exceeded, booting ... ")\n"
         echo
 	    echo -en "$(msgpurple "$(TEXT "To check the problem, access the following TTYD URL through a web browser. :")")"
-	    echo " http://${IP}:7681"
-	    echo -e "$(msgalert "$(TEXT "Default TTYD root password is 'blank' ")")"    
+	    echo " http://${ACCESS_IP}:7681 $(msgalert "root / [blank]")"
 	    echo -e "$(msgwarning "$(TEXT "If you have any problems with the DSM installation steps, check the '/var/log/linuxrc.syno.log' file in this access.")")"
 	    echo            
-        echo -en "\r$(TEXT "\"HTTP, Synology Web Assistant (BusyBox httpd)\" service may take 20 - 40 seconds.")\n"
-        echo -en "\r$(TEXT "(Network access is not immediately available)")\n"
+        echo -e "$(msgcyan "$(TEXT "DSM Web Assistant may take 20-40 seconds; network may not be ready yet.")")"
         echo -en "\r$(TEXT "Kernel loading has started, nothing will be displayed here anymore ...")\n"
         echo -en "$(msgnormal "$(TEXT "Enter the following address in your web browser :")")"
-        echo " http://${IP}:5000"        
+        echo " http://${ACCESS_IP}:5000"
 
-		[ -n "${IP}" ] && URL="http://${IP}:5000" || URL="https://finds.synology.com/"
+		[ -n "${ACCESS_IP}" ] && URL="http://${ACCESS_IP}:5000" || URL="https://finds.synology.com/"
 		# [0.1.4g] QR code library pre-check before python3 invocation
 		check_python_deps qrcode PIL
 		python3 /root/functions.py makeqr -d "${URL}" -l "7" -o "/tmp/qrcode.png"

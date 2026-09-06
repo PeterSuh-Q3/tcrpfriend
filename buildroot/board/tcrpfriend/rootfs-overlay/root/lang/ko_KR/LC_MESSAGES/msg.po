@@ -52,8 +52,8 @@ msgid "r key pressed! Entering Menu for Reset DSM Password!"
 msgstr "r 키를 누릅니다! DSM 비밀번호 재설정 메뉴로 들어갑니다!"
 
 #: boot.sh:620
-msgid "e key pressed! Entering Menu for Edit USB/SATA Command Line!"
-msgstr "e 키를 누릅니다! USB/SATA 명령줄 편집 메뉴로 들어갑니다!"
+msgid "e key pressed! Entering Menu for Edit USB_LINE (cmdline)!"
+msgstr "e 키를 누릅니다! USB_LINE (cmdline) 명령줄 편집 메뉴로 들어갑니다!"
 
 #: boot.sh:626
 msgid "j key pressed! Prepare Entering Force Junior (to re-install DSM)!"
@@ -133,8 +133,8 @@ msgid "Press <r> to enter a menu for Reset DSM Password"
 msgstr "<r> 을 눌러 DSM 비밀번호 재설정 메뉴로 들어갑니다"
 
 #: boot.sh:1117
-msgid "Press <e> to enter a menu for Edit USB/SATA Command Line"
-msgstr "<e> 을 눌러 USB/SATA 명령줄 편집 메뉴로 들어갑니다"
+msgid "Press <e> to enter a menu for Edit USB_LINE (cmdline)"
+msgstr "<e> 을 눌러 USB_LINE (cmdline) 명령줄 편집 메뉴로 들어갑니다"
 
 #: boot.sh:1118
 msgid "Press <j> to enter a Junior mode (to re-install DSM)"
@@ -209,3 +209,10 @@ msgstr "m 키를 누릅니다! 캡쳐 공유를 위해 민감정보(Serial/MAC)�
 #: boot.sh:1153
 msgid "m key pressed! Sensitive info (Serial/MAC) is now unmasked"
 msgstr "m 키를 누릅니다! 민감정보(Serial/MAC) 마스크가 해제되었습니다"
+
+#: boot.sh:2309
+msgid "Enter the following address in your web browser :"
+msgstr "웹 브라우저에 다음 주소를 입력하세요:"
+#: boot.sh:2306
+msgid "DSM Web Assistant may take 20-40 seconds; network may not be ready yet."
+msgstr "DSM Web Assistant 준비에 20-40초가 걸릴 수 있으며, 네트워크는 아직 준비되지 않았을 수 있습니다."

@@ -52,8 +52,8 @@ msgid "r key pressed! Entering Menu for Reset DSM Password!"
 msgstr "आर कुंजी दबाया! डीएसएम पासवर्ड रीसेट करने के लिए मेनू दर्ज करें!"
 
 #: boot.sh:620
-msgid "e key pressed! Entering Menu for Edit USB/SATA Command Line!"
-msgstr "ई कुंजी दबाया! संपादन USB/SATA कमांड लाइन के लिए मेनू दर्ज करें!"
+msgid "e key pressed! Entering Menu for Edit USB_LINE (cmdline)!"
+msgstr "ई कुंजी दबाया! संपादन USB_LINE (cmdline) कमांड लाइन के लिए मेनू दर्ज करें!"
 
 #: boot.sh:626
 msgid "j key pressed! Prepare Entering Force Junior (to re-install DSM)!"
@@ -134,8 +134,8 @@ msgid "Press <r> to enter a menu for Reset DSM Password"
 msgstr "प्रेस <r> रीसेट DSM पासवर्ड के लिए एक मेनू में प्रवेश करने के लिए"
 
 #: boot.sh:1117
-msgid "Press <e> to enter a menu for Edit USB/SATA Command Line"
-msgstr "Edit USB/SATA कमांड लाइन के लिए एक मेनू दर्ज करने के लिए प्रेस <e>"
+msgid "Press <e> to enter a menu for Edit USB_LINE (cmdline)"
+msgstr "Edit USB_LINE (cmdline) कमांड लाइन के लिए एक मेनू दर्ज करने के लिए प्रेस <e>"
 
 #: boot.sh:1118
 msgid "Press <j> to enter a Junior mode (to re-install DSM)"
@@ -219,3 +219,10 @@ msgstr "m कुंजी दबाई गई! स्क्रीनशॉट �
 #: boot.sh:1153
 msgid "m key pressed! Sensitive info (Serial/MAC) is now unmasked"
 msgstr "m कुंजी दबाई गई! संवेदनशील जानकारी (सीरियल/MAC) अब छिपी नहीं है"
+
+#: boot.sh:2309
+msgid "Enter the following address in your web browser :"
+msgstr "अपने वेब ब्राउज़र में निम्न पता दर्ज करें:"
+#: boot.sh:2306
+msgid "DSM Web Assistant may take 20-40 seconds; network may not be ready yet."
+msgstr "DSM वेब असिस्टेंट में 20-40 सेकंड लग सकते हैं; नेटवर्क अभी तैयार नहीं हो सकता है।"

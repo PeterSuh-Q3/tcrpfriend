@@ -48,8 +48,8 @@ msgid "r key pressed! Entering Menu for Reset DSM Password!"
 msgstr "กดปุ่ม r แล้ว! เข้าสู่เมนูเพื่อรีเซ็ตรหัสผ่าน DSM!"
 
 #: boot.sh:620
-msgid "e key pressed! Entering Menu for Edit USB/SATA Command Line!"
-msgstr "กดปุ่ม e! เข้าสู่เมนูเพื่อแก้ไขบรรทัดคำสั่ง USB/SATA!"
+msgid "e key pressed! Entering Menu for Edit USB_LINE (cmdline)!"
+msgstr "กดปุ่ม e! เข้าสู่เมนูเพื่อแก้ไขบรรทัดคำสั่ง USB_LINE (cmdline)!"
 
 #: boot.sh:626
 msgid "j key pressed! Prepare Entering Force Junior (to re-install DSM)!"
@@ -125,8 +125,8 @@ msgid "Press <r> to enter a menu for Reset DSM Password"
 msgstr "กด <r> เพื่อเข้าสู่เมนูสำหรับรีเซ็ตรหัสผ่าน DSM"
 
 #: boot.sh:1117
-msgid "Press <e> to enter a menu for Edit USB/SATA Command Line"
-msgstr "กด <e> เพื่อเข้าสู่เมนูสำหรับแก้ไขบรรทัดคำสั่ง USB/SATA"
+msgid "Press <e> to enter a menu for Edit USB_LINE (cmdline)"
+msgstr "กด <e> เพื่อเข้าสู่เมนูสำหรับแก้ไขบรรทัดคำสั่ง USB_LINE (cmdline)"
 
 #: boot.sh:1118
 msgid "Press <j> to enter a Junior mode (to re-install DSM)"
@@ -204,3 +204,10 @@ msgstr "กดปุ่ม m แล้ว! ข้อมูลที่ละเ�
 #: boot.sh:1153
 msgid "m key pressed! Sensitive info (Serial/MAC) is now unmasked"
 msgstr "กดปุ่ม m แล้ว! ยกเลิกการซ่อนข้อมูลที่ละเอียดอ่อน (Serial/MAC) แล้ว"
+
+#: boot.sh:2309
+msgid "Enter the following address in your web browser :"
+msgstr "ป้อนที่อยู่ต่อไปนี้ในเว็บเบราว์เซอร์ของคุณ:"
+#: boot.sh:2306
+msgid "DSM Web Assistant may take 20-40 seconds; network may not be ready yet."
+msgstr "DSM Web Assistant อาจใช้เวลา 20-40 วินาที และเครือข่ายอาจยังไม่พร้อม"

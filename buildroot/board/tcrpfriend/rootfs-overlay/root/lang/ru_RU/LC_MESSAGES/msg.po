@@ -53,9 +53,9 @@ msgid "r key pressed! Entering Menu for Reset DSM Password!"
 msgstr "клавиши нажаты! Введите меню для удаления пароля DSM!"
 
 #: boot.sh:620
-msgid "e key pressed! Entering Menu for Edit USB/SATA Command Line!"
+msgid "e key pressed! Entering Menu for Edit USB_LINE (cmdline)!"
 msgstr ""
-"е ключ нажат! Введите меню для редактирования командной строки USB/SATA!"
+"е ключ нажат! Введите меню для редактирования командной строки USB_LINE (cmdline)!"
 
 #: boot.sh:626
 msgid "j key pressed! Prepare Entering Force Junior (to re-install DSM)!"
@@ -137,8 +137,8 @@ msgid "Press <r> to enter a menu for Reset DSM Password"
 msgstr "Нажмите <r>, чтобы ввести меню для сброса пароля DSM"
 
 #: boot.sh:1117
-msgid "Press <e> to enter a menu for Edit USB/SATA Command Line"
-msgstr "Нажмите <e>, чтобы ввести меню для Правки командной строки USB/SATA"
+msgid "Press <e> to enter a menu for Edit USB_LINE (cmdline)"
+msgstr "Нажмите <e>, чтобы ввести меню для Правки командной строки USB_LINE (cmdline)"
 
 #: boot.sh:1118
 msgid "Press <j> to enter a Junior mode (to re-install DSM)"
@@ -218,3 +218,10 @@ msgstr "Нажата клавиша m! Конфиденциальные данн
 #: boot.sh:1153
 msgid "m key pressed! Sensitive info (Serial/MAC) is now unmasked"
 msgstr "Нажата клавиша m! Конфиденциальные данные (серийный номер/MAC) больше не скрыты"
+
+#: boot.sh:2309
+msgid "Enter the following address in your web browser :"
+msgstr "Введите следующий адрес в веб-браузере:"
+#: boot.sh:2306
+msgid "DSM Web Assistant may take 20-40 seconds; network may not be ready yet."
+msgstr "Запуск DSM Web Assistant может занять 20-40 секунд; сеть может быть ещё не готова."

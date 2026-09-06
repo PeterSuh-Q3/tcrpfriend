@@ -52,7 +52,7 @@ msgid "r key pressed! Entering Menu for Reset DSM Password!"
 msgstr "r kulcsnyomtatott! Belépő menü a DSM jelszó visszaállításához!"
 
 #: boot.sh:620
-msgid "e key pressed! Entering Menu for Edit USB/SATA Command Line!"
+msgid "e key pressed! Entering Menu for Edit USB_LINE (cmdline)!"
 msgstr ""
 "e kulcsfontosságú nyomott! Belépés menü Edit USB /SATA Parancsnoki Line!"
 
@@ -136,8 +136,8 @@ msgid "Press <r> to enter a menu for Reset DSM Password"
 msgstr "Nyomja meg a <r> menübe a DSM jelszó visszaállításához"
 
 #: boot.sh:1117
-msgid "Press <e> to enter a menu for Edit USB/SATA Command Line"
-msgstr "Nyomja meg a <e>-t, hogy menübe lépjen az USB/SATA Parancsnoki Line-hez"
+msgid "Press <e> to enter a menu for Edit USB_LINE (cmdline)"
+msgstr "Nyomja meg a <e>-t, hogy menübe lépjen az USB_LINE (cmdline) Parancsnoki Line-hez"
 
 #: boot.sh:1118
 msgid "Press <j> to enter a Junior mode (to re-install DSM)"
@@ -220,3 +220,10 @@ msgstr "m billentyű megnyomva! Az érzékeny adatok (sorozatszám/MAC) most el 
 #: boot.sh:1153
 msgid "m key pressed! Sensitive info (Serial/MAC) is now unmasked"
 msgstr "m billentyű megnyomva! Az érzékeny adatok (sorozatszám/MAC) elrejtése megszűnt"
+
+#: boot.sh:2309
+msgid "Enter the following address in your web browser :"
+msgstr "Írja be a következő címet a webböngészőjébe:"
+#: boot.sh:2306
+msgid "DSM Web Assistant may take 20-40 seconds; network may not be ready yet."
+msgstr "A DSM Web Assistant 20-40 másodpercet vehet igénybe; a hálózat még nem biztos, hogy készen áll."

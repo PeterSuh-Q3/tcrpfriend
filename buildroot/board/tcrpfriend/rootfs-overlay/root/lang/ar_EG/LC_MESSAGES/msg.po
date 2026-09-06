@@ -53,7 +53,7 @@ msgid "r key pressed! Entering Menu for Reset DSM Password!"
 msgstr "! دخول مينو لإستعادة كلمة سر دي إم سي!"
 
 #: boot.sh:620
-msgid "e key pressed! Entering Menu for Edit USB/SATA Command Line!"
+msgid "e key pressed! Entering Menu for Edit USB_LINE (cmdline)!"
 msgstr "! دخول مينو من أجل إيديت يونا بي/ساتا خط القيادة!"
 
 #: boot.sh:626
@@ -133,7 +133,7 @@ msgid "Press <r> to enter a menu for Reset DSM Password"
 msgstr ":: إدخال قائمة بأسماء جوازات السفر الخاصة بـ \" ريست دي إم \""
 
 #: boot.sh:1117
-msgid "Press <e> to enter a menu for Edit USB/SATA Command Line"
+msgid "Press <e> to enter a menu for Edit USB_LINE (cmdline)"
 msgstr "مطبعة للدخول في قائمة لخط قيادة إيديت أوكس بي/ساتا"
 
 #: boot.sh:1118
@@ -212,3 +212,10 @@ msgstr "تم الضغط على مفتاح m! المعلومات الحساسة (
 #: boot.sh:1153
 msgid "m key pressed! Sensitive info (Serial/MAC) is now unmasked"
 msgstr "تم الضغط على مفتاح m! لم تعد المعلومات الحساسة (الرقم التسلسلي/MAC) مخفية"
+
+#: boot.sh:2309
+msgid "Enter the following address in your web browser :"
+msgstr "أدخل العنوان التالي في متصفح الويب:"
+#: boot.sh:2306
+msgid "DSM Web Assistant may take 20-40 seconds; network may not be ready yet."
+msgstr "قد يستغرق مساعد الويب DSM من 20 إلى 40 ثانية؛ قد لا تكون الشبكة جاهزة بعد."
