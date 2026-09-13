@@ -71,7 +71,12 @@ jobs:
           cp /opt/updaterootfs/bzImage-friend /opt/output
           mkdir /opt/verify-initrd
           cd /opt/verify-initrd
-          xz -dc /opt/output/initrd-friend | sudo cpio -idm 2>&1 >/dev/null
+          # Validation needs only the embedded configuration.  Do not extract
+          # device nodes such as dev/console into the GitHub runner; that
+          # requires privileges unrelated to config validation and can make a
+          # successful ramdisk look failed.  Keep stderr visible for a useful
+          # failure log.
+          xz -dc /opt/output/initrd-friend | sudo cpio -idm --quiet 'root/config/*'
           test -f root/config/_common/ramdisk/patch-sets.json
           test -f root/config/.mshell-redpill-load-revision.json
           test "$(jq -r .ref root/config/.mshell-redpill-load-revision.json)" = "master"
