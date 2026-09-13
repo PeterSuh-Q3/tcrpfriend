@@ -5,7 +5,11 @@ on:
     types: [published]
 
   workflow_dispatch:
-      
+    inputs:
+      tag:
+        description: 'Existing or new release tag to build and update'
+        required: true
+        type: string
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -67,7 +71,7 @@ jobs:
           cp /opt/updaterootfs/bzImage-friend /opt/output
           mkdir /opt/verify-initrd
           cd /opt/verify-initrd
-          xz -dc /opt/output/initrd-friend | cpio -idm 2>&1 >/dev/null
+          xz -dc /opt/output/initrd-friend | sudo cpio -idm 2>&1 >/dev/null
           test -f root/config/_common/ramdisk/patch-sets.json
           test -f root/config/.mshell-redpill-load-revision.json
           test "$(jq -r .ref root/config/.mshell-redpill-load-revision.json)" = "master"
@@ -88,7 +92,7 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.event.release.tag_name }}
+          tag_name: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}
           files: |
             /opt/output/bzImage-friend
             /opt/output/initrd-friend
