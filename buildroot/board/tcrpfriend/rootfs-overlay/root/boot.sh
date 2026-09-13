@@ -317,6 +317,7 @@ function showlastupdate() {
        static-IP status and clarify localized TTYD, USB_LINE, and web notices.
 0.1.5g Improves DSM ramdisk patch compatibility with current loader configurations.
        Validates patches before applying them to help prevent failed DSM boot preparation.
+	   
 EOF
 }
 
