@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.5f"
+BOOTVER="0.1.5g"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -289,6 +289,9 @@ function history() {
 	       enumerated interface (which can be a link-local DHCP address). Static
 	       IP startup status is consolidated into one console line, and boot
 	       notices clarify TTYD credentials, USB_LINE, and localized web access.
+	0.1.5g Resolve redpill-load master ramdisk patch sets before patching. V2
+	       config is verified with patch-set provenance, duplicate and missing
+	       patches fail safely, and V2 patches are dry-run before modification.
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -313,7 +316,11 @@ function showlastupdate() {
        from netdns.ipdns and the primary NIC owns the gateway/default route.
 0.1.5f Use the successful Internet route for TTYD/DSM URLs. Consolidate
        static-IP status and clarify localized TTYD, USB_LINE, and web notices.
-	   
+
+0.1.5g Resolve embedded redpill-load master patch sets before ramdisk patching.
+       Validate config provenance and V2 patch paths, and dry-run V2 patches
+       before they can modify initrd-dsm.
+
 EOF
 }
 
@@ -1035,6 +1042,135 @@ function buildStaticNetworkCmdline() {
     echo "${tokens}"
 }
 
+# Resolve the ordered ramdisk patch list embedded in this FRIEND image.
+# redpill-load/master may use reusable V2 patch sets in addition to the
+# legacy patches.ramdisk array.  Keep the same order as redpill-load:
+# expanded sets first, then explicit legacy paths.
+function resolve_ramdisk_patches() {
+    local config_path="$1" patch_sets_path="$2"
+    local set_names set_name set_paths patch_path resolved_path common_path="/root/config/_common"
+    local -A seen_patches=()
+
+    RAMDISK_PATCH_MODE="legacy"
+
+    [ -r "${config_path}" ] || {
+        echo "ERROR: Ramdisk config is unavailable: ${config_path}" >&2
+        return 1
+    }
+    jq -e . "${config_path}" >/dev/null 2>&1 || {
+        echo "ERROR: Invalid ramdisk config JSON: ${config_path}" >&2
+        return 1
+    }
+    jq -e '((.patches // {}) | ((.ramdisk // []) | (type == "array" and all(.[]; type == "string"))))' "${config_path}" >/dev/null 2>&1 || {
+        echo "ERROR: patches.ramdisk must be an array of paths" >&2
+        return 1
+    }
+
+    if jq -e '(.patches // {}) | has("ramdisk_sets")' "${config_path}" >/dev/null 2>&1; then
+        RAMDISK_PATCH_MODE="v2"
+        [ -r "${patch_sets_path}" ] || {
+            echo "ERROR: Ramdisk patch-set catalog is unavailable: ${patch_sets_path}" >&2
+            return 1
+        }
+        jq -e . "${patch_sets_path}" >/dev/null 2>&1 || {
+            echo "ERROR: Invalid ramdisk patch-set JSON: ${patch_sets_path}" >&2
+            return 1
+        }
+        jq -e '((.patches // {}) | (.ramdisk_sets | (type == "array" and all(.[]; type == "string"))))' "${config_path}" >/dev/null 2>&1 || {
+            echo "ERROR: patches.ramdisk_sets must be an array of set names" >&2
+            return 1
+        }
+
+        set_names="$(jq -r '.patches.ramdisk_sets[]' "${config_path}")" || return 1
+        while IFS= read -r set_name; do
+            [ -n "${set_name}" ] || continue
+            set_paths="$(jq -e -r --arg name "${set_name}" '.[$name] | if type == "array" and all(.[]; type == "string") then .[] else error("undefined or invalid patch set") end' "${patch_sets_path}")" || {
+                echo "ERROR: Ramdisk patch set is undefined or invalid: ${set_name}" >&2
+                return 1
+            }
+            while IFS= read -r patch_path; do
+                [ -n "${patch_path}" ] || continue
+                if [[ -n "${seen_patches[${patch_path}]+x}" ]]; then
+                    echo "ERROR: Ramdisk patch is included more than once: ${patch_path}" >&2
+                    return 1
+                fi
+                seen_patches[${patch_path}]=1
+                resolved_path="${patch_path//@@@COMMON@@@/${common_path}}"
+                case "${resolved_path}" in
+                    /root/config/*) ;;
+                    *) echo "ERROR: Ramdisk patch escapes embedded config: ${patch_path}" >&2; return 1 ;;
+                esac
+                [[ "${resolved_path}" == *"/../"* || "${resolved_path}" == */.. ]] && {
+                    echo "ERROR: Ramdisk patch contains a parent path: ${patch_path}" >&2
+                    return 1
+                }
+                [ -r "${resolved_path}" ] || {
+                    echo "ERROR: Ramdisk patch file is unavailable: ${resolved_path}" >&2
+                    return 1
+                }
+                printf '%s\n' "${resolved_path}"
+            done <<< "${set_paths}"
+        done <<< "${set_names}"
+    fi
+
+    while IFS= read -r patch_path; do
+        [ -n "${patch_path}" ] || continue
+        if [[ -n "${seen_patches[${patch_path}]+x}" ]]; then
+            echo "ERROR: Ramdisk patch is included more than once: ${patch_path}" >&2
+            return 1
+        fi
+        seen_patches[${patch_path}]=1
+        resolved_path="${patch_path//@@@COMMON@@@/${common_path}}"
+        case "${resolved_path}" in
+            /root/config/*) ;;
+            *) echo "ERROR: Ramdisk patch escapes embedded config: ${patch_path}" >&2; return 1 ;;
+        esac
+        [[ "${resolved_path}" == *"/../"* || "${resolved_path}" == */.. ]] && {
+            echo "ERROR: Ramdisk patch contains a parent path: ${patch_path}" >&2
+            return 1
+        }
+        [ -r "${resolved_path}" ] || {
+            echo "ERROR: Ramdisk patch file is unavailable: ${resolved_path}" >&2
+            return 1
+        }
+        printf '%s\n' "${resolved_path}"
+    done < <(jq -r '.patches.ramdisk // [] | .[]' "${config_path}")
+}
+
+# V2 config represents verified source families.  Verify every patch before
+# changing the extracted ramdisk, then apply only when every dry-run passes.
+# Legacy flat configs retain the previous tolerant behavior for compatibility.
+function apply_resolved_ramdisk_patches() {
+    local patch_list="$1" patch_path patch_output
+
+    if [ "${RAMDISK_PATCH_MODE}" = "v2" ]; then
+        while IFS= read -r patch_path; do
+            [ -n "${patch_path}" ] || continue
+            patch_output="$(patch --dry-run -p1 -f -F 3 < "${patch_path}" 2>&1)" || {
+                echo "ERROR: Ramdisk patch dry-run failed: ${patch_path}" >&2
+                echo "${patch_output}" >&2
+                printf '%s\n%s\n' "[ramdisk] dry-run failed: ${patch_path}" "${patch_output}" >> "${FRIENDLOG}"
+                return 1
+            }
+        done < "${patch_list}"
+    fi
+
+    while IFS= read -r patch_path; do
+        [ -n "${patch_path}" ] || continue
+        echo "Applying patch ${patch_path} in dir ${PWD}"
+        patch_output="$(patch -p1 -f -F 3 < "${patch_path}" 2>&1)" || {
+            if [ "${RAMDISK_PATCH_MODE}" = "v2" ]; then
+                echo "ERROR: Ramdisk patch apply failed: ${patch_path}" >&2
+                echo "${patch_output}" >&2
+                printf '%s\n%s\n' "[ramdisk] apply failed: ${patch_path}" "${patch_output}" >> "${FRIENDLOG}"
+                return 1
+            fi
+            echo "WARNING: Legacy ramdisk patch failed and was skipped: ${patch_path}" >&2
+            printf '%s\n%s\n' "[ramdisk] legacy patch skipped: ${patch_path}" "${patch_output}" >> "${FRIENDLOG}"
+        }
+    done < "${patch_list}"
+}
+
 function patchramdisk() {
 
     if [ ! -n "$IP" ]; then
@@ -1042,29 +1178,41 @@ function patchramdisk() {
         exit 99
     fi
 
-    extractramdisk
-
-    temprd="/root/rd.temp"
     CONFIG_PATH="/root/config/$ORIGIN_PLATFORM/$version/config.json"
-    
-    RAMDISK_PATCH=$(cat ${CONFIG_PATH} | jq -r -e ' .patches .ramdisk')
+    PATCH_SET_PATH="/root/config/_common/ramdisk/patch-sets.json"
+    PATCH_LIST_FILE="/tmp/tcrp-ramdisk-patches.$$"
+
+    if ! resolve_ramdisk_patches "${CONFIG_PATH}" "${PATCH_SET_PATH}" > "${PATCH_LIST_FILE}"; then
+        echo "ERROR: Failed to resolve embedded ramdisk patches; initrd-dsm was not changed."
+        rm -f "${PATCH_LIST_FILE}"
+        exit 99
+    fi
+    CONFIG_PROVENANCE="/root/config/.mshell-redpill-load-revision.json"
+    if [ -r "${CONFIG_PROVENANCE}" ]; then
+        echo "Embedded redpill-load config provenance: $(jq -c . "${CONFIG_PROVENANCE}" 2>/dev/null || cat "${CONFIG_PROVENANCE}")"
+    else
+        echo "WARNING: Embedded redpill-load config provenance is unavailable."
+    fi
+    echo "Ramdisk patch mode: ${RAMDISK_PATCH_MODE}"
+    echo "Patches to be applied : $(tr '\n' ' ' < "${PATCH_LIST_FILE}")"
+
+    extractramdisk
+    temprd="/root/rd.temp"
+
     SYNOINFO_PATCH=$(cat ${CONFIG_PATH} | jq -r -e ' .synoinfo')
     SYNOINFO_USER=$(cat /mnt/tcrp/user_config.json | jq -r -e ' .synoinfo')
     RAMDISK_COPY=$(cat ${CONFIG_PATH} | jq -r -e ' .extra .ramdisk_copy')
     RD_COMPRESSED=$(cat ${CONFIG_PATH} | jq -r -e ' .extra .compress_rd')
     echo "Patching RamDisk"
 
-    PATCHES="$(echo $RAMDISK_PATCH | jq . | sed -e 's/@@@COMMON@@@/\/root\/config\/_common/' | grep config | sed -e 's/"//g' | sed -e 's/,//g')"
-
-    echo "Patches to be applied : $PATCHES"
-
     cd $temprd
     . $temprd/etc/VERSION
-    for patch in $PATCHES; do
-        echo "Applying patch $patch in dir $PWD"
-        # -f, -F 3 옵션을 추가하고 || true 로 에러 반환을 무시합니다.
-        patch -p1 -f -F 3 <$patch || true		
-    done
+    if ! apply_resolved_ramdisk_patches "${PATCH_LIST_FILE}"; then
+        echo "ERROR: Ramdisk patching failed; initrd-dsm was not changed."
+        rm -f "${PATCH_LIST_FILE}"
+        exit 99
+    fi
+    rm -f "${PATCH_LIST_FILE}"
     # 실패한 hunk로 인해 생성된 .rej 파일이 램디스크에 남는 것을 방지
     find $temprd -name "*.rej" -type f -delete
     find $temprd -name "*.orig" -type f -delete

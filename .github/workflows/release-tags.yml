@@ -16,7 +16,13 @@ jobs:
           mkdir /opt/config-files
           cd /opt/config-files
           git clone -b master --single-branch --depth=1 https://github.com/PeterSuh-Q3/redpill-load.git
-          ls -ltr /opt/config-files/redpill-load/config 
+          CONFIG_REPO=/opt/config-files/redpill-load
+          CONFIG_SHA=$(git -C "${CONFIG_REPO}" rev-parse HEAD)
+          test -f "${CONFIG_REPO}/config/_common/ramdisk/patch-sets.json"
+          printf '{"ref":"master","commit":"%s","format":"patch-sets-v2"}\n' "${CONFIG_SHA}" \
+            > "${CONFIG_REPO}/config/.mshell-redpill-load-revision.json"
+          echo "Using redpill-load master at ${CONFIG_SHA}"
+          ls -ltr "${CONFIG_REPO}/config"
       - name: Clone source code
         id: updaterootfs
         run: |
@@ -32,7 +38,10 @@ jobs:
           rm -f ../initrd-friend
           ls -ltr /home/runner/work/tcrpfriend/tcrpfriend/buildroot/board/tcrpfriend/rootfs-overlay/root 
           sudo cp -rf /home/runner/work/tcrpfriend/tcrpfriend/buildroot/board/tcrpfriend/rootfs-overlay/root/* /opt/updaterootfs/temprd/root/
-          sudo cp -rf /opt/config-files/redpill-load/config /opt/updaterootfs/temprd/root/
+          sudo rm -rf /opt/updaterootfs/temprd/root/config
+          sudo cp -a /opt/config-files/redpill-load/config /opt/updaterootfs/temprd/root/config
+          sudo test -f /opt/updaterootfs/temprd/root/config/_common/ramdisk/patch-sets.json
+          sudo test -f /opt/updaterootfs/temprd/root/config/.mshell-redpill-load-revision.json
           sudo cp -rf /home/runner/work/tcrpfriend/tcrpfriend/buildroot/board/tcrpfriend/rootfs-overlay/etc/* /opt/updaterootfs/temprd/etc/
           sudo cp -rf /home/runner/work/tcrpfriend/tcrpfriend/buildroot/board/tcrpfriend/rootfs-overlay/usr/* /opt/updaterootfs/temprd/usr/
           sudo chmod +x /opt/updaterootfs/temprd/usr/bin/jq
@@ -56,6 +65,14 @@ jobs:
           mkdir /opt/output
           echo "Recreating ramdisk using xz(lzma2) " && cd /opt/updaterootfs/temprd && sudo find . 2>/dev/null | sudo cpio -o -H newc -R root:root | xz -9 -T0 --check=crc32 >/opt/output/initrd-friend
           cp /opt/updaterootfs/bzImage-friend /opt/output
+          mkdir /opt/verify-initrd
+          cd /opt/verify-initrd
+          xz -dc /opt/output/initrd-friend | cpio -idm 2>&1 >/dev/null
+          test -f root/config/_common/ramdisk/patch-sets.json
+          test -f root/config/.mshell-redpill-load-revision.json
+          test "$(jq -r .ref root/config/.mshell-redpill-load-revision.json)" = "master"
+          test "$(jq -r .commit root/config/.mshell-redpill-load-revision.json)" = "$(git -C /opt/config-files/redpill-load rev-parse HEAD)"
+          echo "Verified embedded redpill-load config: $(cat root/config/.mshell-redpill-load-revision.json)"
           ls -ltr /opt/output
           touch /opt/output/chksum
           echo "VERSION=`cat /home/runner/work/tcrpfriend/tcrpfriend/buildroot/board/tcrpfriend/rootfs-overlay/root/VERSION`" >> /opt/output/chksum
