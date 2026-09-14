@@ -289,11 +289,12 @@ function history() {
 	       enumerated interface (which can be a link-local DHCP address). Static
 	       IP startup status is consolidated into one console line, and boot
 	       notices clarify TTYD credentials, USB_LINE, and localized web access.
-    0.1.5g Improves DSM ramdisk patch compatibility with current loader configurations.
-    0.1.5h Shows the DSM runtime update separately from the boot payload update.
-           Uses MSHELL Manager runtime metadata when it matches the loader build,
-           while preserving payload metadata for ramdisk patch verification.
-	       Validates patches before applying them to help prevent failed DSM boot preparation.
+	0.1.5g Resolve redpill-load master ramdisk patch sets before patching. V2
+	       config is verified with patch-set provenance, duplicate and missing
+	       patches fail safely, and V2 patches are dry-run before modification.
+	0.1.5h Prefer the DSM runtime Update number in boot status when MSHELL
+	       Manager metadata matches the current loader build; otherwise use the
+	       boot payload Update. Payload patch metadata remains authoritative.
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -318,8 +319,12 @@ function showlastupdate() {
        from netdns.ipdns and the primary NIC owns the gateway/default route.
 0.1.5f Use the successful Internet route for TTYD/DSM URLs. Consolidate
        static-IP status and clarify localized TTYD, USB_LINE, and web notices.
-0.1.5g Improves DSM ramdisk patch compatibility with current loader configurations.
-       Validates patches before applying them to help prevent failed DSM boot preparation.
+0.1.5g Resolve embedded redpill-load master patch sets before ramdisk patching.
+       Validate config provenance and V2 patch paths, and dry-run V2 patches
+       before they can modify initrd-dsm.
+0.1.5h Prefer the DSM runtime Update number in boot status when MSHELL
+       Manager metadata matches the current loader build; otherwise use the
+       boot payload Update. Payload patch metadata remains authoritative.
 	   
 EOF
 }
@@ -1501,12 +1506,7 @@ function gethw() {
 
     checkmachine
 
-    if [ "${runtime_update_available:-false}" = "true" ]; then
-        update_display="DSM runtime U${display_smallfixnumber} (boot payload U${smallfixnumber})"
-    else
-        update_display="boot payload U${smallfixnumber} (DSM runtime metadata unavailable)"
-    fi
-    echo -ne "Model : $(msgnormal "$model"), Serial : $(msgnormal "$(masktext "$serial")"), Mac : $(msgnormal "$(masktext "$mac1")"), Build : $(msgnormal "$version"), Update : $(msgnormal "$update_display"), LKM : $(msgnormal "${redpillmake}")\n"
+    echo -ne "Model : $(msgnormal "$model"), Serial : $(msgnormal "$(masktext "$serial")"), Mac : $(msgnormal "$(masktext "$mac1")"), Build : $(msgnormal "$version"), Update : $(msgnormal "$display_smallfixnumber"), LKM : $(msgnormal "${redpillmake}")\n"
     echo -ne "Platform : $(msgnormal "$ORIGIN_PLATFORM"), Loader BUS: $(msgnormal "${BUS}${SHR_EX_TEXT}"), Module Type: $(msgnormal "$mtype ($mlmethod)")\n"
 	# Display every VGA (class 0300) controller, one GPU per line.
 	GPU_NUM=0
@@ -2238,10 +2238,8 @@ function readconfig() {
         display_smallfixnumber="$smallfixnumber"
         runtime_version="$(jq -r '.general.runtime_version // empty' "$userconfigfile" 2>/dev/null)"
         runtime_smallfixnumber="$(jq -r '.general.runtime_smallfixnumber // empty' "$userconfigfile" 2>/dev/null)"
-        runtime_update_available="false"
         if [ "$runtime_version" = "$version" ] && echo "$runtime_smallfixnumber" | grep -Eq '^[0-9]+$'; then
             display_smallfixnumber="$runtime_smallfixnumber"
-            runtime_update_available="true"
         fi
         redpillmake="$(jq -r -e '.general .redpillmake' $userconfigfile)"
         friendautoupd="$(jq -r -e '.general .friendautoupd' $userconfigfile)"
