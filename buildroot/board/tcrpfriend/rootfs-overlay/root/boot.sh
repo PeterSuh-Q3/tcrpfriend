@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.5g"
+BOOTVER="0.1.5h"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -289,7 +289,10 @@ function history() {
 	       enumerated interface (which can be a link-local DHCP address). Static
 	       IP startup status is consolidated into one console line, and boot
 	       notices clarify TTYD credentials, USB_LINE, and localized web access.
-	0.1.5g Improves DSM ramdisk patch compatibility with current loader configurations.
+    0.1.5g Improves DSM ramdisk patch compatibility with current loader configurations.
+    0.1.5h Shows the DSM runtime update separately from the boot payload update.
+           Uses MSHELL Manager runtime metadata when it matches the loader build,
+           while preserving payload metadata for ramdisk patch verification.
 	       Validates patches before applying them to help prevent failed DSM boot preparation.
 
     Current Version : ${BOOTVER}
@@ -1399,6 +1402,16 @@ function updateuserconfigfile() {
 
 function updategrubconf() {
 
+    runtime_version="$(jq -r '.general.runtime_version // empty' "$userconfigfile" 2>/dev/null)"
+    runtime_smallfixnumber="$(jq -r '.general.runtime_smallfixnumber // empty' "$userconfigfile" 2>/dev/null)"
+
+    # MSHELL Manager owns the runtime-facing GRUB label.  Do not let a
+    # payload patch replace its DSM runtime Update number with the P2 number.
+    if [ "$runtime_version" = "$version" ] && echo "$runtime_smallfixnumber" | grep -Eq '^[0-9]+$'; then
+        echo "Keeping MSHELL Manager DSM runtime GRUB label: $runtime_version Update $runtime_smallfixnumber"
+        return 0
+    fi
+
     curgrubver="$(grep menuentry /mnt/tcrp-p1/boot/grub/grub.cfg | head -1 | awk '{print $6}')"
     curgrubsmall="$(grep menuentry /mnt/tcrp-p1/boot/grub/grub.cfg | head -1 | awk '{print $8}')"
     echo "Updating grub version values from: $curgrubver U$curgrubsmall to $version U$smallfixnumber"
@@ -1488,7 +1501,12 @@ function gethw() {
 
     checkmachine
 
-    echo -ne "Model : $(msgnormal "$model"), Serial : $(msgnormal "$(masktext "$serial")"), Mac : $(msgnormal "$(masktext "$mac1")"), Build : $(msgnormal "$version"), Update : $(msgnormal "$smallfixnumber"), LKM : $(msgnormal "${redpillmake}")\n"
+    if [ "${runtime_update_available:-false}" = "true" ]; then
+        update_display="DSM runtime U${display_smallfixnumber} (boot payload U${smallfixnumber})"
+    else
+        update_display="boot payload U${smallfixnumber} (DSM runtime metadata unavailable)"
+    fi
+    echo -ne "Model : $(msgnormal "$model"), Serial : $(msgnormal "$(masktext "$serial")"), Mac : $(msgnormal "$(masktext "$mac1")"), Build : $(msgnormal "$version"), Update : $(msgnormal "$update_display"), LKM : $(msgnormal "${redpillmake}")\n"
     echo -ne "Platform : $(msgnormal "$ORIGIN_PLATFORM"), Loader BUS: $(msgnormal "${BUS}${SHR_EX_TEXT}"), Module Type: $(msgnormal "$mtype ($mlmethod)")\n"
 	# Display every VGA (class 0300) controller, one GPU per line.
 	GPU_NUM=0
@@ -2214,6 +2232,17 @@ function readconfig() {
             TEXT "Update(smallfixnumber) is not resolved. Please check the /mnt/tcrp/user_config.json file."
         #    exit 99
         fi        
+        # Payload metadata is authoritative for ramdisk hashes and patching.
+        # Runtime metadata is display-only and is written by MSHELL Manager
+        # after DSM has mounted its own root filesystem.
+        display_smallfixnumber="$smallfixnumber"
+        runtime_version="$(jq -r '.general.runtime_version // empty' "$userconfigfile" 2>/dev/null)"
+        runtime_smallfixnumber="$(jq -r '.general.runtime_smallfixnumber // empty' "$userconfigfile" 2>/dev/null)"
+        runtime_update_available="false"
+        if [ "$runtime_version" = "$version" ] && echo "$runtime_smallfixnumber" | grep -Eq '^[0-9]+$'; then
+            display_smallfixnumber="$runtime_smallfixnumber"
+            runtime_update_available="true"
+        fi
         redpillmake="$(jq -r -e '.general .redpillmake' $userconfigfile)"
         friendautoupd="$(jq -r -e '.general .friendautoupd' $userconfigfile)"
         hidesensitive="$(jq -r -e '.general .hidesensitive' $userconfigfile)"
