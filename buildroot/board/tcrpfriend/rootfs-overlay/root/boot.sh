@@ -289,9 +289,8 @@ function history() {
 	       enumerated interface (which can be a link-local DHCP address). Static
 	       IP startup status is consolidated into one console line, and boot
 	       notices clarify TTYD credentials, USB_LINE, and localized web access.
-	0.1.5g Resolve redpill-load master ramdisk patch sets before patching. V2
-	       config is verified with patch-set provenance, duplicate and missing
-	       patches fail safely, and V2 patches are dry-run before modification.
+	0.1.5g Improves DSM ramdisk patch compatibility with current loader configurations.
+	       Validates patches before applying them to help prevent failed DSM boot preparation.	   
 	0.1.5h Prefer the DSM runtime Update number in boot status when MSHELL
 	       Manager metadata matches the current loader build; otherwise use the
 	       boot payload Update. Payload patch metadata remains authoritative.
@@ -319,9 +318,8 @@ function showlastupdate() {
        from netdns.ipdns and the primary NIC owns the gateway/default route.
 0.1.5f Use the successful Internet route for TTYD/DSM URLs. Consolidate
        static-IP status and clarify localized TTYD, USB_LINE, and web notices.
-0.1.5g Resolve embedded redpill-load master patch sets before ramdisk patching.
-       Validate config provenance and V2 patch paths, and dry-run V2 patches
-       before they can modify initrd-dsm.
+0.1.5g Improves DSM ramdisk patch compatibility with current loader configurations.
+       Validates patches before applying them to help prevent failed DSM boot preparation.	   
 0.1.5h Prefer the DSM runtime Update number in boot status when MSHELL
        Manager metadata matches the current loader build; otherwise use the
        boot payload Update. Payload patch metadata remains authoritative.
