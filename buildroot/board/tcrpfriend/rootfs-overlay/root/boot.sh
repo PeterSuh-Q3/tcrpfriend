@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.5h"
+BOOTVER="0.1.5i"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -294,6 +294,8 @@ function history() {
 	0.1.5h Prefer the DSM runtime Update number in boot status when MSHELL
 	       Manager metadata matches the current loader build; otherwise use the
 	       boot payload Update. Payload patch metadata remains authoritative.
+	0.1.5i Use the resolver-selected KVER only when platform and DSM build match;
+	       older or mismatched user configs keep the legacy kernel mapping.
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -323,6 +325,8 @@ function showlastupdate() {
 0.1.5h Prefer the DSM runtime Update number in boot status when MSHELL
        Manager metadata matches the current loader build; otherwise use the
        boot payload Update. Payload patch metadata remains authoritative.
+0.1.5i Use the resolver-selected KVER only when platform and DSM build match;
+       older or mismatched user configs keep the legacy kernel mapping.
 	   
 EOF
 }
@@ -1401,6 +1405,24 @@ function updateuserconfigfile() {
 
     fi
 
+}
+
+# Prefer the exact kernel selected by MSHELL's reviewed target resolver. Older
+# loaders have no resolver metadata and continue through the legacy mapping.
+function resolver_kver_for_boot() {
+	local platform="$1" dsm_build="$2" config="${3:-$userconfigfile}"
+	local saved_platform saved_version saved_build saved_kver
+	[ -r "$config" ] || return 1
+	saved_platform=$(jq -r '.general.resolver_platform // empty' "$config" 2>/dev/null) || return 1
+	saved_version=$(jq -r '.general.version // empty' "$config" 2>/dev/null) || return 1
+	saved_kver=$(jq -r '.general.kver // empty' "$config" 2>/dev/null) || return 1
+	[ "$saved_platform" = "$platform" ] || return 1
+	case "$saved_version" in
+		*-"$dsm_build") ;;
+		*) return 1 ;;
+	esac
+	printf '%s' "$saved_kver" | grep -Eq '^[0-9]+(\.[0-9]+)+$' || return 1
+	printf '%s\n' "$saved_kver"
 }
 
 function updategrubconf() {
@@ -2863,7 +2885,10 @@ function initialize() {
 
     DSM_VERSION=$(cat /mnt/tcrp-p1/GRUB_VER | grep DSM_VERSION | cut -d "=" -f2 | sed 's/"//g')
 
-	if echo "${kver3platforms}" | grep -qw "${ORIGIN_PLATFORM}"; then
+	KVER=$(resolver_kver_for_boot "$ORIGIN_PLATFORM" "$DSM_VERSION" "$userconfigfile" || true)
+	if [ -n "$KVER" ]; then
+		msginfo "Using resolver-selected kernel version ${KVER} for ${ORIGIN_PLATFORM} DSM build ${DSM_VERSION}"
+	elif echo "${kver3platforms}" | grep -qw "${ORIGIN_PLATFORM}"; then
 		if [ "$DSM_VERSION" = "25556" ]; then
 			KVER="3.10.105"
 		else
