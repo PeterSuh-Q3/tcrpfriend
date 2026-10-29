@@ -294,7 +294,7 @@ function history() {
 	0.1.5h Prefer the DSM runtime Update number in boot status when MSHELL
 	       Manager metadata matches the current loader build; otherwise use the
 	       boot payload Update. Payload patch metadata remains authoritative.
-	0.1.5i Use the resolver-selected KVER only when platform and DSM build match;
+	0.1.5i Use the resolver-selected KVER only when platform and DSM build match
 	       older or mismatched user configs keep the legacy kernel mapping.
 
     Current Version : ${BOOTVER}
@@ -309,7 +309,7 @@ function showlastupdate() {
 0.1.4q Add MSHELL Manager auto-rebuild hook (non-interactive build+backup+kexec).
 0.1.5g Improves DSM ramdisk patch compatibility with current loader configurations.
        Validates patches before applying them to help prevent failed DSM boot preparation.	   
-0.1.5i Use the resolver-selected KVER only when platform and DSM build match;
+0.1.5i Use the resolver-selected KVER only when platform and DSM build match
        older or mismatched user configs keep the legacy kernel mapping.
 	   
 EOF
