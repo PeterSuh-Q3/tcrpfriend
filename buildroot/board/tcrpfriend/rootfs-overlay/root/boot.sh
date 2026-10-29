@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.5j"
+BOOTVER="0.1.5k"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -300,6 +300,8 @@ function history() {
 	0.1.5j Read the shared six-platform kernel 5 policy and block epyc7003ntb.
 	       Resolve legacy kernels by platform and DSM build; stop when no reviewed
 	       kernel mapping exists.
+	0.1.5k Stop retrying deterministic CPU-feature rejections during MSHELL
+	       auto-rebuild and explain BMI2-compatible mode selection.
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -317,6 +319,8 @@ function showlastupdate() {
        older or mismatched user configs keep the legacy kernel mapping.
 0.1.5j Use the shared kernel 5 platform policy, reject epyc7003ntb, and require
        an approved per-build kernel mapping for legacy loader configurations.
+0.1.5k Stop deterministic CPU-feature retries and guide users to a compatible
+       resolver-listed module/method mode when BMI2 is unavailable.
 	   
 EOF
 }
@@ -2626,8 +2630,11 @@ function mshell_auto_rebuild() {
     # function (which would also require exporting everything it
     # transitively calls).
     build_rc=1
+    local cpu_feature_missing=0 attempt_log
     for attempt in 1 2 3; do
         echo "=== mshell auto-rebuild attempt ${attempt}/3 ==="
+        attempt_log="/tmp/mshell-auto-rebuild-${attempt}.log"
+        : > "$attempt_log"
         timeout 600 bash -c '
             . /home/tc/functions.sh
 
@@ -2734,14 +2741,42 @@ function mshell_auto_rebuild() {
                 my "${MODEL}-${BUILD}" noconfig fri prevent_param
             fi
         ' \
-            2>&1 | tee -a /home/tc/zlastbuild.log
+            2>&1 | tee -a /home/tc/zlastbuild.log "$attempt_log"
         build_rc=${PIPESTATUS[0]}
-        [ ${build_rc} -eq 0 ] && break
+        if [ ${build_rc} -eq 0 ]; then
+            rm -f "$attempt_log"
+            break
+        fi
+
+        # CPU compatibility failures are deterministic for the saved
+        # target/mode. Repeating the same build cannot fix them, and used
+        # to leave users with three identical failures and no next step.
+        if grep -qx 'CPU_FEATURE_MISSING' "$attempt_log"; then
+            cpu_feature_missing=1
+            rm -f "$attempt_log"
+            echo "[ERROR] The selected ${MDLNAME}/${MLMETHOD} build mode requires CPU features that are not exposed by this xTCRP environment (BMI2 is required for some kernel 5 targets)."
+            echo "[ACTION] If this is a VM and its host CPU supports BMI2, change the VM CPU type to host/passthrough, then retry."
+            echo "[ACTION] If the physical CPU does not support BMI2, open menu.sh or MSHELL Manager and explicitly select a resolver-listed mode without the BMI2 requirement (for SA6400 DSM 7.4.1, custom-modules/PML is available). This mode may provide fewer bundled modules/addons; the setting will not be changed automatically."
+            break
+        fi
+        rm -f "$attempt_log"
         echo "attempt ${attempt} failed (exit ${build_rc}, 124=timeout)"
         [ ${attempt} -lt 3 ] && sleep 30
     done
 
     if [ ${build_rc} -ne 0 ]; then
+        if [ "${cpu_feature_missing}" = 1 ]; then
+            # Do not leave Manager's one-shot marker/default GRUB entry
+            # armed after a deterministic compatibility rejection. A
+            # later power cycle should boot the existing DSM until the
+            # user saves a compatible build mode and requests rebuild again.
+            sudo rm -f /mnt/tcrp/.mshell-auto-rebuild
+            sudo sed -i 's/set default="[0-9]"/set default="0"/' "/mnt/${LOADER_DISK}1/boot/grub/grub.cfg"
+            sync
+            echo "MSHELL auto-rebuild stopped because the selected module/method mode is incompatible with the detected CPU; see /home/tc/zlastbuild.log."
+            echo "Auto-rebuild marker cleared; the next reboot will use the existing DSM loader until a compatible mode is saved and rebuild is requested again."
+            return ${build_rc}
+        fi
         echo "mshell auto-rebuild failed after 3 attempts (exit ${build_rc}) - see /home/tc/zlastbuild.log"
         return ${build_rc}
     fi
