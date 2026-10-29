@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.5i"
+BOOTVER="0.1.5j"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -25,7 +25,8 @@ alias TEXT='gettext "msg"'
 shopt -s expand_aliases
 
 kver3platforms="bromolow braswell avoton cedarview grantley"
-kver5platforms="epyc7002 v1000nk r1000nk geminilakenk"
+platform_policy="/root/platform-policy.v1.json"
+kver5platforms=$(jq -er 'if .version == 1 and (.kernel5_platforms|type)=="array" and (.kernel5_platforms|length)>0 and (.excluded_platforms|type)=="array" and (.excluded_platforms|index("epyc7003ntb")) != null and ((.kernel5_platforms - .excluded_platforms)|length)==(.kernel5_platforms|length) then .kernel5_platforms | join(" ") else error("invalid policy") end' "$platform_policy") || { echo "Platform policy missing or invalid: $platform_policy" >&2; exit 1; }
 
 function history() {
     cat <<EOF
@@ -760,7 +761,7 @@ function extractramdisk() {
 			KVER="3.10.108"
 		fi
 	elif echo "${kver5platforms}" | grep -qw "${ORIGIN_PLATFORM}"; then
-		KVER="5.10.55"
+		KVER=$(jq -er --arg platform "$ORIGIN_PLATFORM" --arg build "$buildnumber" '.legacy_kernels[$platform][$build] // empty' "$platform_policy") || { echo "No approved kernel for $ORIGIN_PLATFORM build $buildnumber" >&2; exit 1; }
 	else
 		if [ "$buildnumber" -le 25556 ]; then
 			KVER="4.4.59"
@@ -2857,6 +2858,9 @@ function initialize() {
     [ -f modules.alias.4.json.gz ] && gunzip -f modules.alias.4.json.gz    
 
     ORIGIN_PLATFORM=$(cat /mnt/tcrp-p1/GRUB_VER | grep PLATFORM | cut -d "=" -f2 | tr '[:upper:]' '[:lower:]' | sed 's/"//g')
+    if jq -e --arg platform "$ORIGIN_PLATFORM" '.excluded_platforms | index($platform) != null' "$platform_policy" >/dev/null; then
+        echo "Unsupported platform: $ORIGIN_PLATFORM" >&2; exit 1
+    fi
 
     case $ORIGIN_PLATFORM in
     avoton | bromolow | braswell | cedarview | grantley)
@@ -2879,7 +2883,7 @@ function initialize() {
 			KVER="3.10.108"
 		fi
 	elif echo "${kver5platforms}" | grep -qw "${ORIGIN_PLATFORM}"; then
-		KVER="5.10.55"
+		KVER=$(jq -er --arg platform "$ORIGIN_PLATFORM" --arg build "$DSM_VERSION" '.legacy_kernels[$platform][$build] // empty' "$platform_policy") || { echo "No approved kernel for $ORIGIN_PLATFORM build $DSM_VERSION" >&2; exit 1; }
 	else
 		if [ "$DSM_VERSION" -le 25556 ]; then
 			KVER="4.4.59"
