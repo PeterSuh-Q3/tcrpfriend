@@ -301,7 +301,7 @@ function history() {
 	       Resolve legacy kernels by platform and DSM build; stop when no reviewed
 	       kernel mapping exists.
 	0.1.5k Stop retrying deterministic CPU-feature rejections during MSHELL
-	       auto-rebuild and explain BMI2-compatible mode selection.
+	       auto-rebuild and show the configured mode with BMI2 guidance.
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -2630,7 +2630,7 @@ function mshell_auto_rebuild() {
     # function (which would also require exporting everything it
     # transitively calls).
     build_rc=1
-    local cpu_feature_missing=0 attempt_log
+    local cpu_feature_missing=0 attempt_log display_module display_method
     for attempt in 1 2 3; do
         echo "=== mshell auto-rebuild attempt ${attempt}/3 ==="
         attempt_log="/tmp/mshell-auto-rebuild-${attempt}.log"
@@ -2754,7 +2754,11 @@ function mshell_auto_rebuild() {
         if grep -qx 'CPU_FEATURE_MISSING' "$attempt_log"; then
             cpu_feature_missing=1
             rm -f "$attempt_log"
-            echo "[ERROR] The selected ${MDLNAME}/${MLMETHOD} build mode requires CPU features that are not exposed by this xTCRP environment (BMI2 is required for some kernel 5 targets)."
+            # The build runs in another shell, so its MDLNAME/MLMETHOD
+            # variables are not available here. Read the saved selection.
+            display_module=$(readConfigKey "general" "modulename") || display_module=""
+            display_method=$(readConfigKey "general" "mlmethod") || display_method=""
+            echo "[ERROR] The selected ${display_module:-unknown}/${display_method:-unknown} build mode requires CPU features that are not exposed by this xTCRP environment (BMI2 is required for some kernel 5 targets)."
             echo "[ACTION] If this is a VM and its host CPU supports BMI2, change the VM CPU type to host/passthrough, then retry."
             echo "[ACTION] If the physical CPU does not support BMI2, open menu.sh or MSHELL Manager and explicitly select a resolver-listed mode without the BMI2 requirement (for SA6400 DSM 7.4.1, custom-modules/PML is available). This mode may provide fewer bundled modules/addons; the setting will not be changed automatically."
             break
