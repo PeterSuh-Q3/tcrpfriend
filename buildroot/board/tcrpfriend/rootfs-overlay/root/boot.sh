@@ -297,6 +297,9 @@ function history() {
 	       boot payload Update. Payload patch metadata remains authoritative.
 	0.1.5i Use the resolver-selected KVER only when platform and DSM build match
 	       older or mismatched user configs keep the legacy kernel mapping.
+	0.1.5j Read the shared six-platform kernel 5 policy and block epyc7003ntb.
+	       Resolve legacy kernels by platform and DSM build; stop when no reviewed
+	       kernel mapping exists.
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -312,6 +315,8 @@ function showlastupdate() {
        Validates patches before applying them to help prevent failed DSM boot preparation.	   
 0.1.5i Use the resolver-selected KVER only when platform and DSM build match
        older or mismatched user configs keep the legacy kernel mapping.
+0.1.5j Use the shared kernel 5 platform policy, reject epyc7003ntb, and require
+       an approved per-build kernel mapping for legacy loader configurations.
 	   
 EOF
 }
