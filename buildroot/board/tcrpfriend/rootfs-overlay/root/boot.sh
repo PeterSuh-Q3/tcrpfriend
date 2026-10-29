@@ -307,24 +307,8 @@ function showlastupdate() {
 0.1.0  friend kernel version up from 5.15.26 to 6.4.16
 0.1.3m Enable FRIEND Kernel on HP N36L/N40L/N54L (Supports Older AMD CPUs)
 0.1.4q Add MSHELL Manager auto-rebuild hook (non-interactive build+backup+kexec).
-0.1.4w Switch static IP to a kernel cmdline parameter (network.<MAC>=...) added
-       at kexec time - the ramdisk ifcfg-ethN approach doesn't survive DSM's own boot.
-0.1.5a Add <m> hotkey to mask/unmask Serial/MAC (incl. netconsole and static-IP
-       network.<MAC>= cmdline tokens) on screen for screenshot sharing.
-0.1.5c Support up to 8 static-IP NICs (ipsettings is now an array with one
-       primary NIC owning the default route)
-0.1.5d Guard DSM kexec handoff against duplicate TTYD/local-console boot
-       sessions. 
-0.1.5e Stop ConnMan before static-IP setup so DHCP cannot re-add addresses,
-       DNS routes, or a competing path on another NIC. resolv.conf is rebuilt
-       from netdns.ipdns and the primary NIC owns the gateway/default route.
-0.1.5f Use the successful Internet route for TTYD/DSM URLs. Consolidate
-       static-IP status and clarify localized TTYD, USB_LINE, and web notices.
 0.1.5g Improves DSM ramdisk patch compatibility with current loader configurations.
        Validates patches before applying them to help prevent failed DSM boot preparation.	   
-0.1.5h Prefer the DSM runtime Update number in boot status when MSHELL
-       Manager metadata matches the current loader build; otherwise use the
-       boot payload Update. Payload patch metadata remains authoritative.
 0.1.5i Use the resolver-selected KVER only when platform and DSM build match;
        older or mismatched user configs keep the legacy kernel mapping.
 	   
