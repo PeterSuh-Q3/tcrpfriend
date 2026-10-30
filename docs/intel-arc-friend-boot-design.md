@@ -13,7 +13,8 @@ Core Ultra 7 155H의 Meteor Lake Arc 내장 GPU 장착 노트북에서 FRIEND �
 * 조사 기준은 tcrpfriend main `75120ba8a2c684e94b152d2d158a5f1b8d88b74d`이다. 보고 당시 이미지의 실제 FRIEND 커널과 이 소스의 동일성은 미확인이다.
 * `buildroot/configs/tcrpfriend_defconfig`는 Buildroot의 latest kernel 선택과 저장된 버전 문자열 `6.6.79`, `board/tcrpfriend/kernel_defconfig`를 지정한다. 실제 버전은 선택한 Buildroot revision 및 생성된 `.config`에서 확정해야 한다. `tcrpfriend_defconfig.k6`의 별도 경로도 확인한다.
 * `kernel_defconfig`는 `CONFIG_DRM=y`, `CONFIG_FB_EFI=y`, `CONFIG_FRAMEBUFFER_CONSOLE=y`를 명시하지만 i915 및 xe 활성화 설정은 명시하지 않는다. 실제 olddefconfig 결과와 이미지 모듈 목록을 확인하기 전 i915 포함 여부를 단정하지 않는다. EFI framebuffer는 GPU 전용 드라이버와 별개다.
-* Buildroot 펌웨어 선택과 rootfs overlay에서 Intel GPU 펌웨어를 명시적으로 찾지 못했다. 이것이 155H KP의 원인이라는 증거는 아니다. `root/tools/ramdisk-patch.sh`의 `firmware.tgz`는 DSM 램디스크용이므로 FRIEND rootfs 펌웨어로 취급하지 않는다. 실제 적용되는 패치 경로 및 최종 이미지 내용도 확인한다.
+* `buildroot/board/tcrpfriend/rootfs-overlay/usr/lib/firmware/`는 FRIEND rootfs에 포함되는 **실제 펌웨어 디렉터리**다. `BR2_ROOTFS_OVERLAY`가 이 overlay를 지정하며, 현재 디렉터리에는 Realtek 등 주로 네트워크 장치용 펌웨어가 있다. 다만 조사한 현재 overlay에는 `i915` 디렉터리나 DG2·Meteor Lake용 GuC 펌웨어가 없고, Buildroot 펌웨어 선택에도 Intel GPU 펌웨어가 명시되어 있지 않다. 따라서 **FRIEND에 펌웨어가 없는 것이 아니라, 현재 소스에서 Intel GPU 펌웨어가 확인되지 않은 것**이다. 별도 패키지나 다른 빌드 단계로 최종 이미지에 포함되는지는 실제 산출물을 확인해야 한다. 이것이 155H KP의 원인이라는 증거는 아니다.
+* `root/tools/ramdisk-patch.sh`의 `firmware.tgz`는 DSM 램디스크용으로 추출되므로 위 FRIEND rootfs 펌웨어와 구분한다. 실제 적용되는 패치 경로 및 최종 이미지 내용도 확인한다.
 * `.github/workflows/buildroot.yml`은 이동하는 Buildroot 브랜치 `2023.11.x`와 redpill-load `master`를 사용하고 빌드 결과로 bzImage와 initrd만 보관한다. 재현 가능한 커널 버전, 최종 설정, 펌웨어 및 원본 해시가 남지 않는 것이 조사상의 결함이다. workflow의 overlay 복사와 redpill-load config 복사 순서도 최종 rootfs에서 확인한다.
 
 ## 설계 원칙
