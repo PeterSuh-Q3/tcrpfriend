@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.5l"
+BOOTVER="0.1.5k"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -302,9 +302,6 @@ function history() {
 	       kernel mapping exists.
 	0.1.5k Stop retrying deterministic CPU-feature rejections during MSHELL
 	       auto-rebuild and show the configured mode with BMI2 guidance.
-	0.1.5l Keep a separate Nehalem report for each Manager auto-rebuild attempt.
-	       Stop retries only for a validated, allowlisted SIGILL result; static
-	       warnings and untested results leave the existing retry policy intact.
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -324,8 +321,6 @@ function showlastupdate() {
        an approved per-build kernel mapping for legacy loader configurations.
 0.1.5k Stop deterministic CPU-feature retries and guide users to a compatible
        resolver-listed module/method mode when BMI2 is unavailable.
-0.1.5l Track Nehalem compatibility results per auto-rebuild attempt and stop
-       repeated attempts only after a validated SIGILL result.
 	   
 EOF
 }
@@ -2635,15 +2630,11 @@ function mshell_auto_rebuild() {
     # function (which would also require exporting everything it
     # transitively calls).
     build_rc=1
-    local cpu_feature_missing=0 binary_sigill=0 attempt_log attempt_dir attempt_id display_module display_method
+    local cpu_feature_missing=0 attempt_log display_module display_method
     for attempt in 1 2 3; do
         echo "=== mshell auto-rebuild attempt ${attempt}/3 ==="
         attempt_log="/tmp/mshell-auto-rebuild-${attempt}.log"
         : > "$attempt_log"
-        attempt_dir=$(mktemp -d /tmp/mshell-nehalem-auto.XXXXXXXX) || attempt_dir=""
-        attempt_id=$(basename "${attempt_dir:-none}")
-        export MSHELL_NEHALEM_ATTEMPT="$attempt_id"
-        export MSHELL_NEHALEM_REPORT="${attempt_dir:+${attempt_dir}/report.json}"
         timeout 600 bash -c '
             . /home/tc/functions.sh
 
@@ -2752,25 +2743,11 @@ function mshell_auto_rebuild() {
         ' \
             2>&1 | tee -a /home/tc/zlastbuild.log "$attempt_log"
         build_rc=${PIPESTATUS[0]}
-        if [ -x /home/tc/tools/nehalem-report-summary.sh ]; then
-            /home/tc/tools/nehalem-report-summary.sh "$MSHELL_NEHALEM_REPORT" "$attempt_id" | tee -a /home/tc/zlastbuild.log
-        else
-            echo 'Nehalem compatibility: UNTESTED — summary helper unavailable' | tee -a /home/tc/zlastbuild.log
-        fi
         if [ ${build_rc} -eq 0 ]; then
             rm -f "$attempt_log"
             break
         fi
 
-        # Only an actual allowlisted Nehalem execution ending in SIGILL may
-        # stop retries. Static opcode observations are never sufficient.
-        if [ -x /home/tc/tools/nehalem-confirmed-sigill.sh ] && \
-           /home/tc/tools/nehalem-confirmed-sigill.sh "$MSHELL_NEHALEM_REPORT" "$attempt_id"; then
-            binary_sigill=1
-            rm -f "$attempt_log"
-            echo '[ERROR] A reviewed Nehalem execution test confirmed SIGILL; automatic retries stopped.'
-            break
-        fi
         # CPU compatibility failures are deterministic for the saved
         # target/mode. Repeating the same build cannot fix them, and used
         # to leave users with three identical failures and no next step.
@@ -2792,10 +2769,6 @@ function mshell_auto_rebuild() {
     done
 
     if [ ${build_rc} -ne 0 ]; then
-        if [ "$binary_sigill" = 1 ]; then
-            echo "MSHELL auto-rebuild stopped after confirmed binary incompatibility; report: $MSHELL_NEHALEM_REPORT"
-            return ${build_rc}
-        fi
         if [ "${cpu_feature_missing}" = 1 ]; then
             # Do not leave Manager's one-shot marker/default GRUB entry
             # armed after a deterministic compatibility rejection. A
