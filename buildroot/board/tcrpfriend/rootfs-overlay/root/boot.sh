@@ -326,8 +326,8 @@ function showlastupdate() {
 0.1.5k Stop deterministic CPU-feature retries and guide users to a compatible
        resolver-listed module/method mode when BMI2 is unavailable.
 0.1.5l Ignore the empty default ipsettings scaffold and remain on DHCP.
-	0.1.5m Detect custom and dsm-kernel-compat kernel signatures to skip kpatch,
-	       including when all-modules is selected.
+0.1.5m Detect custom and dsm-kernel-compat kernel signatures to skip kpatch,
+       including when all-modules is selected.
 	   
 EOF
 }
