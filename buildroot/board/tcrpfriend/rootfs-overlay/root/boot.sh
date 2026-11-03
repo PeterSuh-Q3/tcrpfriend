@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.5l"
+BOOTVER="0.1.5m"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -304,6 +304,8 @@ function history() {
 	       auto-rebuild and show the configured mode with BMI2 guidance.
 	0.1.5l Treat an empty ipsettings scaffold as DHCP, without warning or
 	       stopping DHCP services; keep validation for configured static entries.
+	0.1.5m Detect custom and dsm-kernel-compat kernel signatures in zImage-dsm;
+	       skip FRIEND kpatch independently of the selected module pack.
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -324,8 +326,16 @@ function showlastupdate() {
 0.1.5k Stop deterministic CPU-feature retries and guide users to a compatible
        resolver-listed module/method mode when BMI2 is unavailable.
 0.1.5l Ignore the empty default ipsettings scaffold and remain on DHCP.
+	0.1.5m Detect custom and dsm-kernel-compat kernel signatures to skip kpatch,
+	       including when all-modules is selected.
 	   
 EOF
+}
+
+function get_prepatched_kernel_signature() {
+    local image="${1:-/mnt/tcrp/zImage-dsm}"
+    [ -s "${image}" ] || return 1
+    strings -a "${image}" 2>/dev/null | grep -E -m1 -o 'PeterSuh-Q3@MSHELL|dsm-kernel-compat@debian12'
 }
 
 
@@ -730,6 +740,12 @@ function _set_conf_kv() {
 }
 
 function patchkernel() {
+	local kernel_signature
+	kernel_signature="$(get_prepatched_kernel_signature /mnt/tcrp/zImage-dsm 2>/dev/null || true)"
+	if [ -n "${kernel_signature}" ]; then
+		echo "Detected prepatched kernel signature '${kernel_signature}'; skipping kpatch"
+		return 0
+	fi
 
 	echo "Patching Kernel"
 	/root/tools/bzImage-to-vmlinux.sh /mnt/tcrp-p2/zImage /root/vmlinux >log 2>&1 >/dev/null
@@ -1325,9 +1341,11 @@ function patchramdisk() {
 function finishramdiskpatch() {
     origrdhash=$(sha256sum /mnt/tcrp-p2/rd.gz | awk '{print $1}')
     updateuserconfigfield "general" "rdhash" "$origrdhash"	
-	if [ "$mtype" != "custom-modules" ]; then
+	if [ "$mtype" != "custom-modules" ] && ! get_prepatched_kernel_signature /mnt/tcrp/zImage-dsm >/dev/null 2>&1; then
     	origzimghash=$(sha256sum /mnt/tcrp-p2/zImage | awk '{print $1}')
     	updateuserconfigfield "general" "zimghash" "$origzimghash"
+	else
+		echo "Keeping zImage hash state for custom or prepatched kernel"
 	fi
     updateuserconfigfield "general" "version" "${major}.${minor}.${micro}-${buildnumber}"
 	
@@ -1838,8 +1856,12 @@ function checkupgrade() {
     rdhash="$(jq -r -e '.general .rdhash' $userconfigfile)"
     origrdhash=$(sha256sum /mnt/tcrp-p2/rd.gz | awk '{print $1}')
     zimghash="$(jq -r -e '.general .zimghash' $userconfigfile)"
+	kernel_signature="$(get_prepatched_kernel_signature /mnt/tcrp/zImage-dsm 2>/dev/null || true)"
 	if [ "$mtype" = "custom-modules" ]; then
 	    echo "custom-modules Skip Patching Kernel"
+		origzimghash=$zimghash
+	elif [ -n "${kernel_signature}" ]; then
+	    echo "Detected prepatched kernel signature '${kernel_signature}'; Skip Patching Kernel"
 		origzimghash=$zimghash
 	else	
     	origzimghash=$(sha256sum /mnt/tcrp-p2/zImage | awk '{print $1}')
