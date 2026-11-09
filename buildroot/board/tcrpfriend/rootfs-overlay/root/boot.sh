@@ -1750,20 +1750,16 @@ function getip() {
 
     ethdevs=$(ls /sys/class/net/ | grep -v lo || true)
 
-    # MOSCHIP USB-Ethernet 드라이버 초기화 보정
-    # mcs7830 드라이버에 연결된 인터페이스가 DOWN이면 활성화
-    local eth driver
-
-    for eth in $ethdevs; do
-        driver=$(basename "$(readlink -f "/sys/class/net/${eth}/device/driver" 2>/dev/null)")
-
-        if [ "${driver}" = "mcs7830" ]; then
-            if [ "$(cat "/sys/class/net/${eth}/flags" 2>/dev/null)" ]; then
-                echo "MOSCHIP USB-Ethernet detected: activating ${eth}" >&2
-                ifconfig "${eth}" up
-            fi
-        fi
-    done
+	# MOSCHIP USB-Ethernet 활성화
+	for eth in $ethdevs; do
+	    driver=$(basename "$(readlink -f \
+	        "/sys/class/net/${eth}/device/driver" 2>/dev/null)")
+	
+	    if [ "${driver}" = "mcs7830" ]; then
+	        echo "MOSCHIP: activating ${eth}" >&2
+	        ifconfig "${eth}" up
+	    fi
+	done
 
     sleep 3
 
@@ -1802,15 +1798,43 @@ function getip() {
 
         # DHCP는 리스를 받는 데 시간이 걸릴 수 있어 최대 5초 대기. static은
         # setnetwork()가 이미 부팅 초반에 적용해 놨어야 정상이라 보통 바로 잡힌다.
-        count=0
-        ip4=""
-        while [ ${count} -lt 5 ]; do
-            ip4="$(ip -4 addr show dev "${eth}" 2>/dev/null | awk '/inet /{print $2; exit}')"
-            [ -n "${ip4}" ] && break
-            count=$((count + 1))
-            sleep 1
-        done
-        [ -z "${ip4}" ] && continue
+		count=0
+		ip4=""
+		
+		# 169.254는 무시하고 정상 IPv4를 최대 10초 대기
+		while [ "${count}" -lt 10 ]; do
+		    ip4=$(ip -4 addr show dev "${eth}" 2>/dev/null |
+		        awk '$1 == "inet" &&
+		             $2 !~ /^169\.254\./ {
+		                 print $2
+		                 exit
+		             }')
+		
+		    [ -n "${ip4}" ] && break
+		
+		    count=$((count + 1))
+		    sleep 1
+		done
+		
+		[ -z "${ip4}" ] && continue
+		
+		# MOSCHIP DHCP 인터페이스의 169.254 주소 정리
+		if [ "$(basename "$(readlink -f \
+		    "/sys/class/net/${eth}/device/driver" 2>/dev/null)")" = "mcs7830" ]; then
+		
+		    is_static=$(jq -r --arg d "${eth}" \
+		        '[.ipsettings[]? | select(.ipiface == $d)] | length' \
+		        "${userconfigfile}" 2>/dev/null)
+		
+		    if [ "${is_static}" = "0" ]; then
+		        ip -4 addr show dev "${eth}" 2>/dev/null |
+		            awk '$1 == "inet" && $2 ~ /^169\.254\./ {print $2}' |
+		            while read -r lladdr; do
+		                echo "MOSCHIP: removing ${lladdr} from ${eth}" >&2
+		                ip addr del "${lladdr}" dev "${eth}"
+		            done
+		    fi
+		fi
 
         LASTIP="${ip4%%/*}"
         is_static=$(jq -r --arg d "${eth}" '[.ipsettings[]? | select(.ipiface == $d)] | length' "${userconfigfile}" 2>/dev/null)
