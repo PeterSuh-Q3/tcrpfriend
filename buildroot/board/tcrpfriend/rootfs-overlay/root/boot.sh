@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Author : PeterSuh-Q3
-# Date : 260905
+# Date : 261109
 # User Variables :
 ###############################################################################
 
@@ -9,7 +9,7 @@
 source /root/menufunc.h
 #####################################################################################################
 
-BOOTVER="0.1.5m"
+BOOTVER="0.1.5n"
 FRIENDLOG="/mnt/tcrp/friendlog.log"
 AUTOUPDATES="1"
 userconfigfile=/mnt/tcrp/user_config.json
@@ -306,6 +306,7 @@ function history() {
 	       stopping DHCP services; keep validation for configured static entries.
 	0.1.5m Detect custom and dsm-kernel-compat kernel signatures in zImage-dsm;
 	       skip FRIEND kpatch independently of the selected module pack.
+	0.1.5n MOSCHIP USB-Ethernet Driver Initialization Correction.
 
     Current Version : ${BOOTVER}
     --------------------------------------------------------------------------------------
@@ -328,6 +329,7 @@ function showlastupdate() {
 0.1.5l Ignore the empty default ipsettings scaffold and remain on DHCP.
 0.1.5m Detect custom and dsm-kernel-compat kernel signatures to skip kpatch,
        including when all-modules is selected.
+0.1.5n MOSCHIP USB-Ethernet Driver Initialization Correction.	   
 	   
 EOF
 }
@@ -1747,6 +1749,21 @@ function get_vendor_device() {
 function getip() {
 
     ethdevs=$(ls /sys/class/net/ | grep -v lo || true)
+
+    # MOSCHIP USB-Ethernet 드라이버 초기화 보정
+    # mcs7830 드라이버에 연결된 인터페이스가 DOWN이면 활성화
+    local eth driver
+
+    for eth in $ethdevs; do
+        driver=$(basename "$(readlink -f "/sys/class/net/${eth}/device/driver" 2>/dev/null)")
+
+        if [ "${driver}" = "mcs7830" ]; then
+            if [ "$(cat "/sys/class/net/${eth}/flags" 2>/dev/null)" ]; then
+                echo "MOSCHIP USB-Ethernet detected: activating ${eth}" >&2
+                ifconfig "${eth}" up
+            fi
+        fi
+    done
 
     sleep 3
 
